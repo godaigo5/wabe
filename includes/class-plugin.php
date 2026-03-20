@@ -1,5 +1,4 @@
 <?php
-
 if (!defined('ABSPATH')) exit;
 
 class WABE_Plugin
@@ -30,6 +29,10 @@ class WABE_Plugin
             'includes/class-openai.php',
             'includes/class-gemini.php',
             'includes/class-image.php',
+            'includes/class-seo.php',
+            'includes/class-internal-links.php',
+            'includes/class-outline-generator.php',
+            'includes/class-topic-generator.php',
             'includes/class-generator.php',
             'includes/class-cron.php',
             'includes/class-admin.php',
@@ -37,7 +40,6 @@ class WABE_Plugin
 
         foreach ($files as $file) {
             $path = WABE_PATH . $file;
-
             if (file_exists($path)) {
                 require_once $path;
             }
@@ -133,16 +135,12 @@ class WABE_Plugin
                 defined('WABE_VERSION') ? WABE_VERSION : filemtime($js_file),
                 true
             );
-        }
 
-        wp_localize_script(
-            'wabe-admin',
-            'wabeAdmin',
-            [
+            wp_localize_script('wabe-admin', 'wabeAdmin', [
                 'ajaxUrl' => admin_url('admin-ajax.php'),
                 'nonce'   => wp_create_nonce('wabe_admin'),
-            ]
-        );
+            ]);
+        }
     }
 
     /**
@@ -224,40 +222,40 @@ class WABE_Plugin
         }
 
         $defaults = [
-            'ai_provider'              => 'openai',
-            'openai_api_key'           => '',
-            'gemini_api_key'           => '',
-            'openai_model'             => 'gpt-4.1',
-            'gemini_model'             => 'gemini-2.5-flash',
-            'generation_count'         => 1,
-            'heading_count'            => 3,
-            'tone'                     => 'standard',
-            'post_status'              => 'draft',
-            'weekly_posts'             => 1,
-            'schedule_enabled'         => '0',
-            'enable_featured_image'    => '0',
-            'image_style'              => 'modern',
-            'enable_seo'               => '0',
-            'enable_internal_links'    => '0',
-            'enable_external_links'    => '0',
-            'enable_topic_prediction'  => '0',
-            'enable_duplicate_check'   => '0',
-            'enable_outline_generator' => '0',
-            'author_name'              => '',
-            'site_context'             => '',
-            'writing_rules'            => '',
-            'seo_keyword'              => '',
-            'internal_link_url'        => '',
-            'external_link_url'        => '',
-            'license_key'              => '',
-            'topics'                   => [],
-            'history'                  => [],
-            'logs'                     => [],
-            'plan'                     => 'free',
-            'license_status'           => 'free',
-            'license_checked_at'       => '',
-            'license_expires_at'       => '',
-            'license_customer_email'   => '',
+            'ai_provider'               => 'openai',
+            'openai_api_key'            => '',
+            'gemini_api_key'            => '',
+            'openai_model'              => 'gpt-4.1',
+            'gemini_model'              => 'gemini-2.5-flash',
+            'generation_count'          => 1,
+            'heading_count'             => 3,
+            'tone'                      => 'standard',
+            'post_status'               => 'draft',
+            'weekly_posts'              => 1,
+            'schedule_enabled'          => '0',
+            'enable_featured_image'     => '0',
+            'image_style'               => 'modern',
+            'enable_seo'                => '0',
+            'enable_internal_links'     => '0',
+            'enable_external_links'     => '0',
+            'enable_topic_prediction'   => '0',
+            'enable_duplicate_check'    => '0',
+            'enable_outline_generator'  => '0',
+            'author_name'               => '',
+            'site_context'              => '',
+            'writing_rules'             => '',
+            'seo_keyword'               => '',
+            'internal_link_url'         => '',
+            'external_link_url'         => '',
+            'license_key'               => '',
+            'topics'                    => [],
+            'history'                   => [],
+            'logs'                      => [],
+            'plan'                      => 'free',
+            'license_status'            => 'free',
+            'license_checked_at'        => '',
+            'license_expires_at'        => '',
+            'license_customer_email'    => '',
         ];
 
         $merged = array_merge($defaults, $options);

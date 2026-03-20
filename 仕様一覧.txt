@@ -1,6 +1,6 @@
 Free・Advansed・Proのプランあり
 
-Free
+Free 
 週1回の自動下書き保存
 ブログタイトルと見出しを1つ生成しその見出しに合った記事を保存
 OpneAIとJeminiのどちらかを選択可能
@@ -33,3 +33,35 @@ Advansedで出来る事を含む
 ログ管理機能（削除可能
 ライセンス画面で今のライセンス情報とFree・Advansed・Proの比較
 
+WordPressプラグイン「WP AI Blog Engine」の開発をしています。
+
+▼目的
+AIでブログ記事（タイトル・見出し・本文・画像）を自動生成し、販売できるプロダクトを作る 
+
+▼構成 
+・OpenAI / Gemini 両対応 
+・画像生成（OpenAI / Gemini Imagen） 
+・Free / Advanced / Pro のプラン制御 
+・Stripe決済 + ライセンスAPI ・自動投稿（WP Cron） 
+・題材管理 / ログ / 履歴 / SEO / 内部リンク等 ▼サーバー構成 
+・PHP API（wabep-api） ・Stripe Webhookでライセンス発行 
+・DB: - licenses - license_activations - stripe_orders 
+
+▼現在の状態 
+・Webhook → ライセンス発行 → DB保存は完成済み 
+・WordPressプラグインもほぼ完成 
+・管理画面UI改善済み 
+・多言語化（POT / PO） 
+
+▼GitHub 
+https://github.com/godaigo5/wabe 
+
+▼重要ルール 
+・必ず「実装ベース」で回答 
+・差分ではなく「コピペで使える完全コード」で出す 
+・プロダクトとして売れる前提で提案 
+・設計
+・UX
+・収益化も考慮する 
+
+▼今回やりたいこと

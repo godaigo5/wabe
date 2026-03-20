@@ -1,137 +1,301 @@
 <?php
 if (!defined('ABSPATH')) exit;
 
-$plan = method_exists($this, 'get_plan') ? (string)$this->get_plan() : 'free';
-$plan_label = method_exists($this, 'get_plan_label') ? $this->get_plan_label($plan) : ucfirst($plan);
-$license = method_exists($this, 'get_license_data') ? $this->get_license_data() : [];
+$opt = is_array($this->options ?? null) ? $this->options : [];
+$license = is_array($license ?? null) ? $license : [];
 
-$status = sanitize_text_field($license['status'] ?? 'inactive');
-$checked_at = sanitize_text_field($license['checked_at'] ?? '');
-$license_key = sanitize_text_field($license['license_key'] ?? ($this->options['license_key'] ?? ''));
+$plan = method_exists($this, 'get_plan') ? $this->get_plan() : sanitize_key($opt['plan'] ?? 'free');
+$plan_label = method_exists($this, 'get_plan_label') ? $this->get_plan_label($plan) : ucfirst((string)$plan);
 
-$weekly_posts_max = method_exists($this, 'plan_weekly_posts_max') ? (int)$this->plan_weekly_posts_max() : 1;
-$heading_count_max = method_exists($this, 'plan_title_count_max') ? (int)$this->plan_title_count_max() : 1;
-$can_publish = method_exists($this, 'plan_can_publish') ? (bool)$this->plan_can_publish() : false;
-$can_use_seo = method_exists($this, 'plan_can_use_seo') ? (bool)$this->plan_can_use_seo() : false;
-$can_use_images = method_exists($this, 'plan_can_use_images') ? (bool)$this->plan_can_use_images() : false;
-$can_use_topic_generator = method_exists($this, 'plan_can_use_topic_prediction') ? (bool)$this->plan_can_use_topic_prediction() : false;
-$can_use_internal_links = method_exists($this, 'plan_can_use_internal_links') ? (bool)$this->plan_can_use_internal_links() : false;
-$can_use_outline_generator = method_exists($this, 'plan_can_use_outline_generator') ? (bool)$this->plan_can_use_outline_generator() : false;
+$license_key = sanitize_text_field($opt['license_key'] ?? '');
+$status = sanitize_text_field($license['status'] ?? ($opt['license_status'] ?? 'free'));
+$checked_at = sanitize_text_field($license['checked_at'] ?? ($opt['license_checked_at'] ?? ''));
+$expires_at = sanitize_text_field($license['expires_at'] ?? ($opt['license_expires_at'] ?? ''));
+$customer_email = sanitize_text_field($license['customer_email'] ?? ($opt['license_customer_email'] ?? ''));
+$remote_plan = sanitize_key($license['plan'] ?? $plan);
 
-if (!function_exists('wabe_license_bool_label')) {
-    function wabe_license_bool_label($value)
+if (!function_exists('wabe_license_status_badge')) {
+    function wabe_license_status_badge($status)
     {
-        return $value ? __('Yes', WABE_TEXTDOMAIN) : __('No', WABE_TEXTDOMAIN);
+        $status = strtolower((string)$status);
+
+        $map = [
+            'active' => ['bg' => '#dcfce7', 'color' => '#166534', 'label' => __('Active', WABE_TEXTDOMAIN)],
+            'valid' => ['bg' => '#dcfce7', 'color' => '#166534', 'label' => __('Valid', WABE_TEXTDOMAIN)],
+            'inactive' => ['bg' => '#f3f4f6', 'color' => '#374151', 'label' => __('Inactive', WABE_TEXTDOMAIN)],
+            'expired' => ['bg' => '#fee2e2', 'color' => '#991b1b', 'label' => __('Expired', WABE_TEXTDOMAIN)],
+            'invalid' => ['bg' => '#fee2e2', 'color' => '#991b1b', 'label' => __('Invalid', WABE_TEXTDOMAIN)],
+            'free' => ['bg' => '#e0f2fe', 'color' => '#075985', 'label' => __('Free', WABE_TEXTDOMAIN)],
+        ];
+
+        $style = $map[$status] ?? ['bg' => '#f3f4f6', 'color' => '#374151', 'label' => ucfirst($status)];
+
+        return sprintf(
+            '<span style="display:inline-block;padding:5px 12px;border-radius:999px;background:%s;color:%s;font-size:12px;font-weight:600;">%s</span>',
+            esc_attr($style['bg']),
+            esc_attr($style['color']),
+            esc_html($style['label'])
+        );
+    }
+}
+
+if (!function_exists('wabe_license_plan_badge')) {
+    function wabe_license_plan_badge($plan)
+    {
+        $plan = strtolower((string)$plan);
+
+        $map = [
+            'free' => ['bg' => '#e2e8f0', 'color' => '#334155', 'label' => 'Free'],
+            'advanced' => ['bg' => '#dbeafe', 'color' => '#1d4ed8', 'label' => 'Advanced'],
+            'pro' => ['bg' => '#ede9fe', 'color' => '#6d28d9', 'label' => 'Pro'],
+        ];
+
+        $style = $map[$plan] ?? ['bg' => '#e5e7eb', 'color' => '#374151', 'label' => ucfirst($plan)];
+
+        return sprintf(
+            '<span style="display:inline-block;padding:6px 12px;border-radius:999px;background:%s;color:%s;font-size:12px;font-weight:700;">%s</span>',
+            esc_attr($style['bg']),
+            esc_attr($style['color']),
+            esc_html($style['label'])
+        );
+    }
+}
+
+if (!function_exists('wabe_license_mask_key')) {
+    function wabe_license_mask_key($value)
+    {
+        $value = trim((string)$value);
+
+        if ($value === '') {
+            return '—';
+        }
+
+        $len = strlen($value);
+        if ($len <= 8) {
+            return str_repeat('*', max(4, $len));
+        }
+
+        return substr($value, 0, 4) . str_repeat('*', max(4, $len - 8)) . substr($value, -4);
     }
 }
 ?>
 <div class="wrap">
-    <h1><?php esc_html_e('License', WABE_TEXTDOMAIN); ?></h1>
+    <h1><?php echo esc_html__('License', WABE_TEXTDOMAIN); ?></h1>
 
-    <div class="card" style="max-width:900px;padding:20px;">
-        <h2 style="margin-top:0;"><?php esc_html_e('Current License Status', WABE_TEXTDOMAIN); ?></h2>
+    <?php if (!empty($_GET['wabe_message'])) : ?>
+        <div class="notice notice-success is-dismissible">
+            <p><?php echo esc_html(wp_unslash($_GET['wabe_message'])); ?></p>
+        </div>
+    <?php endif; ?>
 
-        <p>
-            <?php
-            printf(
-                esc_html__('Current Plan: %s', WABE_TEXTDOMAIN),
-                esc_html($plan_label)
-            );
-            ?>
-        </p>
+    <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:24px;align-items:start;max-width:1400px;">
+        <div>
+            <div class="postbox" style="padding:20px;margin-bottom:24px;">
+                <h2 class="hndle" style="margin:0 0 16px 0;">
+                    <?php echo esc_html__('Current License Status', WABE_TEXTDOMAIN); ?></h2>
 
-        <p>
-            <?php
-            printf(
-                esc_html__('Status: %s', WABE_TEXTDOMAIN),
-                esc_html(__($status, WABE_TEXTDOMAIN))
-            );
-            ?>
-        </p>
+                <table class="form-table" role="presentation">
+                    <tbody>
+                        <tr>
+                            <th scope="row"><?php echo esc_html__('Current Plan', WABE_TEXTDOMAIN); ?></th>
+                            <td>
+                                <?php echo wp_kses_post(wabe_license_plan_badge($plan)); ?>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><?php echo esc_html__('Remote Plan', WABE_TEXTDOMAIN); ?></th>
+                            <td>
+                                <?php echo wp_kses_post(wabe_license_plan_badge($remote_plan)); ?>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><?php echo esc_html__('License Status', WABE_TEXTDOMAIN); ?></th>
+                            <td>
+                                <?php echo wp_kses_post(wabe_license_status_badge($status)); ?>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><?php echo esc_html__('License Key', WABE_TEXTDOMAIN); ?></th>
+                            <td>
+                                <code><?php echo esc_html(wabe_license_mask_key($license_key)); ?></code>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><?php echo esc_html__('Customer Email', WABE_TEXTDOMAIN); ?></th>
+                            <td><?php echo esc_html($customer_email !== '' ? $customer_email : '—'); ?></td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><?php echo esc_html__('Checked At', WABE_TEXTDOMAIN); ?></th>
+                            <td><?php echo esc_html($checked_at !== '' ? $checked_at : '—'); ?></td>
+                        </tr>
+                        <tr>
+                            <th scope="row"><?php echo esc_html__('Expires At', WABE_TEXTDOMAIN); ?></th>
+                            <td><?php echo esc_html($expires_at !== '' ? $expires_at : '—'); ?></td>
+                        </tr>
+                    </tbody>
+                </table>
 
-        <p>
-            <?php
-            printf(
-                esc_html__('Last Checked: %s', WABE_TEXTDOMAIN),
-                esc_html($checked_at !== '' ? $checked_at : __('Not checked yet', WABE_TEXTDOMAIN))
-            );
-            ?>
-        </p>
+                <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:18px;">
+                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="margin:0;">
+                        <input type="hidden" name="action" value="wabe_refresh_license">
+                        <?php wp_nonce_field('wabe_refresh_license', 'wabe_refresh_license_nonce'); ?>
+                        <button type="submit" class="button button-primary">
+                            <?php echo esc_html__('Refresh License', WABE_TEXTDOMAIN); ?>
+                        </button>
+                    </form>
 
-        <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="margin-top:18px;">
-            <input type="hidden" name="action" value="wabe_save_license_key">
-            <?php wp_nonce_field('wabe_save_license_key', 'wabe_license_nonce'); ?>
+                    <a class="button" href="<?php echo esc_url(admin_url('admin.php?page=wabe')); ?>">
+                        <?php echo esc_html__('Back to Settings', WABE_TEXTDOMAIN); ?>
+                    </a>
+                </div>
+            </div>
 
-            <table class="form-table">
-                <tr>
-                    <th scope="row">
-                        <label for="wabe_license_key"><?php esc_html_e('License Key', WABE_TEXTDOMAIN); ?></label>
-                    </th>
-                    <td>
-                        <input id="wabe_license_key" type="text" name="wabe_license_key"
-                            value="<?php echo esc_attr($license_key); ?>" class="regular-text">
-                        <p class="description">
-                            <?php esc_html_e('Enter your license key and save it.', WABE_TEXTDOMAIN); ?></p>
-                    </td>
-                </tr>
-            </table>
+            <div class="postbox" style="padding:20px;margin-bottom:24px;">
+                <h2 class="hndle" style="margin:0 0 16px 0;">
+                    <?php echo esc_html__('Plan Comparison', WABE_TEXTDOMAIN); ?></h2>
 
-            <p class="submit" style="display:flex;gap:10px;flex-wrap:wrap;">
-                <button type="submit" class="button button-primary">
-                    <?php esc_html_e('Save License Key', WABE_TEXTDOMAIN); ?>
-                </button>
-                <a href="<?php echo esc_url(wp_nonce_url(admin_url('admin-post.php?action=wabe_sync_license'), 'wabe_sync_license')); ?>"
-                    class="button">
-                    <?php esc_html_e('Sync License', WABE_TEXTDOMAIN); ?>
-                </a>
-            </p>
-        </form>
-    </div>
+                <table class="widefat striped">
+                    <thead>
+                        <tr>
+                            <th><?php echo esc_html__('Feature', WABE_TEXTDOMAIN); ?></th>
+                            <th>Free</th>
+                            <th>Advanced</th>
+                            <th>Pro</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><?php echo esc_html__('Price', WABE_TEXTDOMAIN); ?></td>
+                            <td><?php echo esc_html__('Free', WABE_TEXTDOMAIN); ?></td>
+                            <td><?php echo esc_html__('$12/mo  $79/yr  $199 lifetime', WABE_TEXTDOMAIN); ?></td>
+                            <td><?php echo esc_html__('$24/mo  $159/yr  $399 lifetime', WABE_TEXTDOMAIN); ?></td>
+                        </tr>
+                        <tr>
+                            <td><?php echo esc_html__('Automatic posts per week', WABE_TEXTDOMAIN); ?></td>
+                            <td>1</td>
+                            <td>1 - 7</td>
+                            <td>1 - 7</td>
+                        </tr>
+                        <tr>
+                            <td><?php echo esc_html__('Heading count', WABE_TEXTDOMAIN); ?></td>
+                            <td>1</td>
+                            <td>1 - 6</td>
+                            <td>1 - 6</td>
+                        </tr>
+                        <tr>
+                            <td><?php echo esc_html__('Post status', WABE_TEXTDOMAIN); ?></td>
+                            <td><?php echo esc_html__('Draft only', WABE_TEXTDOMAIN); ?></td>
+                            <td><?php echo esc_html__('Draft / Publish', WABE_TEXTDOMAIN); ?></td>
+                            <td><?php echo esc_html__('Draft / Publish', WABE_TEXTDOMAIN); ?></td>
+                        </tr>
+                        <tr>
+                            <td><?php echo esc_html__('Featured image generation', WABE_TEXTDOMAIN); ?></td>
+                            <td>—</td>
+                            <td>✓</td>
+                            <td>✓</td>
+                        </tr>
+                        <tr>
+                            <td><?php echo esc_html__('SEO support', WABE_TEXTDOMAIN); ?></td>
+                            <td>—</td>
+                            <td>✓</td>
+                            <td>✓</td>
+                        </tr>
+                        <tr>
+                            <td><?php echo esc_html__('Duplicate check', WABE_TEXTDOMAIN); ?></td>
+                            <td>—</td>
+                            <td>—</td>
+                            <td>✓</td>
+                        </tr>
+                        <tr>
+                            <td><?php echo esc_html__('Internal links', WABE_TEXTDOMAIN); ?></td>
+                            <td>—</td>
+                            <td>—</td>
+                            <td>✓</td>
+                        </tr>
+                        <tr>
+                            <td><?php echo esc_html__('External links', WABE_TEXTDOMAIN); ?></td>
+                            <td>—</td>
+                            <td>—</td>
+                            <td>✓</td>
+                        </tr>
+                        <tr>
+                            <td><?php echo esc_html__('Topic prediction', WABE_TEXTDOMAIN); ?></td>
+                            <td>—</td>
+                            <td>—</td>
+                            <td>✓</td>
+                        </tr>
+                        <tr>
+                            <td><?php echo esc_html__('Outline generator', WABE_TEXTDOMAIN); ?></td>
+                            <td>—</td>
+                            <td>—</td>
+                            <td>✓</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
 
-    <div class="card" style="max-width:900px;padding:20px;margin-top:20px;">
-        <h2 style="margin-top:0;"><?php esc_html_e('Plan Features', WABE_TEXTDOMAIN); ?></h2>
+        <div>
+            <div class="postbox" style="padding:20px;margin-bottom:24px;">
+                <h2 class="hndle" style="margin:0 0 16px 0;">
+                    <?php echo esc_html__('How Licensing Works', WABE_TEXTDOMAIN); ?></h2>
 
-        <table class="widefat striped">
-            <thead>
-                <tr>
-                    <th><?php esc_html_e('Feature', WABE_TEXTDOMAIN); ?></th>
-                    <th><?php esc_html_e('Value', WABE_TEXTDOMAIN); ?></th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td><?php esc_html_e('Weekly Posts Max', WABE_TEXTDOMAIN); ?></td>
-                    <td><?php echo esc_html($weekly_posts_max); ?></td>
-                </tr>
-                <tr>
-                    <td><?php esc_html_e('Heading Count Max', WABE_TEXTDOMAIN); ?></td>
-                    <td><?php echo esc_html($heading_count_max); ?></td>
-                </tr>
-                <tr>
-                    <td><?php esc_html_e('Can Publish', WABE_TEXTDOMAIN); ?></td>
-                    <td><?php echo esc_html(wabe_license_bool_label($can_publish)); ?></td>
-                </tr>
-                <tr>
-                    <td><?php esc_html_e('SEO', WABE_TEXTDOMAIN); ?></td>
-                    <td><?php echo esc_html(wabe_license_bool_label($can_use_seo)); ?></td>
-                </tr>
-                <tr>
-                    <td><?php esc_html_e('Images', WABE_TEXTDOMAIN); ?></td>
-                    <td><?php echo esc_html(wabe_license_bool_label($can_use_images)); ?></td>
-                </tr>
-                <tr>
-                    <td><?php esc_html_e('Topic Generator', WABE_TEXTDOMAIN); ?></td>
-                    <td><?php echo esc_html(wabe_license_bool_label($can_use_topic_generator)); ?></td>
-                </tr>
-                <tr>
-                    <td><?php esc_html_e('Internal Links', WABE_TEXTDOMAIN); ?></td>
-                    <td><?php echo esc_html(wabe_license_bool_label($can_use_internal_links)); ?></td>
-                </tr>
-                <tr>
-                    <td><?php esc_html_e('Outline Generator', WABE_TEXTDOMAIN); ?></td>
-                    <td><?php echo esc_html(wabe_license_bool_label($can_use_outline_generator)); ?></td>
-                </tr>
-            </tbody>
-        </table>
+                <ol style="padding-left:18px;margin:0;">
+                    <li style="margin-bottom:10px;">
+                        <?php echo esc_html__('The customer purchases a plan through Stripe.', WABE_TEXTDOMAIN); ?>
+                    </li>
+                    <li style="margin-bottom:10px;">
+                        <?php echo esc_html__('Stripe Webhook issues or updates the license on your API server.', WABE_TEXTDOMAIN); ?>
+                    </li>
+                    <li style="margin-bottom:10px;">
+                        <?php echo esc_html__('The plugin syncs with your license API and reflects the active plan.', WABE_TEXTDOMAIN); ?>
+                    </li>
+                    <li>
+                        <?php echo esc_html__('Features are locked or unlocked automatically based on the returned plan and license status.', WABE_TEXTDOMAIN); ?>
+                    </li>
+                </ol>
+            </div>
+
+            <div class="postbox" style="padding:20px;margin-bottom:24px;">
+                <h2 class="hndle" style="margin:0 0 16px 0;">
+                    <?php echo esc_html__('What to Check When License Sync Fails', WABE_TEXTDOMAIN); ?></h2>
+
+                <ul style="padding-left:18px;margin:0;">
+                    <li style="margin-bottom:10px;">
+                        <?php echo esc_html__('Confirm that the saved license key is correct.', WABE_TEXTDOMAIN); ?>
+                    </li>
+                    <li style="margin-bottom:10px;">
+                        <?php echo esc_html__('Check whether your API server is reachable from WordPress.', WABE_TEXTDOMAIN); ?>
+                    </li>
+                    <li style="margin-bottom:10px;">
+                        <?php echo esc_html__('Check the Stripe Webhook processing result on the API side.', WABE_TEXTDOMAIN); ?>
+                    </li>
+                    <li><?php echo esc_html__('Review the plugin logs for detailed sync errors.', WABE_TEXTDOMAIN); ?>
+                    </li>
+                </ul>
+
+                <p style="margin-top:16px;">
+                    <a class="button" href="<?php echo esc_url(admin_url('admin.php?page=wabe-logs')); ?>">
+                        <?php echo esc_html__('Open Logs', WABE_TEXTDOMAIN); ?>
+                    </a>
+                </p>
+            </div>
+
+            <div class="postbox" style="padding:20px;">
+                <h2 class="hndle" style="margin:0 0 16px 0;">
+                    <?php echo esc_html__('Sales Page / Upgrade', WABE_TEXTDOMAIN); ?></h2>
+
+                <p style="margin-top:0;">
+                    <?php echo esc_html__('Upgrade links can be placed here later. For now, direct users to your sales site or customer portal.', WABE_TEXTDOMAIN); ?>
+                </p>
+
+                <p style="margin-bottom:0;">
+                    <a class="button button-secondary" href="http://wabe.d-create.online/" target="_blank"
+                        rel="noopener noreferrer">
+                        <?php echo esc_html__('Open Sales Site', WABE_TEXTDOMAIN); ?>
+                    </a>
+                </p>
+            </div>
+        </div>
     </div>
 </div>

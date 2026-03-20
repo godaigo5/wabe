@@ -1,5 +1,4 @@
 <?php
-
 if (!defined('ABSPATH')) exit;
 
 class WABE_Plan
@@ -9,28 +8,36 @@ class WABE_Plan
 	const PLAN_PRO      = 'pro';
 
 	/**
-	 * 全featureキーの初期定義
+	 * デフォルトfeature
 	 *
-	 * ここを唯一の正として扱う
+	 * @return array
 	 */
 	public static function default_features()
 	{
 		return [
-			'weekly_posts_max'          => 1,
-			'title_count_max'           => 1,
-			'can_publish'               => false,
-			'can_use_seo'               => false,
-			'can_use_images'            => false,
-			'can_use_internal_links'    => false,
-			'can_use_external_links'    => false,
-			'can_use_topic_prediction'  => false,
-			'can_use_duplicate_check'   => false,
+			'weekly_posts_max'         => 1,
+			'title_count_max'          => 1,
+			'heading_count_max'        => 1,
+			'can_publish'              => false,
+			'can_use_seo'              => false,
+			'can_use_images'           => false,
+			'can_use_internal_links'   => false,
+			'can_use_external_links'   => false,
+			'can_use_topic_prediction' => false,
+			'can_use_duplicate_check'  => false,
 			'can_use_outline_generator' => false,
 		];
 	}
 
 	/**
 	 * プラン別機能定義
+	 *
+	 * 仕様書準拠:
+	 * Free     : 週1 / 見出し1
+	 * Advanced : 週1〜7 / 見出し1〜6
+	 * Pro      : Advanced + 重複チェック/内部外部リンク/題材予測
+	 *
+	 * @return array
 	 */
 	public static function plan_matrix()
 	{
@@ -40,6 +47,7 @@ class WABE_Plan
 			self::PLAN_FREE => array_merge($base, [
 				'weekly_posts_max'          => 1,
 				'title_count_max'           => 1,
+				'heading_count_max'         => 1,
 				'can_publish'               => false,
 				'can_use_seo'               => false,
 				'can_use_images'            => false,
@@ -49,10 +57,10 @@ class WABE_Plan
 				'can_use_duplicate_check'   => false,
 				'can_use_outline_generator' => false,
 			]),
-
 			self::PLAN_ADVANCED => array_merge($base, [
-				'weekly_posts_max'          => 3,
-				'title_count_max'           => 3,
+				'weekly_posts_max'          => 7,
+				'title_count_max'           => 1,
+				'heading_count_max'         => 6,
 				'can_publish'               => true,
 				'can_use_seo'               => true,
 				'can_use_images'            => true,
@@ -62,10 +70,10 @@ class WABE_Plan
 				'can_use_duplicate_check'   => false,
 				'can_use_outline_generator' => false,
 			]),
-
 			self::PLAN_PRO => array_merge($base, [
 				'weekly_posts_max'          => 7,
-				'title_count_max'           => 6,
+				'title_count_max'           => 1,
+				'heading_count_max'         => 6,
 				'can_publish'               => true,
 				'can_use_seo'               => true,
 				'can_use_images'            => true,
@@ -80,6 +88,9 @@ class WABE_Plan
 
 	/**
 	 * プラン名の正規化
+	 *
+	 * @param mixed $plan
+	 * @return string
 	 */
 	public static function normalize_plan($plan)
 	{
@@ -94,6 +105,8 @@ class WABE_Plan
 
 	/**
 	 * 現在プラン取得
+	 *
+	 * @return string
 	 */
 	public static function get_plan()
 	{
@@ -115,18 +128,20 @@ class WABE_Plan
 
 	/**
 	 * 現在feature一式取得
+	 *
+	 * @return array
 	 */
 	public static function get_features()
 	{
-		$plan = self::get_plan();
-		$matrix = self::plan_matrix();
-
+		$plan     = self::get_plan();
+		$matrix   = self::plan_matrix();
 		$features = $matrix[$plan] ?? self::default_features();
 
 		if (class_exists('WABE_License') && method_exists('WABE_License', 'get_cached_license_data')) {
 			$license = WABE_License::get_cached_license_data();
+
 			if (!empty($license['features']) && is_array($license['features'])) {
-				$features = self::normalize_features($license['features'], $features);
+				$features = self::normalize_legacy_features($license['features'], $features);
 			}
 		}
 
@@ -135,6 +150,10 @@ class WABE_Plan
 
 	/**
 	 * 任意feature取得
+	 *
+	 * @param string $key
+	 * @param mixed  $default
+	 * @return mixed
 	 */
 	public static function get_feature($key, $default = null)
 	{
@@ -149,6 +168,10 @@ class WABE_Plan
 
 	/**
 	 * feature群の正規化
+	 *
+	 * @param mixed $features
+	 * @param array|null $fallback
+	 * @return array
 	 */
 	public static function normalize_features($features, $fallback = null)
 	{
@@ -177,21 +200,26 @@ class WABE_Plan
 
 	/**
 	 * 旧featureキーからの移行も吸収
+	 *
+	 * @param mixed $features
+	 * @param array|null $fallback
+	 * @return array
 	 */
 	public static function normalize_legacy_features($features, $fallback = null)
 	{
 		$base = is_array($features) ? $features : [];
 
 		$map = [
-			'can_use_outline' => 'can_use_outline_generator',
-			'can_outline'     => 'can_use_outline_generator',
-			'can_use_image'   => 'can_use_images',
-			'can_use_internal' => 'can_use_internal_links',
-			'can_use_external' => 'can_use_external_links',
+			'can_use_outline'   => 'can_use_outline_generator',
+			'can_outline'       => 'can_use_outline_generator',
+			'can_use_image'     => 'can_use_images',
+			'can_use_internal'  => 'can_use_internal_links',
+			'can_use_external'  => 'can_use_external_links',
 			'can_use_prediction' => 'can_use_topic_prediction',
 			'can_duplicate_check' => 'can_use_duplicate_check',
-			'weekly_post_max' => 'weekly_posts_max',
-			'title_max'       => 'title_count_max',
+			'weekly_post_max'   => 'weekly_posts_max',
+			'title_max'         => 'title_count_max',
+			'heading_max'       => 'heading_count_max',
 		];
 
 		foreach ($map as $old => $new) {
@@ -211,6 +239,11 @@ class WABE_Plan
 	public static function title_count_max()
 	{
 		return max(1, (int)self::get_feature('title_count_max', 1));
+	}
+
+	public static function heading_count_max()
+	{
+		return max(1, (int)self::get_feature('heading_count_max', self::title_count_max()));
 	}
 
 	public static function can_publish()
@@ -266,6 +299,12 @@ class WABE_Plan
 		return $labels[$plan] ?? 'Free';
 	}
 
+	/**
+	 * 値をboolへ
+	 *
+	 * @param mixed $value
+	 * @return bool
+	 */
 	private static function to_bool($value)
 	{
 		if (is_bool($value)) {
@@ -277,6 +316,7 @@ class WABE_Plan
 		}
 
 		$value = strtolower(trim((string)$value));
+
 		return in_array($value, ['1', 'true', 'yes', 'on', 'enabled', 'active'], true);
 	}
 }
