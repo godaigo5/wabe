@@ -1,51 +1,105 @@
 <?php
 if (!defined('ABSPATH')) exit;
-foreach (['logger', 'license', 'plan', 'openai', 'image', 'seo', 'topic-generator', 'internal-links', 'outline-generator', 'generator', 'cron', 'admin'] as $f) {
-    require_once WABE_PATH . 'includes/class-' . $f . '.php';
-}
+
 class WABE_Plugin
 {
-    public function run()
+    public function __construct()
     {
-        add_action('plugins_loaded', [$this, 'load_textdomain']);
-        add_action('init', [$this, 'bootstrap'], 5);
-        register_activation_hook(dirname(__FILE__, 2) . '/wp-ai-blog-engine.php', [$this, 'activate']);
-        register_deactivation_hook(dirname(__FILE__, 2) . '/wp-ai-blog-engine.php', ['WABE_Cron', 'deactivate']);
+        $this->load_dependencies();
+
+        add_action('init', [$this, 'init']);
+        add_action('admin_menu', [$this, 'admin_menu']);
+        add_action('admin_init', [$this, 'maybe_create_default_options']);
     }
-    public function load_textdomain()
+
+    private function load_dependencies()
     {
-        load_plugin_textdomain(WABE_TEXTDOMAIN, false, dirname(plugin_basename(dirname(__FILE__, 2) . '/wp-ai-blog-engine.php')) . '/languages');
-    }
-    public function activate()
-    {
-        $this->maybe_create_default_options();
-        WABE_Cron::deactivate();
-    }
-    public function bootstrap()
-    {
-        $this->maybe_create_default_options();
-        $admin = new WABE_Admin();
-        if (is_admin()) {
-            add_action('admin_menu', [$admin, 'menu']);
-            add_action('admin_post_wabe_save_settings', [$admin, 'save_settings']);
-            add_action('admin_post_wabe_save_topics', [$admin, 'save_topics']);
-            add_action('admin_post_wabe_manual_generate', [$admin, 'manual_generate']);
-            add_action('admin_post_wabe_clear_logs', [$admin, 'clear_logs']);
-            add_action('admin_post_wabe_save_license', [$admin, 'save_license']);
-            add_action('admin_post_wabe_generate_topics', [$admin, 'generate_topics']);
+        require_once WABE_PATH . 'includes/class-openai.php';
+        require_once WABE_PATH . 'includes/class-gemini.php';
+        require_once WABE_PATH . 'includes/class-generator.php';
+        require_once WABE_PATH . 'includes/class-admin.php';
+        require_once WABE_PATH . 'includes/class-cron.php';
+        require_once WABE_PATH . 'includes/class-logger.php';
+        require_once WABE_PATH . 'includes/class-plan.php';
+        require_once WABE_PATH . 'includes/class-license.php';
+        require_once WABE_PATH . 'includes/class-image.php';
+
+        if (file_exists(WABE_PATH . 'includes/class-seo.php')) {
+            require_once WABE_PATH . 'includes/class-seo.php';
         }
-        add_filter('cron_schedules', [new WABE_Cron(), 'schedule']);
-        add_action('wabe_generate_event', ['WABE_Cron', 'execute']);
-        add_action('init', ['WABE_Cron', 'register'], 20);
+
+        if (file_exists(WABE_PATH . 'includes/class-internal-links.php')) {
+            require_once WABE_PATH . 'includes/class-internal-links.php';
+        }
+
+        if (file_exists(WABE_PATH . 'includes/class-outline-generator.php')) {
+            require_once WABE_PATH . 'includes/class-outline-generator.php';
+        }
     }
-    private function maybe_create_default_options()
+
+    public function init()
     {
-        $d = ['api_key' => '', 'generation_count' => 1, 'tone' => 'standard', 'post_status' => 'draft', 'weekly_posts' => 1, 'topics' => [], 'history' => [], 'license_key' => '', 'license_data' => [], 'license_checked_at' => ''];
-        $c = get_option(WABE_OPTION, false);
-        if ($c === false) {
-            add_option(WABE_OPTION, $d);
+        WABE_Cron::init();
+    }
+
+    public function admin_menu()
+    {
+        add_menu_page(
+            'WP AI Blog Engine',
+            'WP AI Blog',
+            'manage_options',
+            'wabe',
+            [$this, 'render_admin_page'],
+            'dashicons-edit',
+            26
+        );
+    }
+
+    public function render_admin_page()
+    {
+        $admin = new WABE_Admin();
+        $admin->render();
+    }
+
+    public function maybe_create_default_options()
+    {
+        $defaults = [
+            // ===== AI設定 =====
+            'ai_provider'    => 'openai',
+
+            'openai_api_key' => '',
+            'gemini_api_key' => '',
+
+            'openai_model'   => 'gpt-4.1-mini',
+            'gemini_model'   => 'gemini-2.5-flash',
+
+            // ===== 生成設定 =====
+            'generation_count' => 1,
+            'tone'             => 'standard',
+            'post_status'      => 'draft',
+            'weekly_posts'     => 1,
+
+            // ===== データ =====
+            'topics'  => [],
+            'history' => [],
+
+            // ===== ライセンス =====
+            'license_key'         => '',
+            'license_data'        => [],
+            'license_checked_at'  => '',
+        ];
+
+        $current = get_option(WABE_OPTION, false);
+
+        if ($current === false) {
+            add_option(WABE_OPTION, $defaults);
             return;
         }
-        if (is_array($c)) update_option(WABE_OPTION, wp_parse_args($c, $d));
+
+        if (is_array($current)) {
+            // 不足キーだけ補完（完全上書きはしない）
+            $current = wp_parse_args($current, $defaults);
+            update_option(WABE_OPTION, $current);
+        }
     }
 }

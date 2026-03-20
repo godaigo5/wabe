@@ -1,35 +1,24 @@
 <?php
-
 if (!defined('ABSPATH')) exit;
 
 class WABE_Generator
 {
     public function run()
     {
-        $options = get_option(WABE_OPTION, []);
-        $topics  = $options['topics'] ?? [];
-
-        if (empty($topics) || !is_array($topics)) {
-            WABE_Logger::warning('Generator: topics empty');
-            return false;
-        }
-
-        $topic = $topics[0] ?? null;
-
-        if (empty($topic) || empty($topic['topic'])) {
-            WABE_Logger::warning('Generator: first topic empty');
-            return false;
-        }
-
-        $title_count = max(1, min(WABE_Plan::title_count_max(), intval($options['generation_count'] ?? 1)));
-        $status      = sanitize_text_field($options['post_status'] ?? 'draft');
-        $global_tone = sanitize_text_field($options['tone'] ?? 'standard');
-
-        if (!WABE_Plan::can_publish()) {
-            $status = 'draft';
-        }
-
         try {
+            $options = get_option(WABE_OPTION, []);
+            $topics  = $options['topics'] ?? [];
+
+            if (empty($topics) || !is_array($topics)) {
+                WABE_Logger::warning('Generator: no topics found');
+                return false;
+            }
+
+            $topic       = $topics[0];
+            $title_count = max(1, intval($options['generation_count'] ?? 1));
+            $status      = sanitize_text_field($options['post_status'] ?? 'draft');
+            $global_tone = sanitize_text_field($options['tone'] ?? 'standard');
+
             $post_id = $this->generate($topic, $title_count, $status, $global_tone);
 
             if ($post_id) {
@@ -62,24 +51,34 @@ class WABE_Generator
             $status = 'draft';
         }
 
-        $ai    = new WABE_OpenAI();
-        $image = new WABE_Image();
+        $options  = get_option(WABE_OPTION, []);
+        $provider = sanitize_key($options['ai_provider'] ?? 'openai');
 
+        if ($provider === 'gemini' && class_exists('WABE_Gemini')) {
+            $ai    = new WABE_Gemini();
+            $model = sanitize_text_field($options['gemini_model'] ?? 'gemini-2.5-flash');
+        } else {
+            $ai    = new WABE_OpenAI();
+            $model = sanitize_text_field($options['openai_model'] ?? 'gpt-4.1-mini');
+        }
+
+        $image    = new WABE_Image();
         $locale   = get_locale();
         $language = $this->get_ai_language($locale);
 
-        $titles = $this->generate_titles($ai, $topic_text, $style, $tone, $language, $locale, $title_count);
+        $titles = $this->generate_titles($ai, $model, $topic_text, $style, $tone, $language, $locale, $title_count);
 
         if (empty($titles)) {
             WABE_Logger::error('Generator: title generation failed - ' . $topic_text);
             return false;
         }
 
-        $post_title = $titles[0];
+        $post_title    = $titles[0];
         $content_parts = [];
 
         foreach ($titles as $title) {
             $outline = '';
+
             if (WABE_Plan::can_use_outline_generator() && class_exists('WABE_Outline_Generator')) {
                 $outline = WABE_Outline_Generator::generate($title);
             }
@@ -95,7 +94,8 @@ class WABE_Generator
             );
 
             $result = trim($ai->text($content_prompt, [
-                'temperature' => 0.7,
+                'model'             => $model,
+                'temperature'       => 0.7,
                 'max_output_tokens' => 2200,
             ]));
 
@@ -104,7 +104,7 @@ class WABE_Generator
                 continue;
             }
 
-            $section = '<h2>' . esc_html($title) . '</h2>' . "\n" . $result;
+            $section = "## " . esc_html($title) . "\n\n" . $result;
             $content_parts[] = $section;
         }
 
@@ -116,11 +116,11 @@ class WABE_Generator
         $content = implode("\n\n", $content_parts);
 
         if (WABE_Plan::can_use_seo()) {
-            $seo = new WABE_SEO();
+            $seo     = new WABE_SEO();
             $content = $seo->optimize($content, $topic_text);
         }
 
-        if (WABE_Plan::can_use_internal_links() && class_exists('WAIAP_Internal_Links')) {
+        if (WABE_Plan::can_use_internal_links() && class_exists('WABE_Internal_Links')) {
             $content = WABE_Internal_Links::generate($content);
         }
 
@@ -163,6 +163,8 @@ class WABE_Generator
             'title'       => $post_title,
             'title_count' => count($titles),
             'titles'      => $titles,
+            'provider'    => $provider,
+            'model'       => $model,
         ]);
 
         return $post_id;
@@ -181,16 +183,16 @@ class WABE_Generator
         $options['topics'] = array_values($topics);
 
         update_option(WABE_OPTION, $options);
-
         WABE_Logger::info('Generator: first topic removed');
     }
 
-    private function generate_titles($ai, $topic, $style, $tone, $language, $locale, $count)
+    private function generate_titles($ai, $model, $topic, $style, $tone, $language, $locale, $count)
     {
         $prompt = $this->build_titles_prompt($topic, $style, $tone, $language, $locale, $count);
 
         $response = trim($ai->text($prompt, [
-            'temperature' => 0.8,
+            'model'             => $model,
+            'temperature'       => 0.8,
             'max_output_tokens' => 500,
         ]));
 
@@ -198,7 +200,7 @@ class WABE_Generator
             return [];
         }
 
-        $lines = preg_split('/\r\n|\r|\n/', $response);
+        $lines  = preg_split('/\r\n|\r|\n/', $response);
         $titles = [];
 
         foreach ($lines as $line) {
@@ -228,23 +230,13 @@ class WABE_Generator
     {
         return "
 You are a professional SEO writer.
-
 Create {$count} different SEO-friendly blog titles for the following topic.
 
-Topic:
-{$topic}
-
-Style:
-{$style}
-
-Tone:
-{$tone}
-
-Language:
-{$language}
-
-Locale:
-{$locale}
+Topic: {$topic}
+Style: {$style}
+Tone: {$tone}
+Language: {$language}
+Locale: {$locale}
 
 Requirements:
 - Create exactly {$count} titles
@@ -261,29 +253,15 @@ Requirements:
     {
         return "
 You are a professional SEO writer.
-
 Write a high-quality SEO blog article section based on the following title.
 
-Main Topic:
-{$topic}
-
-Section Title:
-{$title}
-
-Style:
-{$style}
-
-Tone:
-{$tone}
-
-Language:
-{$language}
-
-Locale:
-{$locale}
-
-Outline:
-{$outline}
+Main Topic: {$topic}
+Section Title: {$title}
+Style: {$style}
+Tone: {$tone}
+Language: {$language}
+Locale: {$locale}
+Outline: {$outline}
 
 Requirements:
 - Beginner friendly
@@ -303,6 +281,7 @@ Requirements:
         $title = wp_strip_all_tags($title);
         $title = trim($title);
         $title = preg_replace('/^["\'「『]+|["\'」』]+$/u', '', $title);
+
         return $title;
     }
 

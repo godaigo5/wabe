@@ -1,40 +1,67 @@
 <?php
 if (!defined('ABSPATH')) exit;
+
 class WABE_Cron
 {
-    public function schedule($schedules)
+    const HOOK = 'wabe_cron_generate';
+
+    public static function init()
     {
-        $o = get_option(WABE_OPTION, []);
-        $weekly = max(1, min(WABE_Plan::weekly_posts_max(), intval($o['weekly_posts'] ?? 1)));
-        $schedules['wabe_schedule'] = ['interval' => intval((DAY_IN_SECONDS * 7) / $weekly), 'display' => __('WABE Auto Post', WABE_TEXTDOMAIN)];
+        add_filter('cron_schedules', [__CLASS__, 'add_schedules']);
+        add_action(self::HOOK, [__CLASS__, 'run']);
+        self::maybe_schedule();
+    }
+
+    public static function add_schedules($schedules)
+    {
+        if (!isset($schedules['wabe_hourly'])) {
+            $schedules['wabe_hourly'] = [
+                'interval' => HOUR_IN_SECONDS,
+                'display'  => __('Once Hourly (WABE)', WABE_TEXTDOMAIN),
+            ];
+        }
+
+        if (!isset($schedules['wabe_daily'])) {
+            $schedules['wabe_daily'] = [
+                'interval' => DAY_IN_SECONDS,
+                'display'  => __('Once Daily (WABE)', WABE_TEXTDOMAIN),
+            ];
+        }
+
         return $schedules;
     }
-    static function register()
+
+    public static function maybe_schedule()
     {
-        $o = get_option(WABE_OPTION, []);
-        if (empty($o['topics'])) return;
-        if (!wp_next_scheduled('wabe_generate_event')) wp_schedule_event(time(), 'wabe_schedule', 'wabe_generate_event');
-    }
-    static function reschedule()
-    {
-        wp_clear_scheduled_hook('wabe_generate_event');
-        self::register();
-    }
-    static function deactivate()
-    {
-        wp_clear_scheduled_hook('wabe_generate_event');
-    }
-    static function execute()
-    {
-        if (get_transient('wabe_cron_lock')) return;
-        set_transient('wabe_cron_lock', 1, 60);
-        try {
-            (new WABE_Generator())->run();
-            $o = get_option(WABE_OPTION, []);
-            if (empty($o['topics'])) self::deactivate();
-        } catch (Throwable $e) {
-            WABE_Logger::error('Cron error: ' . $e->getMessage());
+        if (!wp_next_scheduled(self::HOOK)) {
+            wp_schedule_event(time() + 300, 'wabe_daily', self::HOOK);
         }
-        delete_transient('wabe_cron_lock');
+    }
+
+    public static function clear()
+    {
+        $timestamp = wp_next_scheduled(self::HOOK);
+
+        while ($timestamp) {
+            wp_unschedule_event($timestamp, self::HOOK);
+            $timestamp = wp_next_scheduled(self::HOOK);
+        }
+    }
+
+    public static function reschedule()
+    {
+        self::clear();
+        self::maybe_schedule();
+    }
+
+    public static function run()
+    {
+        try {
+            $generator = new WABE_Generator();
+            $generator->run();
+            WABE_Logger::info('Cron: generation completed');
+        } catch (Throwable $e) {
+            WABE_Logger::error('Cron Error: ' . $e->getMessage());
+        }
     }
 }
