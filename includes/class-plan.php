@@ -1,115 +1,282 @@
 <?php
+
 if (!defined('ABSPATH')) exit;
 
 class WABE_Plan
 {
-	public static function get_license_data()
+	const PLAN_FREE     = 'free';
+	const PLAN_ADVANCED = 'advanced';
+	const PLAN_PRO      = 'pro';
+
+	/**
+	 * 全featureキーの初期定義
+	 *
+	 * ここを唯一の正として扱う
+	 */
+	public static function default_features()
 	{
-		$license = WABE_License::sync(false);
-
-		if (!is_array($license)) {
-			$license = WABE_License::get_default_payload();
-		}
-
-		if (empty($license['features']) || !is_array($license['features'])) {
-			$default = WABE_License::get_default_payload();
-			$license['features'] = $default['features'];
-		}
-
-		return $license;
+		return [
+			'weekly_posts_max'          => 1,
+			'title_count_max'           => 1,
+			'can_publish'               => false,
+			'can_use_seo'               => false,
+			'can_use_images'            => false,
+			'can_use_internal_links'    => false,
+			'can_use_external_links'    => false,
+			'can_use_topic_prediction'  => false,
+			'can_use_duplicate_check'   => false,
+			'can_use_outline_generator' => false,
+		];
 	}
 
-	public static function get_plan()
+	/**
+	 * プラン別機能定義
+	 */
+	public static function plan_matrix()
 	{
-		$license = self::get_license_data();
-		$plan = sanitize_key($license['plan'] ?? 'free');
+		$base = self::default_features();
 
-		if (!in_array($plan, ['free', 'advanced', 'pro'], true)) {
-			$plan = 'free';
+		return [
+			self::PLAN_FREE => array_merge($base, [
+				'weekly_posts_max'          => 1,
+				'title_count_max'           => 1,
+				'can_publish'               => false,
+				'can_use_seo'               => false,
+				'can_use_images'            => false,
+				'can_use_internal_links'    => false,
+				'can_use_external_links'    => false,
+				'can_use_topic_prediction'  => false,
+				'can_use_duplicate_check'   => false,
+				'can_use_outline_generator' => false,
+			]),
+
+			self::PLAN_ADVANCED => array_merge($base, [
+				'weekly_posts_max'          => 3,
+				'title_count_max'           => 3,
+				'can_publish'               => true,
+				'can_use_seo'               => true,
+				'can_use_images'            => true,
+				'can_use_internal_links'    => false,
+				'can_use_external_links'    => false,
+				'can_use_topic_prediction'  => false,
+				'can_use_duplicate_check'   => false,
+				'can_use_outline_generator' => false,
+			]),
+
+			self::PLAN_PRO => array_merge($base, [
+				'weekly_posts_max'          => 7,
+				'title_count_max'           => 6,
+				'can_publish'               => true,
+				'can_use_seo'               => true,
+				'can_use_images'            => true,
+				'can_use_internal_links'    => true,
+				'can_use_external_links'    => true,
+				'can_use_topic_prediction'  => true,
+				'can_use_duplicate_check'   => true,
+				'can_use_outline_generator' => true,
+			]),
+		];
+	}
+
+	/**
+	 * プラン名の正規化
+	 */
+	public static function normalize_plan($plan)
+	{
+		$plan = sanitize_key((string)$plan);
+
+		if (!in_array($plan, [self::PLAN_FREE, self::PLAN_ADVANCED, self::PLAN_PRO], true)) {
+			return self::PLAN_FREE;
 		}
 
 		return $plan;
 	}
 
-	public static function is_free()
+	/**
+	 * 現在プラン取得
+	 */
+	public static function get_plan()
 	{
-		return self::get_plan() === 'free';
-	}
-
-	public static function is_advanced()
-	{
-		return self::get_plan() === 'advanced';
-	}
-
-	public static function is_pro()
-	{
-		return self::get_plan() === 'pro';
-	}
-
-	public static function feature($key, $default = null)
-	{
-		$license  = self::get_license_data();
-		$features = $license['features'] ?? [];
-
-		if (array_key_exists($key, $features)) {
-			return $features[$key];
+		if (class_exists('WABE_License') && method_exists('WABE_License', 'get_cached_license_data')) {
+			$license = WABE_License::get_cached_license_data();
+			if (!empty($license)) {
+				return self::normalize_plan($license['plan'] ?? self::PLAN_FREE);
+			}
 		}
 
-		return $default;
+		if (class_exists('WABE_License') && method_exists('WABE_License', 'sync')) {
+			$license = WABE_License::sync(false);
+			return self::normalize_plan($license['plan'] ?? self::PLAN_FREE);
+		}
+
+		$o = get_option(WABE_OPTION, []);
+		return self::normalize_plan($o['plan'] ?? self::PLAN_FREE);
+	}
+
+	/**
+	 * 現在feature一式取得
+	 */
+	public static function get_features()
+	{
+		$plan = self::get_plan();
+		$matrix = self::plan_matrix();
+
+		$features = $matrix[$plan] ?? self::default_features();
+
+		if (class_exists('WABE_License') && method_exists('WABE_License', 'get_cached_license_data')) {
+			$license = WABE_License::get_cached_license_data();
+			if (!empty($license['features']) && is_array($license['features'])) {
+				$features = self::normalize_features($license['features'], $features);
+			}
+		}
+
+		return $features;
+	}
+
+	/**
+	 * 任意feature取得
+	 */
+	public static function get_feature($key, $default = null)
+	{
+		$features = self::get_features();
+
+		if (!array_key_exists($key, $features)) {
+			return $default;
+		}
+
+		return $features[$key];
+	}
+
+	/**
+	 * feature群の正規化
+	 */
+	public static function normalize_features($features, $fallback = null)
+	{
+		$base = is_array($fallback) ? $fallback : self::default_features();
+
+		if (!is_array($features)) {
+			return $base;
+		}
+
+		$normalized = $base;
+
+		foreach (self::default_features() as $key => $default) {
+			if (!array_key_exists($key, $features)) {
+				continue;
+			}
+
+			if (is_bool($default)) {
+				$normalized[$key] = self::to_bool($features[$key]);
+			} else {
+				$normalized[$key] = max(0, (int)$features[$key]);
+			}
+		}
+
+		return $normalized;
+	}
+
+	/**
+	 * 旧featureキーからの移行も吸収
+	 */
+	public static function normalize_legacy_features($features, $fallback = null)
+	{
+		$base = is_array($features) ? $features : [];
+
+		$map = [
+			'can_use_outline' => 'can_use_outline_generator',
+			'can_outline'     => 'can_use_outline_generator',
+			'can_use_image'   => 'can_use_images',
+			'can_use_internal' => 'can_use_internal_links',
+			'can_use_external' => 'can_use_external_links',
+			'can_use_prediction' => 'can_use_topic_prediction',
+			'can_duplicate_check' => 'can_use_duplicate_check',
+			'weekly_post_max' => 'weekly_posts_max',
+			'title_max'       => 'title_count_max',
+		];
+
+		foreach ($map as $old => $new) {
+			if (array_key_exists($old, $base) && !array_key_exists($new, $base)) {
+				$base[$new] = $base[$old];
+			}
+		}
+
+		return self::normalize_features($base, $fallback);
 	}
 
 	public static function weekly_posts_max()
 	{
-		return max(1, intval(self::feature('weekly_posts_max', 1)));
+		return max(1, (int)self::get_feature('weekly_posts_max', 1));
 	}
 
 	public static function title_count_max()
 	{
-		return max(1, intval(self::feature('title_count_max', 1)));
+		return max(1, (int)self::get_feature('title_count_max', 1));
 	}
 
 	public static function can_publish()
 	{
-		return !empty(self::feature('can_publish', false));
+		return (bool)self::get_feature('can_publish', false);
 	}
 
 	public static function can_use_seo()
 	{
-		return !empty(self::feature('can_use_seo', false));
+		return (bool)self::get_feature('can_use_seo', false);
 	}
 
 	public static function can_use_images()
 	{
-		return !empty(self::feature('can_use_images', false));
-	}
-
-	public static function can_use_topic_generator()
-	{
-		return !empty(self::feature('can_use_topic_generator', false));
+		return (bool)self::get_feature('can_use_images', false);
 	}
 
 	public static function can_use_internal_links()
 	{
-		return !empty(self::feature('can_use_internal_links', false));
-	}
-
-	public static function can_use_outline_generator()
-	{
-		return !empty(self::feature('can_use_outline_generator', false));
-	}
-
-	public static function can_use_topic_prediction()
-	{
-		return !empty(self::feature('can_use_topic_prediction', false));
-	}
-
-	public static function can_use_duplicate_check()
-	{
-		return !empty(self::feature('can_use_duplicate_check', false));
+		return (bool)self::get_feature('can_use_internal_links', false);
 	}
 
 	public static function can_use_external_links()
 	{
-		return !empty(self::feature('can_use_external_links', false));
+		return (bool)self::get_feature('can_use_external_links', false);
+	}
+
+	public static function can_use_topic_prediction()
+	{
+		return (bool)self::get_feature('can_use_topic_prediction', false);
+	}
+
+	public static function can_use_duplicate_check()
+	{
+		return (bool)self::get_feature('can_use_duplicate_check', false);
+	}
+
+	public static function can_use_outline_generator()
+	{
+		return (bool)self::get_feature('can_use_outline_generator', false);
+	}
+
+	public static function get_plan_label($plan = '')
+	{
+		$plan = $plan !== '' ? self::normalize_plan($plan) : self::get_plan();
+
+		$labels = [
+			self::PLAN_FREE     => 'Free',
+			self::PLAN_ADVANCED => 'Advanced',
+			self::PLAN_PRO      => 'Pro',
+		];
+
+		return $labels[$plan] ?? 'Free';
+	}
+
+	private static function to_bool($value)
+	{
+		if (is_bool($value)) {
+			return $value;
+		}
+
+		if (is_numeric($value)) {
+			return ((int)$value) === 1;
+		}
+
+		$value = strtolower(trim((string)$value));
+		return in_array($value, ['1', 'true', 'yes', 'on', 'enabled', 'active'], true);
 	}
 }
