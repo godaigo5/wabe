@@ -24,4 +24,51 @@ return [
         'allowed_plans'        => ['free', 'advanced', 'pro'],
         'domain_limit_default' => 1,
     ],
+
+    'stripe' => [
+        'secret_key'     => getenv('WABEP_STRIPE_SECRET_KEY') ?: '',
+        'webhook_secret' => getenv('WABEP_STRIPE_WEBHOOK_SECRET') ?: '',
+        'currency'       => 'usd',
+
+        /*
+         | 価格設計（USD）
+         |
+         | Advanced:
+         |   Monthly  = $12
+         |   Yearly   = $79
+         |   Lifetime = $199
+         |
+         | Pro:
+         |   Monthly  = $24
+         |   Yearly   = $159
+         |   Lifetime = $399
+         */
+        'prices' => [
+            'price_1TClRwQOghVIYdnPrzvrJ8Aa' => [
+                'plan'    => 'advanced',
+                'billing' => 'monthly',
+            ],
+            'price_1TClRJQOghVIYdnP5RxwLydi' => [
+                'plan'    => 'advanced',
+                'billing' => 'yearly',
+            ],
+            'price_1TClekQOghVIYdnPCCQU3PKq' => [
+                'plan'    => 'advanced',
+                'billing' => 'lifetime',
+            ],
+
+            'price_1TClSrQOghVIYdnPUInUClyt' => [
+                'plan'    => 'pro',
+                'billing' => 'monthly',
+            ],
+            'price_1TClSOQOghVIYdnPbiJssYuG' => [
+                'plan'    => 'pro',
+                'billing' => 'yearly',
+            ],
+            'price_1TCleAQOghVIYdnPAuPU26lp' => [
+                'plan'    => 'pro',
+                'billing' => 'lifetime',
+            ],
+        ],
+    ],
 ];

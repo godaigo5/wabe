@@ -46,20 +46,45 @@ class LicenseService
             ]);
         }
 
-        if (($license['status'] ?? '') !== 'active') {
+        $status = (string)($license['status'] ?? 'inactive');
+        $expiresAt = !empty($license['expires_at']) ? (string)$license['expires_at'] : null;
+
+        if ($status === 'inactive') {
             return $this->signed([
                 'ok'    => false,
                 'valid' => false,
-                'error' => 'License is not active',
+                'error' => 'License is inactive',
             ]);
         }
 
-        if (!empty($license['expires_at']) && strtotime((string)$license['expires_at']) < time()) {
-            return $this->signed([
-                'ok'    => false,
-                'valid' => false,
-                'error' => 'License expired',
-            ]);
+        if ($status === 'canceled') {
+            if ($this->isExpired($expiresAt)) {
+                $this->markLicenseInactive((int)$license['id']);
+
+                return $this->signed([
+                    'ok'    => false,
+                    'valid' => false,
+                    'error' => 'License expired after cancellation',
+                ]);
+            }
+        } else {
+            if ($status !== 'active') {
+                return $this->signed([
+                    'ok'    => false,
+                    'valid' => false,
+                    'error' => 'License is not active',
+                ]);
+            }
+
+            if ($this->isExpired($expiresAt)) {
+                $this->markLicenseInactive((int)$license['id']);
+
+                return $this->signed([
+                    'ok'    => false,
+                    'valid' => false,
+                    'error' => 'License expired',
+                ]);
+            }
         }
 
         if (!$this->isDomainAllowed((int)$license['id'], $domain)) {
@@ -78,8 +103,8 @@ class LicenseService
             $domain,
             $plugin,
             (string)$license['plan'],
-            (string)$license['status'],
-            !empty($license['expires_at']) ? (string)$license['expires_at'] : null,
+            $status,
+            $expiresAt,
             false,
             $license
         );
@@ -115,7 +140,10 @@ class LicenseService
             ]);
         }
 
-        if (($license['status'] ?? '') !== 'active') {
+        $status = (string)($license['status'] ?? 'inactive');
+        $expiresAt = !empty($license['expires_at']) ? (string)$license['expires_at'] : null;
+
+        if (!in_array($status, ['active', 'canceled'], true)) {
             return $this->signed([
                 'ok'    => false,
                 'valid' => false,
@@ -123,7 +151,9 @@ class LicenseService
             ]);
         }
 
-        if (!empty($license['expires_at']) && strtotime((string)$license['expires_at']) < time()) {
+        if ($this->isExpired($expiresAt)) {
+            $this->markLicenseInactive((int)$license['id']);
+
             return $this->signed([
                 'ok'    => false,
                 'valid' => false,
@@ -162,8 +192,8 @@ class LicenseService
             $domain,
             $plugin,
             (string)$license['plan'],
-            (string)$license['status'],
-            !empty($license['expires_at']) ? (string)$license['expires_at'] : null,
+            $status,
+            $expiresAt,
             false,
             $license
         );
@@ -355,6 +385,33 @@ class LicenseService
             ':license_id' => $licenseId,
             ':domain'     => $domain,
         ]);
+    }
+
+    private function markLicenseInactive(int $licenseId): void
+    {
+        $stmt = $this->pdo->prepare(
+            'UPDATE licenses
+             SET status = :status, updated_at = NOW()
+             WHERE id = :id'
+        );
+        $stmt->execute([
+            ':status' => 'inactive',
+            ':id'     => $licenseId,
+        ]);
+    }
+
+    private function isExpired(?string $expiresAt): bool
+    {
+        if ($expiresAt === null || $expiresAt === '') {
+            return false;
+        }
+
+        $timestamp = strtotime($expiresAt);
+        if ($timestamp === false) {
+            return false;
+        }
+
+        return $timestamp < time();
     }
 
     private function isTestKey(string $licenseKey): bool

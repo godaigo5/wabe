@@ -1,0 +1,30 @@
+CREATE TABLE IF NOT EXISTS stripe_orders (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  stripe_event_id VARCHAR(191) NOT NULL,
+  stripe_checkout_session_id VARCHAR(191) DEFAULT NULL,
+  stripe_payment_intent_id VARCHAR(191) DEFAULT NULL,
+  stripe_subscription_id VARCHAR(191) DEFAULT NULL,
+  stripe_customer_id VARCHAR(191) DEFAULT NULL,
+  customer_email VARCHAR(191) DEFAULT NULL,
+  plan ENUM('free','advanced','pro') NOT NULL DEFAULT 'free',
+  billing_cycle VARCHAR(50) DEFAULT NULL,
+  price_id VARCHAR(191) DEFAULT NULL,
+  amount_total BIGINT NOT NULL DEFAULT 0,
+  currency VARCHAR(20) DEFAULT NULL,
+  payment_status VARCHAR(50) DEFAULT NULL,
+  license_id BIGINT UNSIGNED DEFAULT NULL,
+  license_key VARCHAR(191) DEFAULT NULL,
+  status VARCHAR(50) DEFAULT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uniq_stripe_event_id (stripe_event_id),
+  KEY idx_checkout_session (stripe_checkout_session_id),
+  KEY idx_payment_intent (stripe_payment_intent_id),
+  KEY idx_subscription (stripe_subscription_id),
+  KEY idx_customer_email (customer_email),
+  KEY idx_license_id (license_id),
+  CONSTRAINT fk_stripe_orders_license
+    FOREIGN KEY (license_id) REFERENCES licenses(id)
+    ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
