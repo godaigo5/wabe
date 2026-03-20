@@ -24,8 +24,8 @@ define('WABE_OPTION', 'wabe_options');
  * ライセンスAPIのURLを使う場合はここを本番URLに変更
  * 未設定でもFreeとして動作します
  */
-if (!defined('https://wabep-api.d-create.online/')) {
-    define('https://wabep-api.d-create.online/', '');
+if (!defined('WABE_LICENSE_API_URL')) {
+    define('WABE_LICENSE_API_URL', '');
 }
 
 require_once WABE_PATH . 'includes/class-plugin.php';
@@ -51,7 +51,7 @@ function wabe_activate()
     }
 
     $plugin = new WABE_Plugin();
-    $plugin->activate();
+    $plugin->maybe_create_default_options();
 
     if (class_exists('WABE_Cron')) {
         WABE_Cron::reschedule();
