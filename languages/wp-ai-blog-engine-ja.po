@@ -1,0 +1,685 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: WP AI Blog Engine 1.0.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-03-18 00:00+0000\n"
+"PO-Revision-Date: 2026-03-19 17:22+0000\n"
+"Last-Translator: \n"
+"Language-Team: 日本語\n"
+"Language: ja\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Loco https://localise.biz/\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"X-Loco-Version: 2.8.3; wp-6.9.4; php-8.3.30"
+
+#: generated
+msgid "Activate"
+msgstr "有効化"
+
+#: generated
+msgid "Activate License"
+msgstr "ライセンスを有効化"
+
+#: generated
+msgid "Active"
+msgstr "有効"
+
+#: generated
+msgid "Advanced"
+msgstr "Advanced"
+
+#: generated
+msgid "Advanced features available in Pro."
+msgstr "Proで高度な機能が利用できます。"
+
+#: generated
+msgid "After purchase, paste your license key here and save."
+msgstr "購入後、ここにライセンスキーを貼り付けて保存してください。"
+
+#: generated
+msgid "AI Topic Generator"
+msgstr "AI題材生成"
+
+#: generated
+msgid ""
+"AI-powered blog automation for WordPress with licensing, SEO, images, and "
+"Pro automation features."
+msgstr "SEO対策、画像編集、プロ向け自動化機能を備えた、AI搭載のWordPressブログ自動化ツール。"
+
+#: generated
+msgid "Allowed Sites"
+msgstr "許可サイト数"
+
+#: generated
+msgid "API Connection Test"
+msgstr "API接続テスト"
+
+#: generated
+msgid "API Key"
+msgstr "APIキー"
+
+#: generated
+msgid "Article"
+msgstr "記事"
+
+#: generated
+msgid "Article generated successfully."
+msgstr "記事を生成しました。"
+
+#: generated
+msgid "Article Outline Generator"
+msgstr "記事構成生成"
+
+#: generated
+msgid "Auto Publish"
+msgstr "記事自動公開"
+
+#: generated
+msgid "Best for testing the plugin."
+msgstr "プラグインのテストに最適です。"
+
+#: generated
+msgid "blocked"
+msgstr "停止"
+
+#: generated
+msgid "Buy Advanced"
+msgstr "Advancedを購入"
+
+#: generated
+msgid "Buy Pro"
+msgstr "Proを購入"
+
+#: generated
+msgid "Casual"
+msgstr "カジュアル"
+
+#: generated
+msgid "Check"
+msgstr "確認"
+
+#: generated
+msgid "Check License"
+msgstr "ライセンスを確認"
+
+#: generated
+msgid "Chinese"
+msgstr "中国語"
+
+#: generated
+msgid "Clear Logs"
+msgstr "ログを全削除"
+
+#: generated
+msgid "Connection failed."
+msgstr "接続に失敗しました。"
+
+#: generated
+msgid "Connection successful."
+msgstr "接続に成功しました。"
+
+#: generated
+msgid "Content generation failed."
+msgstr "本文生成に失敗しました。"
+
+#: generated
+msgid "Cron deactivated."
+msgstr "Cronを停止しました。"
+
+#: generated
+msgid "Cron registered."
+msgstr "Cronを登録しました。"
+
+#: generated
+msgid "Cron rescheduled."
+msgstr "Cronを再登録しました。"
+
+#: generated
+msgid "Current Features"
+msgstr "現在利用可能な機能"
+
+#: generated
+msgid "Current License Data"
+msgstr "現在のライセンス情報"
+
+#: generated
+msgid "Current Plan:"
+msgstr "現在のプラン:"
+
+#: generated
+msgid "Dashboard"
+msgstr "ダッシュボード"
+
+#: generated
+msgid "Date"
+msgstr "日時"
+
+#: generated
+msgid "Deactivate"
+msgstr "無効化"
+
+#: generated
+msgid "Deactivate License"
+msgstr "ライセンスを無効化"
+
+#: generated
+msgid "Description Style"
+msgstr "説明スタイル"
+
+#: generated
+msgid "Disabled"
+msgstr "使用不可"
+
+#: generated
+msgid "Documentation"
+msgstr "ドキュメント"
+
+#: generated
+msgid "Domain"
+msgstr "ドメイン"
+
+#: generated
+msgid "Draft"
+msgstr "下書き"
+
+#: generated
+msgid "Edit"
+msgstr "編集"
+
+#: generated
+msgid "Enabled"
+msgstr "有効"
+
+#: generated
+msgid "English"
+msgstr "英語"
+
+#: generated
+msgid "Enter your API key"
+msgstr "APIキーを入力してください"
+
+#: generated
+msgid "Enter your license key"
+msgstr "ライセンスキーを入力してください"
+
+#: generated
+msgid "Error"
+msgstr "エラー"
+
+#: generated
+msgid "Expired"
+msgstr "期限切れ"
+
+#: generated
+msgid "Expires At"
+msgstr "有効期限"
+
+#: generated
+msgid "Feature"
+msgstr "機能"
+
+#: generated
+msgid "Featured Image Generation"
+msgstr "アイキャッチ画像生成"
+
+#: generated
+msgid "Featured image set."
+msgstr "アイキャッチ画像を設定しました。"
+
+#: generated
+msgid "For bloggers who want automation, SEO, and images."
+msgstr "ブロガー向け。自動化、SEO、画像を利用したい方用。"
+
+#: generated
+msgid ""
+"For full AI automation with topic generation, internal links, and outlines."
+msgstr "トピック生成、内部リンク、アウトライン作成など、AIによる完全な自動化を実現します。"
+
+#: generated
+msgid "Free"
+msgstr "無料版"
+
+#: generated
+msgid "Free plan in use"
+msgstr "-"
+
+#: generated
+msgid "French"
+msgstr "フランス語"
+
+#: generated
+msgid "Generate AI Topics"
+msgstr "AIで題材生成"
+
+#: generated
+msgid "Generate Now"
+msgstr "今すぐ生成"
+
+#: generated
+msgid "Generate Topics"
+msgstr "題材を生成"
+
+#: generated
+msgid "Generate with Current Topic"
+msgstr "この題材で今すぐ生成"
+
+#: generated
+msgid "Generated Titles"
+msgstr "生成タイトル一覧"
+
+#: generated
+msgid "Generation Count"
+msgstr "生成数"
+
+#: generated
+msgid "Generation History"
+msgstr "生成履歴"
+
+#: generated
+msgid "German"
+msgstr "ドイツ語"
+
+#: generated
+msgid "Health Check"
+msgstr "ヘルスチェック"
+
+#: generated
+msgid "Help"
+msgstr "ヘルプ"
+
+#: generated
+msgid "History"
+msgstr "履歴"
+
+#: generated
+msgid "Image"
+msgstr "画像"
+
+#: generated
+msgid "Inactive"
+msgstr "未アクティベート"
+
+#: generated
+msgid "Info"
+msgstr "情報"
+
+#: generated
+msgid "Insufficient setup. Please add topic and style."
+msgstr "設定が不足しています。題材とスタイルを入力してください。"
+
+#: generated
+msgid "Internal Link Generator"
+msgstr "内部リンク生成"
+
+#: generated
+msgid "Invalid"
+msgstr "無効"
+
+#: generated
+msgid "Invalid License"
+msgstr "無効なライセンス"
+
+#: generated
+msgid "Japanese"
+msgstr "日本語"
+
+#: generated
+msgid "Korean"
+msgstr "韓国語"
+
+#: generated
+msgid "Language"
+msgstr "言語"
+
+#: generated
+msgid "License"
+msgstr "ライセンス"
+
+#: generated
+msgid "License activated."
+msgstr "ライセンスを有効化しました。"
+
+#: generated
+msgid "License active"
+msgstr "ライセンス認証済み"
+
+#: generated
+msgid "License blocked"
+msgstr "ライセンス停止"
+
+#: generated
+msgid "License check failed."
+msgstr "ライセンス確認に失敗しました。"
+
+#: generated
+msgid "License deactivated."
+msgstr "ライセンスを無効化しました。"
+
+#: generated
+msgid "License expired"
+msgstr "ライセンスの有効期限切れ"
+
+#: generated
+msgid "License Features"
+msgstr "ライセンス機能"
+
+#: generated
+msgid "License inactive"
+msgstr "ライセンスが無効"
+
+#: generated
+msgid "License Key"
+msgstr "ライセンスキー"
+
+#: generated
+msgid "License saved and synchronized."
+msgstr "ライセンスが保存され、同期されました。"
+
+#: generated
+msgid "License Status"
+msgstr "ライセンス状態"
+
+#: generated
+msgid "Log"
+msgstr "ログ"
+
+#: generated
+msgid "Log Level"
+msgstr "ログレベル"
+
+#: generated
+msgid "Logs"
+msgstr "ログ"
+
+#: generated
+msgid "Logs cleared."
+msgstr "ログを削除しました。"
+
+#: generated
+msgid "Manual Generate"
+msgstr "手動生成"
+
+#: generated
+msgid "Manual generation executed."
+msgstr "手動生成を実行しました。"
+
+#: generated
+msgid "Message"
+msgstr "メッセージ"
+
+#: generated
+msgid "month"
+msgstr "月"
+
+#: generated
+msgid "Never"
+msgstr "なし"
+
+#: generated
+msgid "Next Scheduled Run"
+msgstr "次回投稿予定"
+
+#: generated
+msgid "No history yet."
+msgstr "履歴はまだありません。"
+
+#: generated
+msgid "No logs found."
+msgstr "ログはありません。"
+
+#: generated
+msgid "No."
+msgstr "No"
+
+#: generated
+msgid "Not Ready"
+msgstr "未準備"
+
+#: generated
+msgid "Not Scheduled"
+msgstr "未設定"
+
+#: generated
+msgid "OpenAI API Key"
+msgstr "OpenAI APIキー"
+
+#: generated
+msgid "or"
+msgstr "または"
+
+#: generated
+msgid "Outline"
+msgstr "構成"
+
+#: generated
+msgid "Permission denied."
+msgstr "権限がありません。"
+
+#: generated
+msgid "Plan"
+msgstr "プラン"
+
+#: generated
+msgid "Plan Comparison"
+msgstr "プラン比較"
+
+#: generated
+msgid "Plugin Version"
+msgstr "プラグインバージョン"
+
+#: generated
+msgid "Polite"
+msgstr "丁寧"
+
+#: generated
+msgid "Post Link"
+msgstr "投稿リンク"
+
+#: generated
+msgid "Post Status"
+msgstr "投稿ステータス"
+
+#: generated
+msgid "Post Title"
+msgstr "投稿タイトル"
+
+#: generated
+msgid "Posts"
+msgstr "投稿"
+
+#: generated
+msgid "Pro"
+msgstr "Pro"
+
+#: generated
+msgid "Publish"
+msgstr "公開"
+
+#: generated
+msgid "Ready"
+msgstr "準備完了"
+
+#: generated
+msgid "Ready to Post"
+msgstr "投稿準備状態"
+
+#: generated
+msgid "Related Articles"
+msgstr "関連記事"
+
+#: generated
+msgid "Save"
+msgstr "保存"
+
+#: generated
+msgid "Save License"
+msgstr "ライセンスを保存"
+
+#: generated
+msgid "Save Settings"
+msgstr "設定を保存"
+
+#: generated
+msgid "Saved."
+msgstr "保存しました。"
+
+#: generated
+msgid "Schedule"
+msgstr "スケジュール"
+
+#: generated
+msgid "Security check failed."
+msgstr "セキュリティチェックに失敗しました。"
+
+#: generated
+msgid "Select plan"
+msgstr "プランを選択"
+
+#: generated
+msgid "SEO"
+msgstr "SEO"
+
+#: generated
+msgid "SEO Optimization"
+msgstr "SEO最適化"
+
+#: generated
+msgid "Settings"
+msgstr "設定"
+
+#: generated
+msgid "Settings saved."
+msgstr "設定を保存しました。"
+
+#: generated
+msgid "Site"
+msgstr "サイト"
+
+#: generated
+msgid "Spanish"
+msgstr "スペイン語"
+
+#: generated
+msgid "Standard"
+msgstr "標準"
+
+#: generated
+msgid "Status"
+msgstr "状態"
+
+#: generated
+msgid "Style"
+msgstr "スタイル"
+
+#: generated
+msgid "Support"
+msgstr "サポート"
+
+#: generated
+msgid "System Status"
+msgstr "システムステータス"
+
+#: generated
+msgid "Title Generation Count"
+msgstr "タイトル生成数"
+
+#: generated
+msgid "Title generation failed."
+msgstr "タイトル生成に失敗しました。"
+
+#: generated
+msgid "Tone"
+msgstr "トーン"
+
+#: generated
+msgid "Tools"
+msgstr "ツール"
+
+#: generated
+msgid "Topic"
+msgstr "題材"
+
+#: generated
+msgid "Topic List"
+msgstr "題材一覧"
+
+#: generated
+msgid "Topic Management"
+msgstr "題材管理"
+
+#: generated
+msgid "Topic saved."
+msgstr "題材を保存しました。"
+
+#: generated
+msgid "Topics"
+msgstr "題材管理"
+
+#: generated
+msgid "Unavailable Features"
+msgstr "利用できない機能"
+
+#: generated
+msgid "Unknown"
+msgstr "不明"
+
+#: generated
+msgid "Upgrade Plan"
+msgstr "プランをアップグレード"
+
+#: generated
+msgid "Upgrade to unlock this feature."
+msgstr "この機能を使うにはアップグレードしてください。"
+
+#: generated
+msgid "Valid"
+msgstr "有効"
+
+#: generated
+msgid "Valid License"
+msgstr "有効なライセンス"
+
+#: generated
+msgid "View"
+msgstr "閲覧"
+
+#: generated
+msgid "Warning"
+msgstr "警告"
+
+#: generated
+msgid "Weekly"
+msgstr "週間"
+
+#: generated
+msgid "Weekly Post Limit"
+msgstr "週間投稿上限"
+
+#: generated
+msgid "Weekly Posts"
+msgstr "週の投稿数"
+
+#: generated
+msgid "year"
+msgstr "年"
+
+#: generated
+msgid ""
+"You are currently using the Free plan. Upgrade to unlock more automation "
+"features."
+msgstr "現在、無料プランをご利用中です。アップグレードすると、より多くの自動化機能が利用可能になります。"
+
+#: generated
+msgid ""
+"You are using the Advanced plan. Upgrade to Pro for full automation features."
+msgstr "現在、アドバンスプランをご利用中です。完全な自動化機能をご利用いただくには、プロプランにアップグレードしてください。"
+
+#: generated
+msgid "You are using the Pro plan with all core automation features enabled."
+msgstr "すべての主要な自動化機能が有効になっているProプランをご利用中です。"
+
+#: generated
+msgid "You do not have permission."
+msgstr "権限がありません。"

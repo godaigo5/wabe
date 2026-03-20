@@ -1,0 +1,684 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: WP AI Blog Engine 1.0.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-03-18 00:00+0000\n"
+"PO-Revision-Date: 2026-03-18 00:00+0000\n"
+"Last-Translator: D-CREATE\n"
+"Language-Team: Japanese\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: OpenAI\n"
+
+#: generated
+msgid "Settings"
+msgstr ""
+
+#: generated
+msgid "Topics"
+msgstr ""
+
+#: generated
+msgid "Logs"
+msgstr ""
+
+#: generated
+msgid "License"
+msgstr ""
+
+#: generated
+msgid "Tools"
+msgstr ""
+
+#: generated
+msgid "Dashboard"
+msgstr ""
+
+#: generated
+msgid "Save Settings"
+msgstr ""
+
+#: generated
+msgid "Save"
+msgstr ""
+
+#: generated
+msgid "Saved."
+msgstr ""
+
+#: generated
+msgid "OpenAI API Key"
+msgstr ""
+
+#: generated
+msgid "API Key"
+msgstr ""
+
+#: generated
+msgid "Enter your API key"
+msgstr ""
+
+#: generatedmsgid "API key updated."
+msgstr ""
+
+#: generated
+msgid "Generation Count"
+msgstr ""
+
+#: generated
+msgid "Title Generation Count"
+msgstr ""
+
+#: generated
+msgid "Weekly Post Limit"
+msgstr ""
+
+#: generated
+msgid "Weekly Posts"
+msgstr ""
+
+#: generated
+msgid "Post Status"
+msgstr ""
+
+#: generated
+msgid "Draft"
+msgstr ""
+
+#: generated
+msgid "Publish"
+msgstr ""
+
+#: generated
+msgid "Tone"
+msgstr ""
+
+#: generated
+msgid "Standard"
+msgstr ""
+
+#: generated
+msgid "Polite"
+msgstr ""
+
+#: generated
+msgid "Casual"
+msgstr ""
+
+#: generated
+msgid "Language"
+msgstr ""
+
+#: generated
+msgid "Japanese"
+msgstr ""
+
+#: generated
+msgid "English"
+msgstr ""
+
+#: generated
+msgid "Chinese"
+msgstr ""
+
+#: generated
+msgid "Korean"
+msgstr ""
+
+#: generated
+msgid "French"
+msgstr ""
+
+#: generated
+msgid "German"
+msgstr ""
+
+#: generated
+msgid "Spanish"
+msgstr ""
+
+#: generated
+msgid "Current Plan:"
+msgstr ""
+
+#: generated
+msgid "Free"
+msgstr ""
+
+#: generated
+msgid "Advanced"
+msgstr ""
+
+#: generated
+msgid "Pro"
+msgstr ""
+
+#: generated
+msgid "License Key"
+msgstr ""
+
+#: generated
+msgid "Enter your license key"
+msgstr ""
+
+#: generated
+msgid "Activate License"
+msgstr ""
+
+#: generated
+msgid "Deactivate License"
+msgstr ""
+
+#: generated
+msgid "Check License"
+msgstr ""
+
+#: generated
+msgid "License Status"
+msgstr ""
+
+#: generated
+msgid "Active"
+msgstr ""
+
+#: generated
+msgid "Inactive"
+msgstr ""
+
+#: generated
+msgid "Expired"
+msgstr ""
+
+#: generated
+msgid "License activated."
+msgstr ""
+
+#: generated
+msgid "License deactivated."
+msgstr ""
+
+#: generated
+msgid "License check failed."
+msgstr ""
+
+#: generated
+msgid "Upgrade Plan"
+msgstr ""
+
+#: generated
+msgid "License Features"
+msgstr ""
+
+#: generated
+msgid "Feature"
+msgstr ""
+
+#: generated
+msgid "Status"
+msgstr ""
+
+#: generated
+msgid "Enabled"
+msgstr ""
+
+#: generated
+msgid "Disabled"
+msgstr ""
+
+#: generated
+msgid "Auto Publish"
+msgstr ""
+
+#: generated
+msgid "SEO Optimization"
+msgstr ""
+
+#: generated
+msgid "Featured Image Generation"
+msgstr ""
+
+#: generated
+msgid "AI Topic Generator"
+msgstr ""
+
+#: generated
+msgid "Internal Link Generator"
+msgstr ""
+
+#: generated
+msgid "Article Outline Generator"
+msgstr ""
+
+#: generated
+msgid "Topic"
+msgstr ""
+
+#: generated
+msgid "Topic Management"
+msgstr ""
+
+#: generated
+msgid "Topic List"
+msgstr ""
+
+#: generated
+msgid "Topic saved."
+msgstr ""
+
+#: generated
+msgid "Generate Topics"
+msgstr ""
+
+#: generated
+msgid "Generate AI Topics"
+msgstr ""
+
+#: generated
+msgid "Description Style"
+msgstr ""
+
+#: generated
+msgid "Style"
+msgstr ""
+
+#: generated
+msgid "No."
+msgstr ""
+
+#: generated
+msgid "Manual Generate"
+msgstr ""
+
+#: generated
+msgid "Generate Now"
+msgstr ""
+
+#: generated
+msgid "Generate with Current Topic"
+msgstr ""
+
+#: generated
+msgid "Generation History"
+msgstr ""
+
+#: generated
+msgid "History"
+msgstr ""
+
+#: generated
+msgid "Date"
+msgstr ""
+
+#: generated
+msgid "Post Title"
+msgstr ""
+
+#: generated
+msgid "Post Link"
+msgstr ""
+
+#: generated
+msgid "Edit"
+msgstr ""
+
+#: generated
+msgid "View"
+msgstr ""
+
+#: generated
+msgid "Generated Titles"
+msgstr ""
+
+#: generated
+msgid "No history yet."
+msgstr ""
+
+#: generated
+msgid "No logs found."
+msgstr ""
+
+#: generated
+msgid "Log"
+msgstr ""
+
+#: generated
+msgid "Log Level"
+msgstr ""
+
+#: generated
+msgid "Message"
+msgstr ""
+
+#: generated
+msgid "Clear Logs"
+msgstr ""
+
+#: generated
+msgid "Logs cleared."
+msgstr ""
+
+#: generated
+msgid "Info"
+msgstr ""
+
+#: generated
+msgid "Warning"
+msgstr ""
+
+#: generated
+msgid "Error"
+msgstr ""
+
+#: generated
+msgid "System Status"
+msgstr ""
+
+#: generated
+msgid "Next Scheduled Run"
+msgstr ""
+
+#: generated
+msgid "Not Scheduled"
+msgstr ""
+
+#: generated
+msgid "Ready to Post"
+msgstr ""
+
+#: generated
+msgid "Ready"
+msgstr ""
+
+#: generated
+msgid "Not Ready"
+msgstr ""
+
+#: generated
+msgid "Insufficient setup. Please add topic and style."
+msgstr ""
+
+#: generated
+msgid "API Connection Test"
+msgstr ""
+
+#: generated
+msgid "Connection successful."
+msgstr ""
+
+#: generated
+msgid "Connection failed."
+msgstr ""
+
+#: generated
+msgid "Permission denied."
+msgstr ""
+
+#: generated
+msgid "Security check failed."
+msgstr ""
+
+#: generated
+msgid "You do not have permission."
+msgstr ""
+
+#: generated
+msgid "Settings saved."
+msgstr ""
+
+#: generated
+msgid "Manual generation executed."
+msgstr ""
+
+#: generated
+msgid "Cron registered."
+msgstr ""
+
+#: generated
+msgid "Cron rescheduled."
+msgstr ""
+
+#: generated
+msgid "Cron deactivated."
+msgstr ""
+
+#: generated
+msgid "Health Check"
+msgstr ""
+
+#: generated
+msgid "Plan"
+msgstr ""
+
+#: generated
+msgid "Valid"
+msgstr ""
+
+#: generated
+msgid "Invalid"
+msgstr ""
+
+#: generated
+msgid "Expires At"
+msgstr ""
+
+#: generated
+msgid "Never"
+msgstr ""
+
+#: generated
+msgid "Site"
+msgstr ""
+
+#: generated
+msgid "Domain"
+msgstr ""
+
+#: generated
+msgid "Plugin Version"
+msgstr ""
+
+#: generated
+msgid "Allowed Sites"
+msgstr ""
+
+#: generated
+msgid "Image"
+msgstr ""
+
+#: generated
+msgid "SEO"
+msgstr ""
+
+#: generated
+msgid "Outline"
+msgstr ""
+
+#: generated
+msgid "Related Articles"
+msgstr ""
+
+#: generated
+msgid "Current Features"
+msgstr ""
+
+#: generated
+msgid "Unavailable Features"
+msgstr ""
+
+#: generated
+msgid "Article generated successfully."
+msgstr ""
+
+#: generated
+msgid "Title generation failed."
+msgstr ""
+
+#: generated
+msgid "Content generation failed."
+msgstr ""
+
+#: generated
+msgid "Featured image set."
+msgstr ""
+
+#: generated
+msgid "Schedule"
+msgstr ""
+
+#: generated
+msgid "Weekly"
+msgstr ""
+
+#: generated
+msgid "Article"
+msgstr ""
+
+#: generated
+msgid "Posts"
+msgstr ""
+
+#: generated
+msgid "Select plan"
+msgstr ""
+
+#: generated
+msgid "Activate"
+msgstr ""
+
+#: generated
+msgid "Deactivate"
+msgstr ""
+
+#: generated
+msgid "Check"
+msgstr ""
+
+#: generated
+msgid "Help"
+msgstr ""
+
+#: generated
+msgid "Documentation"
+msgstr ""
+
+#: generated
+msgid "Support"
+msgstr ""
+
+#: generated
+msgid "Advanced features available in Pro."
+msgstr ""
+
+#: generated
+msgid "Upgrade to unlock this feature."
+msgstr ""
+
+#: generated
+msgid "You are using the Pro plan with all core automation features enabled."
+msgstr ""
+
+#: generated
+msgid "Best for testing the plugin."
+msgstr ""
+
+#: generated
+msgid "For bloggers who want automation, SEO, and images."
+msgstr ""
+
+#: generated
+msgid "For full AI automation with topic generation, internal links, and outlines."
+msgstr ""
+
+#: generated
+msgid "year"
+msgstr ""
+
+#: generated
+msgid "or"
+msgstr ""
+
+#: generated
+msgid "month"
+msgstr ""
+
+#: generated
+msgid "After purchase, paste your license key here and save."
+msgstr ""
+
+#: generated
+msgid "Current License Data"
+msgstr ""
+
+#: generated
+msgid "AI-powered blog automation for WordPress with licensing, SEO, images, and Pro automation features."
+msgstr ""
+
+#: generated
+msgid "Buy Advanced"
+msgstr ""
+
+#: generated
+msgid "Buy Pro"
+msgstr ""
+
+#: generated
+msgid "Save License"
+msgstr ""
+
+#: generated
+msgid "Plan Comparison"
+msgstr ""
+
+#: generated
+msgid "You are using the Advanced plan. Upgrade to Pro for full automation features."
+msgstr ""
+
+#: generated
+msgid "You are currently using the Free plan. Upgrade to unlock more automation features."
+msgstr ""
+
+#: generated
+msgid "blocked"
+msgstr ""
+
+#: generated
+msgid "Valid License"
+msgstr ""
+
+#: generated
+msgid "Invalid License"
+msgstr ""
+
+#: generated
+msgid "Free plan in use"
+msgstr ""
+
+#: generated
+msgid "Free plan in use"
+msgstr ""
+
+#: generated
+msgid "License active"
+msgstr ""
+
+#: generated
+msgid "License expired"
+msgstr ""
+
+#: generated
+msgid "License inactive"
+msgstr ""
+
+#: generated
+msgid "License blocked"
+msgstr ""
+
+#: generated
+msgid "Unknown"
+msgstr ""
+
+#: generated
+msgid "License saved and synchronized."
+msgstr ""
