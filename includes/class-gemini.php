@@ -48,7 +48,7 @@ class WABE_Gemini
         ];
 
         $response = wp_remote_post($url, [
-            'timeout' => 60,
+            'timeout' => 90,
             'headers' => [
                 'Content-Type'   => 'application/json',
                 'x-goog-api-key' => $this->key,
@@ -96,27 +96,29 @@ class WABE_Gemini
 
     private function extract_text_from_response($body)
     {
-        if (empty($body['candidates']) || !is_array($body['candidates'])) {
-            return '';
-        }
+        if (!empty($body['candidates']) && is_array($body['candidates'])) {
+            foreach ($body['candidates'] as $candidate) {
+                if (empty($candidate['content']['parts']) || !is_array($candidate['content']['parts'])) {
+                    continue;
+                }
 
-        foreach ($body['candidates'] as $candidate) {
-            if (empty($candidate['content']['parts']) || !is_array($candidate['content']['parts'])) {
-                continue;
-            }
+                $texts = [];
 
-            $texts = [];
+                foreach ($candidate['content']['parts'] as $part) {
+                    if (isset($part['text']) && is_string($part['text'])) {
+                        $texts[] = $part['text'];
+                    }
+                }
 
-            foreach ($candidate['content']['parts'] as $part) {
-                if (isset($part['text']) && is_string($part['text'])) {
-                    $texts[] = $part['text'];
+                $joined = trim(implode("\n", $texts));
+                if ($joined !== '') {
+                    return $joined;
                 }
             }
+        }
 
-            $joined = trim(implode("\n", $texts));
-            if ($joined !== '') {
-                return $joined;
-            }
+        if (!empty($body['text']) && is_string($body['text'])) {
+            return trim($body['text']);
         }
 
         return '';

@@ -1,324 +1,136 @@
 <?php
-
 if (!defined('ABSPATH')) exit;
 
 class WABE_License
 {
-	const TRANSIENT_KEY = 'wabe_license_check';
-	const CACHE_TTL = 12 * HOUR_IN_SECONDS;
-
-	/**
-     * 保存済みライセンス情報取得
-     */
-	public static function get_cached()
-	{
-		$options = get_option(WABE_OPTION, []);
-		return is_array($options['license_data'] ?? null) ? $options['license_data'] : [];
-	}
-
-	/**
-     * 現在のプラン取得
-     */
-	public static function get_plan()
-	{
-		$license = self::get_cached();
-		return sanitize_text_field((string)($license['plan'] ?? 'free'));
-	}
-
-	/**
-     * ライセンス有効判定
-     */
-	public static function is_valid()
-	{
-		$license = self::get_cached();
-		return !empty($license['valid']);
-	}
-
-	/**
-     * 現在の features 配列取得
-     */
-	public static function get_features()
-	{
-		$license = self::get_cached();
-		return is_array($license['features'] ?? null) ? $license['features'] : self::free_payload()['features'];
-	}
-
-	/**
-     * キャッシュ削除
-     */
-	public static function clear_cache()
-	{
-		delete_transient(self::TRANSIENT_KEY);
-		WABE_Logger::info('License: transient cache cleared');
-	}
-
-	/**
-     * ライセンス確認同期
-     * $force = true ならキャッシュ無視でAPIへ再問い合わせ
-     */
 	public static function sync($force = false)
 	{
 		$options = get_option(WABE_OPTION, []);
-		$license_key = trim((string)($options['license_key'] ?? ''));
 
-		// ライセンス未入力なら Free 扱い
-		if ($license_key === '') {
-			$payload = self::free_payload();
-			self::store($payload);
-			self::clear_cache();
-			WABE_Logger::info('License: empty key, fallback to free');
-			return $payload;
-		}
+		$license_key = sanitize_text_field($options['license_key'] ?? '');
+		$checked_at  = sanitize_text_field($options['license_checked_at'] ?? '');
+		$saved_data  = $options['license_data'] ?? [];
 
-		// キャッシュ使用
-		if (!$force) {
-			$cached = get_transient(self::TRANSIENT_KEY);
-			WABE_Logger::info('License transient: ' . print_r($cached, true));
-
-			if (is_array($cached) && isset($cached['plan'], $cached['features'])) {
-				return $cached;
+		if (!$force && $checked_at !== '' && is_array($saved_data)) {
+			$last = strtotime($checked_at);
+			if ($last && (time() - $last) < HOUR_IN_SECONDS) {
+				return $saved_data;
 			}
-		} else {
-			self::clear_cache();
 		}
 
-		$domain = wp_parse_url(home_url(), PHP_URL_HOST);
-		if (!$domain) {
-			$domain = home_url();
-		}
+		$result = self::request_license_data($license_key);
 
-		$url = trailingslashit(WABE_LICENSE_API_BASE) . 'license/check';
-
-		$response = wp_remote_post($url, [
-			'timeout' => 20,
-			'body' => [
-				'license_key' => $license_key,
-				'domain'      => $domain,
-				'plugin'      => 'wp-ai-blog-engine',
-				'version'     => WABE_VERSION,
-			],
-		]);
-
-		if (is_wp_error($response)) {
-			WABE_Logger::error('License sync failed: ' . $response->get_error_message());
-
-			$fallback = self::get_cached();
-			if (!empty($fallback)) {
-				WABE_Logger::warning('License: using stored fallback payload');
-				return $fallback;
-			}
-
-			return self::free_payload();
-		}
-
-		$raw = wp_remote_retrieve_body($response);
-		WABE_Logger::info('License response raw: ' . $raw);
-
-		$payload = json_decode($raw, true);
-
-		if (!is_array($payload)) {
-			WABE_Logger::error('License: invalid JSON response');
-			$payload = self::free_payload();
-		}
-
-		// 念のため最低限の整形
-		$payload = self::normalize_payload($payload);
-
-		self::store($payload);
-		set_transient(self::TRANSIENT_KEY, $payload, self::CACHE_TTL);
-
-		WABE_Logger::info('License sync success: plan=' . ($payload['plan'] ?? 'free'));
-
-		return $payload;
-	}
-
-	/**
-     * ライセンス有効化
-     */
-	public static function activate_remote()
-	{
-		$options = get_option(WABE_OPTION, []);
-		$license_key = trim((string)($options['license_key'] ?? ''));
-
-		if ($license_key === '') {
-			WABE_Logger::warning('License activate skipped: empty key');
-			return self::free_payload();
-		}
-
-		self::clear_cache();
-
-		$domain = wp_parse_url(home_url(), PHP_URL_HOST);
-		if (!$domain) {
-			$domain = home_url();
-		}
-
-		$url = trailingslashit(WABE_LICENSE_API_BASE) . 'license/activate';
-
-		$response = wp_remote_post($url, [
-			'timeout' => 20,
-			'body' => [
-				'license_key' => $license_key,
-				'domain'      => $domain,
-				'plugin'      => 'wp-ai-blog-engine',
-				'version'     => WABE_VERSION,
-			],
-		]);
-
-		if (is_wp_error($response)) {
-			WABE_Logger::error('License activate failed: ' . $response->get_error_message());
-			return self::free_payload();
-		}
-
-		$raw = wp_remote_retrieve_body($response);
-		WABE_Logger::info('License activate raw: ' . $raw);
-
-		$payload = json_decode($raw, true);
-		if (!is_array($payload)) {
-			WABE_Logger::error('License activate invalid JSON');
-			return self::free_payload();
-		}
-
-		$payload = self::normalize_payload($payload);
-
-		self::store($payload);
-		set_transient(self::TRANSIENT_KEY, $payload, self::CACHE_TTL);
-
-		return $payload;
-	}
-
-	/**
-     * ライセンス無効化
-     */
-	public static function deactivate_remote()
-	{
-		$options = get_option(WABE_OPTION, []);
-		$license_key = trim((string)($options['license_key'] ?? ''));
-
-		self::clear_cache();
-
-		if ($license_key === '') {
-			WABE_Logger::warning('License deactivate skipped: empty key');
-			$payload = self::free_payload();
-			self::store($payload);
-			return $payload;
-		}
-
-		$domain = wp_parse_url(home_url(), PHP_URL_HOST);
-		if (!$domain) {
-			$domain = home_url();
-		}
-
-		$url = trailingslashit(WABE_LICENSE_API_BASE) . 'license/deactivate';
-
-		$response = wp_remote_post($url, [
-			'timeout' => 20,
-			'body' => [
-				'license_key' => $license_key,
-				'domain'      => $domain,
-			],
-		]);
-
-		if (is_wp_error($response)) {
-			WABE_Logger::error('License deactivate failed: ' . $response->get_error_message());
-			$payload = self::free_payload();
-			self::store($payload);
-			return $payload;
-		}
-
-		$raw = wp_remote_retrieve_body($response);
-		WABE_Logger::info('License deactivate raw: ' . $raw);
-
-		$payload = json_decode($raw, true);
-		if (!is_array($payload)) {
-			$payload = self::free_payload();
-		}
-
-		$payload = self::normalize_payload($payload);
-
-		// 無効化後は free 相当に寄せる
-		if (empty($payload['valid'])) {
-			$payload = self::free_payload();
-		}
-
-		self::store($payload);
-
-		return $payload;
-	}
-
-	/**
-     * payloadをoptionへ保存
-     */
-	private static function store(array $payload)
-	{
-		$options = get_option(WABE_OPTION, []);
-		$options['license_data'] = $payload;
+		$options['license_data'] = $result;
 		$options['license_checked_at'] = current_time('mysql');
-
-		if (!empty($payload['plan'])) {
-			$options['license_plan'] = sanitize_text_field((string)$payload['plan']);
-		}
-
-		if (!empty($payload['status'])) {
-			$options['license_status'] = sanitize_text_field((string)$payload['status']);
-		}
-
 		update_option(WABE_OPTION, $options);
 
-		WABE_Logger::info('License stored: plan=' . ($payload['plan'] ?? 'free'));
+		return $result;
 	}
 
-	/**
-     * 不正・不足データを最低限補完
-     */
-	private static function normalize_payload(array $payload)
-	{
-		$free = self::free_payload();
-
-		if (!isset($payload['ok'])) {
-			$payload['ok'] = false;
-		}
-
-		if (!isset($payload['valid'])) {
-			$payload['valid'] = false;
-		}
-
-		if (empty($payload['plan'])) {
-			$payload['plan'] = $free['plan'];
-		}
-
-		if (empty($payload['status'])) {
-			$payload['status'] = $free['status'];
-		}
-
-		if (!isset($payload['features']) || !is_array($payload['features'])) {
-			$payload['features'] = $free['features'];
-		} else {
-			$payload['features'] = wp_parse_args($payload['features'], $free['features']);
-		}
-
-		return $payload;
-	}
-
-	/**
-     * Freeプランの標準payload
-     */
-	private static function free_payload()
+	public static function get_default_payload()
 	{
 		return [
-			'ok' => true,
-			'valid' => true,
-			'plan' => 'free',
-			'status' => 'active',
+			'status' => 'free',
+			'plan'   => 'free',
+			'checked_at' => current_time('mysql'),
 			'features' => [
-				'weekly_posts_max' => 1,
-				'title_count_max' => 1,
-				'can_publish' => false,
-				'can_use_seo' => false,
-				'can_use_images' => false,
-				'can_use_topic_generator' => false,
-				'can_use_internal_links' => false,
+				'weekly_posts_max'         => 1,
+				'title_count_max'          => 1,
+				'can_publish'              => false,
+				'can_use_seo'              => false,
+				'can_use_images'           => false,
+				'can_use_topic_generator'  => false,
+				'can_use_internal_links'   => false,
 				'can_use_outline_generator' => false,
+				'can_use_topic_prediction' => false,
+				'can_use_duplicate_check'  => false,
+				'can_use_external_links'   => false,
 			],
 		];
+	}
+
+	private static function request_license_data($license_key)
+	{
+		if ($license_key === '') {
+			return self::get_default_payload();
+		}
+
+		if (!defined('WABE_LICENSE_API_URL') || WABE_LICENSE_API_URL === '') {
+			return self::get_default_payload();
+		}
+
+		$response = wp_remote_post(WABE_LICENSE_API_URL, [
+			'timeout' => 20,
+			'headers' => [
+				'Content-Type' => 'application/json',
+			],
+			'body' => wp_json_encode([
+				'license_key' => $license_key,
+				'site_url'    => home_url(),
+				'plugin'      => 'wp-ai-blog-engine',
+			]),
+		]);
+
+		if (is_wp_error($response)) {
+			WABE_Logger::error('License HTTP error: ' . $response->get_error_message());
+			return self::get_default_payload();
+		}
+
+		$status_code = (int) wp_remote_retrieve_response_code($response);
+		$raw_body    = wp_remote_retrieve_body($response);
+		$body        = json_decode($raw_body, true);
+
+		if ($status_code < 200 || $status_code >= 300 || !is_array($body)) {
+			WABE_Logger::warning('License API returned invalid response');
+			return self::get_default_payload();
+		}
+
+		return self::normalize_payload($body);
+	}
+
+	private static function normalize_payload($body)
+	{
+		$default = self::get_default_payload();
+
+		$status = sanitize_text_field($body['status'] ?? $default['status']);
+		$plan   = sanitize_key($body['plan'] ?? $default['plan']);
+
+		if (!in_array($plan, ['free', 'advanced', 'pro'], true)) {
+			$plan = 'free';
+		}
+
+		$features = is_array($body['features'] ?? null) ? $body['features'] : [];
+		$default_features = $default['features'];
+
+		$normalized = [
+			'status' => $status,
+			'plan'   => $plan,
+			'checked_at' => current_time('mysql'),
+			'features' => [
+				'weekly_posts_max'          => max(1, intval($features['weekly_posts_max'] ?? $default_features['weekly_posts_max'])),
+				'title_count_max'           => max(1, intval($features['title_count_max'] ?? $default_features['title_count_max'])),
+				'can_publish'               => !empty($features['can_publish']),
+				'can_use_seo'               => !empty($features['can_use_seo']),
+				'can_use_images'            => !empty($features['can_use_images']),
+				'can_use_topic_generator'   => !empty($features['can_use_topic_generator']),
+				'can_use_internal_links'    => !empty($features['can_use_internal_links']),
+				'can_use_outline_generator' => !empty($features['can_use_outline_generator']),
+				'can_use_topic_prediction'  => !empty($features['can_use_topic_prediction']),
+				'can_use_duplicate_check'   => !empty($features['can_use_duplicate_check']),
+				'can_use_external_links'    => !empty($features['can_use_external_links']),
+			],
+		];
+
+		if ($plan === 'advanced') {
+			$normalized['features']['weekly_posts_max'] = max(1, min(7, $normalized['features']['weekly_posts_max']));
+			$normalized['features']['title_count_max']  = max(1, min(6, $normalized['features']['title_count_max']));
+		}
+
+		if ($plan === 'pro') {
+			$normalized['features']['weekly_posts_max'] = max(1, min(7, $normalized['features']['weekly_posts_max']));
+			$normalized['features']['title_count_max']  = max(1, min(6, $normalized['features']['title_count_max']));
+		}
+
+		return $normalized;
 	}
 }

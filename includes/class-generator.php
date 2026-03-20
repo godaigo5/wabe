@@ -15,11 +15,10 @@ class WABE_Generator
             }
 
             $topic       = $topics[0];
-            $title_count = max(1, intval($options['generation_count'] ?? 1));
             $status      = sanitize_text_field($options['post_status'] ?? 'draft');
             $global_tone = sanitize_text_field($options['tone'] ?? 'standard');
 
-            $post_id = $this->generate($topic, $title_count, $status, $global_tone);
+            $post_id = $this->generate($topic, $status, $global_tone);
 
             if ($post_id) {
                 $this->remove_first_topic();
@@ -32,7 +31,7 @@ class WABE_Generator
         }
     }
 
-    public function generate($topic, $title_count, $status, $global_tone = 'standard')
+    public function generate($topic, $status, $global_tone = 'standard')
     {
         $topic_text = sanitize_text_field($topic['topic'] ?? '');
         $style      = sanitize_text_field($topic['style'] ?? 'normal');
@@ -51,41 +50,60 @@ class WABE_Generator
             $status = 'draft';
         }
 
-        $options  = get_option(WABE_OPTION, []);
-        $provider = sanitize_key($options['ai_provider'] ?? 'openai');
+        $options       = get_option(WABE_OPTION, []);
+        $provider      = sanitize_key($options['ai_provider'] ?? 'openai');
+        $heading_count = max(1, intval($options['heading_count'] ?? 1));
 
         if ($provider === 'gemini' && class_exists('WABE_Gemini')) {
-            $ai    = new WABE_Gemini();
-            $model = sanitize_text_field($options['gemini_model'] ?? 'gemini-2.5-flash');
+            $ai       = new WABE_Gemini();
+            $model    = sanitize_text_field($options['gemini_model'] ?? 'gemini-2.5-flash');
+            $provider = 'gemini';
         } else {
-            $ai    = new WABE_OpenAI();
-            $model = sanitize_text_field($options['openai_model'] ?? 'gpt-4.1-mini');
+            $ai       = new WABE_OpenAI();
+            $model    = sanitize_text_field($options['openai_model'] ?? 'gpt-4.1');
+            $provider = 'openai';
         }
 
-        $image    = new WABE_Image();
+        $image    = class_exists('WABE_Image') ? new WABE_Image() : null;
         $locale   = get_locale();
         $language = $this->get_ai_language($locale);
 
-        $titles = $this->generate_titles($ai, $model, $topic_text, $style, $tone, $language, $locale, $title_count);
-
-        if (empty($titles)) {
-            WABE_Logger::error('Generator: title generation failed - ' . $topic_text);
+        if ($this->is_duplicate_check_enabled() && $this->is_similar_post_exists($topic_text)) {
+            WABE_Logger::warning('Generator: duplicate topic skipped - ' . $topic_text);
             return false;
         }
 
-        $post_title    = $titles[0];
-        $content_parts = [];
+        $article_title = $this->generate_article_title($ai, $model, $topic_text, $style, $tone, $language, $locale);
+        if ($article_title === '') {
+            WABE_Logger::error('Generator: article title generation failed - ' . $topic_text);
+            return false;
+        }
 
-        foreach ($titles as $title) {
+        $headings = $this->generate_headings($ai, $model, $topic_text, $article_title, $style, $tone, $language, $locale, $heading_count);
+        if (empty($headings)) {
+            WABE_Logger::error('Generator: heading generation failed - ' . $topic_text);
+            return false;
+        }
+
+        $content_parts  = [];
+        $intro          = $this->generate_intro($ai, $model, $topic_text, $article_title, $style, $tone, $language, $locale);
+        $external_links = $this->is_external_links_enabled() ? $this->build_external_links_block($topic_text) : '';
+
+        if ($intro !== '') {
+            $content_parts[] = $intro;
+        }
+
+        foreach ($headings as $heading) {
             $outline = '';
 
             if (WABE_Plan::can_use_outline_generator() && class_exists('WABE_Outline_Generator')) {
-                $outline = WABE_Outline_Generator::generate($title);
+                $outline = WABE_Outline_Generator::generate($heading);
             }
 
-            $content_prompt = $this->build_content_prompt(
+            $section_prompt = $this->build_section_prompt(
                 $topic_text,
-                $title,
+                $article_title,
+                $heading,
                 $style,
                 $tone,
                 $language,
@@ -93,29 +111,32 @@ class WABE_Generator
                 $outline
             );
 
-            $result = trim($ai->text($content_prompt, [
+            $section = trim($ai->text($section_prompt, [
                 'model'             => $model,
                 'temperature'       => 0.7,
                 'max_output_tokens' => 2200,
             ]));
 
-            if ($result === '') {
-                WABE_Logger::warning('Generator: content empty for title - ' . $title);
+            if ($section === '') {
+                WABE_Logger::warning('Generator: section empty for heading - ' . $heading);
                 continue;
             }
 
-            $section = "## " . esc_html($title) . "\n\n" . $result;
-            $content_parts[] = $section;
+            $content_parts[] = '## ' . $heading . "\n\n" . $section;
+        }
+
+        if ($external_links !== '') {
+            $content_parts[] = $external_links;
         }
 
         if (empty($content_parts)) {
-            WABE_Logger::error('Generator: all content generation failed - ' . $topic_text);
+            WABE_Logger::error('Generator: content generation failed - ' . $topic_text);
             return false;
         }
 
         $content = implode("\n\n", $content_parts);
 
-        if (WABE_Plan::can_use_seo()) {
+        if (WABE_Plan::can_use_seo() && class_exists('WABE_SEO')) {
             $seo     = new WABE_SEO();
             $content = $seo->optimize($content, $topic_text);
         }
@@ -125,7 +146,7 @@ class WABE_Generator
         }
 
         $post_id = wp_insert_post([
-            'post_title'   => sanitize_text_field($post_title),
+            'post_title'   => sanitize_text_field($article_title),
             'post_content' => wp_kses_post($content),
             'post_status'  => $status,
             'post_type'    => 'post',
@@ -138,7 +159,7 @@ class WABE_Generator
 
         WABE_Logger::info('Generator: post created ID=' . $post_id);
 
-        if (WABE_Plan::can_use_images()) {
+        if (WABE_Plan::can_use_images() && $image && $this->is_featured_image_enabled()) {
             try {
                 $image_source = $image->generate($topic_text);
 
@@ -154,20 +175,250 @@ class WABE_Generator
         }
 
         $this->save_history([
-            'date'        => current_time('mysql'),
-            'topic'       => $topic_text,
-            'style'       => $style,
-            'tone'        => $tone,
-            'status'      => $status,
-            'post_id'     => $post_id,
-            'title'       => $post_title,
-            'title_count' => count($titles),
-            'titles'      => $titles,
-            'provider'    => $provider,
-            'model'       => $model,
+            'date'          => current_time('mysql'),
+            'topic'         => $topic_text,
+            'style'         => $style,
+            'tone'          => $tone,
+            'status'        => $status,
+            'post_id'       => $post_id,
+            'title'         => $article_title,
+            'heading_count' => count($headings),
+            'headings'      => $headings,
+            'provider'      => $provider,
+            'model'         => $model,
         ]);
 
         return $post_id;
+    }
+
+    private function generate_article_title($ai, $model, $topic, $style, $tone, $language, $locale)
+    {
+        $prompt = $this->build_article_title_prompt($topic, $style, $tone, $language, $locale);
+
+        $response = trim($ai->text($prompt, [
+            'model'             => $model,
+            'temperature'       => 0.8,
+            'max_output_tokens' => 300,
+        ]));
+
+        if ($response === '') {
+            return '';
+        }
+
+        $lines = preg_split('/\r\n|\r|\n/', $response);
+        foreach ($lines as $line) {
+            $line = trim($line);
+            $line = preg_replace('/^\s*[\-\*\d\.\)\(]+?\s*/u', '', $line);
+            $line = $this->normalize_title($line);
+
+            if ($line !== '') {
+                return $line;
+            }
+        }
+
+        return '';
+    }
+
+    private function generate_headings($ai, $model, $topic, $article_title, $style, $tone, $language, $locale, $count)
+    {
+        $prompt = $this->build_headings_prompt($topic, $article_title, $style, $tone, $language, $locale, $count);
+
+        $response = trim($ai->text($prompt, [
+            'model'             => $model,
+            'temperature'       => 0.8,
+            'max_output_tokens' => 700,
+        ]));
+
+        if ($response === '') {
+            return [];
+        }
+
+        $lines    = preg_split('/\r\n|\r|\n/', $response);
+        $headings = [];
+
+        foreach ($lines as $line) {
+            $line = trim($line);
+
+            if ($line === '') {
+                continue;
+            }
+
+            $line = preg_replace('/^\s*#{1,6}\s*/u', '', $line);
+            $line = preg_replace('/^\s*[\-\*\d\.\)\(]+?\s*/u', '', $line);
+            $line = $this->normalize_title($line);
+
+            if ($line !== '') {
+                $headings[] = $line;
+            }
+        }
+
+        $headings = array_values(array_unique($headings));
+        $headings = array_slice($headings, 0, $count);
+
+        WABE_Logger::info('Generator: headings generated count=' . count($headings));
+
+        return $headings;
+    }
+
+    private function generate_intro($ai, $model, $topic, $article_title, $style, $tone, $language, $locale)
+    {
+        $prompt = $this->build_intro_prompt($topic, $article_title, $style, $tone, $language, $locale);
+
+        return trim($ai->text($prompt, [
+            'model'             => $model,
+            'temperature'       => 0.7,
+            'max_output_tokens' => 900,
+        ]));
+    }
+
+    private function build_article_title_prompt($topic, $style, $tone, $language, $locale)
+    {
+        return "
+You are a professional SEO writer.
+Create one SEO-friendly blog title for the following topic.
+
+Topic: {$topic}
+Style: {$style}
+Tone: {$tone}
+Language: {$language}
+Locale: {$locale}
+
+Requirements:
+- Create exactly 1 title
+- Natural and attractive
+- Include the main keyword naturally
+- Max 32 characters if possible
+- Do not use quotation marks
+- Output only the title
+";
+    }
+
+    private function build_headings_prompt($topic, $article_title, $style, $tone, $language, $locale, $count)
+    {
+        return "
+You are a professional SEO writer.
+Create {$count} blog headings for the article below.
+
+Main Topic: {$topic}
+Article Title: {$article_title}
+Style: {$style}
+Tone: {$tone}
+Language: {$language}
+Locale: {$locale}
+
+Requirements:
+- Create exactly {$count} headings
+- Each heading should cover a different subtopic
+- Make headings useful for readers
+- Keep them clear and natural
+- Do not use quotation marks
+- Output only the headings, one per line
+";
+    }
+
+    private function build_intro_prompt($topic, $article_title, $style, $tone, $language, $locale)
+    {
+        return "
+You are a professional SEO writer.
+Write a short introduction for a blog article.
+
+Main Topic: {$topic}
+Article Title: {$article_title}
+Style: {$style}
+Tone: {$tone}
+Language: {$language}
+Locale: {$locale}
+
+Requirements:
+- Beginner friendly
+- Natural and readable
+- Explain what the reader will learn
+- Around 150 to 250 words
+- Do not include headings
+";
+    }
+
+    private function build_section_prompt($topic, $article_title, $heading, $style, $tone, $language, $locale, $outline = '')
+    {
+        return "
+You are a professional SEO writer.
+Write a high-quality SEO blog section based on the following heading.
+
+Main Topic: {$topic}
+Article Title: {$article_title}
+Section Heading: {$heading}
+Style: {$style}
+Tone: {$tone}
+Language: {$language}
+Locale: {$locale}
+Outline: {$outline}
+
+Requirements:
+- Beginner friendly
+- Use H3 headings where appropriate
+- Include concrete explanations
+- Use bullet points where useful
+- Write naturally and clearly
+- Avoid robotic expressions
+- Optimize for search intent
+- Include the main keyword naturally
+- Write at least 600 words for this section
+";
+    }
+
+    private function build_external_links_block($topic)
+    {
+        $topic_escaped = esc_html($topic);
+
+        $links = [
+            '<a href="https://www.google.com/search?q=' . rawurlencode($topic_escaped) . '" target="_blank" rel="noopener noreferrer">Google Search</a>',
+            '<a href="https://www.youtube.com/results?search_query=' . rawurlencode($topic_escaped) . '" target="_blank" rel="noopener noreferrer">YouTube</a>',
+        ];
+
+        return "## Related Resources\n\n- " . implode("\n- ", $links);
+    }
+
+    private function is_duplicate_check_enabled()
+    {
+        if (!WABE_Plan::can_use_duplicate_check()) {
+            return false;
+        }
+
+        $options = get_option(WABE_OPTION, []);
+        return !empty($options['enable_duplicate_check']) && $options['enable_duplicate_check'] === '1';
+    }
+
+    private function is_external_links_enabled()
+    {
+        if (!WABE_Plan::can_use_external_links()) {
+            return false;
+        }
+
+        $options = get_option(WABE_OPTION, []);
+        return !empty($options['enable_external_links']) && $options['enable_external_links'] === '1';
+    }
+
+    private function is_featured_image_enabled()
+    {
+        if (!WABE_Plan::can_use_images()) {
+            return false;
+        }
+
+        $options = get_option(WABE_OPTION, []);
+        return !empty($options['enable_featured_image']) && $options['enable_featured_image'] === '1';
+    }
+
+    private function is_similar_post_exists($topic_text)
+    {
+        $posts = get_posts([
+            'post_type'      => 'post',
+            'post_status'    => ['publish', 'draft', 'future', 'pending', 'private'],
+            'posts_per_page' => 20,
+            's'              => $topic_text,
+            'fields'         => 'ids',
+        ]);
+
+        return !empty($posts);
     }
 
     private function remove_first_topic()
@@ -184,96 +435,6 @@ class WABE_Generator
 
         update_option(WABE_OPTION, $options);
         WABE_Logger::info('Generator: first topic removed');
-    }
-
-    private function generate_titles($ai, $model, $topic, $style, $tone, $language, $locale, $count)
-    {
-        $prompt = $this->build_titles_prompt($topic, $style, $tone, $language, $locale, $count);
-
-        $response = trim($ai->text($prompt, [
-            'model'             => $model,
-            'temperature'       => 0.8,
-            'max_output_tokens' => 500,
-        ]));
-
-        if ($response === '') {
-            return [];
-        }
-
-        $lines  = preg_split('/\r\n|\r|\n/', $response);
-        $titles = [];
-
-        foreach ($lines as $line) {
-            $line = trim($line);
-
-            if ($line === '') {
-                continue;
-            }
-
-            $line = preg_replace('/^\s*[\-\*\d\.\)\(]+?\s*/u', '', $line);
-            $line = $this->normalize_title($line);
-
-            if ($line !== '') {
-                $titles[] = $line;
-            }
-        }
-
-        $titles = array_values(array_unique($titles));
-        $titles = array_slice($titles, 0, $count);
-
-        WABE_Logger::info('Generator: titles generated count=' . count($titles));
-
-        return $titles;
-    }
-
-    private function build_titles_prompt($topic, $style, $tone, $language, $locale, $count)
-    {
-        return "
-You are a professional SEO writer.
-Create {$count} different SEO-friendly blog titles for the following topic.
-
-Topic: {$topic}
-Style: {$style}
-Tone: {$tone}
-Language: {$language}
-Locale: {$locale}
-
-Requirements:
-- Create exactly {$count} titles
-- Each title should be natural and attractive
-- Include the main keyword naturally
-- Max 32 characters if possible
-- Each title should have a slightly different angle
-- Do not use quotation marks
-- Output only the titles, one per line
-";
-    }
-
-    private function build_content_prompt($topic, $title, $style, $tone, $language, $locale, $outline = '')
-    {
-        return "
-You are a professional SEO writer.
-Write a high-quality SEO blog article section based on the following title.
-
-Main Topic: {$topic}
-Section Title: {$title}
-Style: {$style}
-Tone: {$tone}
-Language: {$language}
-Locale: {$locale}
-Outline: {$outline}
-
-Requirements:
-- Beginner friendly
-- Use H3 headings where appropriate
-- Include concrete explanations
-- Use bullet points where useful
-- Write naturally and clearly
-- Avoid robotic expressions
-- Optimize for search intent
-- Include the main keyword naturally
-- Write at least 1200 words for this section
-";
     }
 
     private function normalize_title($title)

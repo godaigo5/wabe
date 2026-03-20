@@ -14,19 +14,13 @@ class WABE_Cron
 
     public static function add_schedules($schedules)
     {
-        if (!isset($schedules['wabe_hourly'])) {
-            $schedules['wabe_hourly'] = [
-                'interval' => HOUR_IN_SECONDS,
-                'display'  => __('Once Hourly (WABE)', WABE_TEXTDOMAIN),
-            ];
-        }
+        $weekly_posts = self::get_weekly_posts();
+        $interval = self::get_interval_seconds($weekly_posts);
 
-        if (!isset($schedules['wabe_daily'])) {
-            $schedules['wabe_daily'] = [
-                'interval' => DAY_IN_SECONDS,
-                'display'  => __('Once Daily (WABE)', WABE_TEXTDOMAIN),
-            ];
-        }
+        $schedules['wabe_dynamic'] = [
+            'interval' => $interval,
+            'display'  => __('WP AI Blog Engine Dynamic Schedule', WABE_TEXTDOMAIN),
+        ];
 
         return $schedules;
     }
@@ -34,7 +28,7 @@ class WABE_Cron
     public static function maybe_schedule()
     {
         if (!wp_next_scheduled(self::HOOK)) {
-            wp_schedule_event(time() + 300, 'wabe_daily', self::HOOK);
+            wp_schedule_event(time() + 300, 'wabe_dynamic', self::HOOK);
         }
     }
 
@@ -58,10 +52,43 @@ class WABE_Cron
     {
         try {
             $generator = new WABE_Generator();
-            $generator->run();
-            WABE_Logger::info('Cron: generation completed');
+            $result = $generator->run();
+
+            if ($result) {
+                WABE_Logger::info('Cron: generation completed');
+            } else {
+                WABE_Logger::warning('Cron: generation skipped or failed');
+            }
         } catch (Throwable $e) {
             WABE_Logger::error('Cron Error: ' . $e->getMessage());
         }
+    }
+
+    private static function get_weekly_posts()
+    {
+        $options = get_option(WABE_OPTION, []);
+        $weekly_posts = intval($options['weekly_posts'] ?? 1);
+
+        if ($weekly_posts < 1) {
+            $weekly_posts = 1;
+        }
+
+        if ($weekly_posts > 7) {
+            $weekly_posts = 7;
+        }
+
+        return $weekly_posts;
+    }
+
+    private static function get_interval_seconds($weekly_posts)
+    {
+        $week_seconds = 7 * DAY_IN_SECONDS;
+        $interval = (int) floor($week_seconds / max(1, $weekly_posts));
+
+        if ($interval < HOUR_IN_SECONDS) {
+            $interval = HOUR_IN_SECONDS;
+        }
+
+        return $interval;
     }
 }

@@ -1,40 +1,47 @@
 <?php
 if (!defined('ABSPATH')) exit;
+
 class WABE_Logger
 {
-    const OPTION_KEY = 'wabe_logs';
-    const MAX_LOGS = 100;
-    static function log($t)
+    public static function info($message)
     {
-        self::write('info', $t);
+        self::write('INFO', $message);
     }
-    static function info($t)
+
+    public static function warning($message)
     {
-        self::write('info', $t);
+        self::write('WARNING', $message);
     }
-    static function warning($t)
+
+    public static function error($message)
     {
-        self::write('warning', $t);
+        self::write('ERROR', $message);
     }
-    static function error($t)
+
+    private static function write($level, $message)
     {
-        self::write('error', $t);
-    }
-    private static function write($level, $text)
-    {
-        $logs = get_option(self::OPTION_KEY, []);
-        if (!is_array($logs)) $logs = [];
-        $logs[] = ['date' => current_time('mysql'), 'level' => sanitize_text_field((string)$level), 'message' => sanitize_textarea_field((string)$text)];
-        if (count($logs) > self::MAX_LOGS) $logs = array_slice($logs, -self::MAX_LOGS);
-        update_option(self::OPTION_KEY, $logs, false);
-    }
-    static function get_logs()
-    {
-        $logs = get_option(self::OPTION_KEY, []);
-        return is_array($logs) ? array_reverse($logs) : [];
-    }
-    static function clear()
-    {
-        delete_option(self::OPTION_KEY);
+        $line = sprintf(
+            '[%s] [%s] %s',
+            current_time('mysql'),
+            sanitize_text_field($level),
+            sanitize_text_field((string)$message)
+        );
+
+        error_log('WABE ' . $line);
+
+        $options = get_option(WABE_OPTION, []);
+        $logs = $options['logs'] ?? [];
+
+        if (!is_array($logs)) {
+            $logs = [];
+        }
+
+        array_unshift($logs, [
+            'date' => current_time('mysql'),
+            'message' => sprintf('[%s] %s', sanitize_text_field($level), sanitize_text_field((string)$message)),
+        ]);
+
+        $options['logs'] = array_slice($logs, 0, 200);
+        update_option(WABE_OPTION, $options);
     }
 }

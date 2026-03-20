@@ -8,13 +8,14 @@ $license = WABE_License::sync(false);
 
 $openai_masked = !empty($opt['openai_api_key'])
     ? str_repeat('*', max(12, mb_strlen((string)$opt['openai_api_key'])))
-    : (!empty($opt['api_key']) ? str_repeat('*', max(12, mb_strlen((string)$opt['api_key']))) : '');
+    : '';
 
 $gemini_masked = !empty($opt['gemini_api_key'])
     ? str_repeat('*', max(12, mb_strlen((string)$opt['gemini_api_key'])))
     : '';
 
 $ai_provider = $opt['ai_provider'] ?? 'openai';
+$image_style = $opt['image_style'] ?? 'modern';
 ?>
 <div class="wrap">
     <h1><?php esc_html_e('WP AI Blog Engine', WABE_TEXTDOMAIN); ?></h1>
@@ -69,10 +70,9 @@ $ai_provider = $opt['ai_provider'] ?? 'openai';
                 </th>
                 <td>
                     <select name="wabe_openai_model" id="wabe_openai_model">
-                        <option value="gpt-4.1-mini"
-                            <?php selected($opt['openai_model'] ?? 'gpt-4.1-mini', 'gpt-4.1-mini'); ?>>gpt-4.1-mini
-                        </option>
-                        <option value="gpt-4.1" <?php selected($opt['openai_model'] ?? '', 'gpt-4.1'); ?>>gpt-4.1
+                        <option value="gpt-4.1-mini" <?php selected($opt['openai_model'] ?? '', 'gpt-4.1-mini'); ?>>
+                            gpt-4.1-mini</option>
+                        <option value="gpt-4.1" <?php selected($opt['openai_model'] ?? 'gpt-4.1', 'gpt-4.1'); ?>>gpt-4.1
                         </option>
                         <option value="gpt-5-mini" <?php selected($opt['openai_model'] ?? '', 'gpt-5-mini'); ?>>
                             gpt-5-mini</option>
@@ -116,12 +116,30 @@ $ai_provider = $opt['ai_provider'] ?? 'openai';
 
             <tr>
                 <th>
-                    <label for="wabe_generation_count"><?php esc_html_e('Title Count', WABE_TEXTDOMAIN); ?></label>
+                    <label
+                        for="wabe_generation_count"><?php esc_html_e('Article Title Count', WABE_TEXTDOMAIN); ?></label>
                 </th>
                 <td>
                     <input id="wabe_generation_count" type="number" min="1"
                         max="<?php echo esc_attr(WABE_Plan::title_count_max()); ?>" name="wabe_generation_count"
                         value="<?php echo esc_attr($opt['generation_count'] ?? 1); ?>" class="small-text">
+                    <p class="description">
+                        <?php esc_html_e('Normally this should stay at 1.', WABE_TEXTDOMAIN); ?>
+                    </p>
+                </td>
+            </tr>
+
+            <tr>
+                <th>
+                    <label for="wabe_heading_count"><?php esc_html_e('Heading Count', WABE_TEXTDOMAIN); ?></label>
+                </th>
+                <td>
+                    <input id="wabe_heading_count" type="number" min="1"
+                        max="<?php echo esc_attr(WABE_Plan::title_count_max()); ?>" name="wabe_heading_count"
+                        value="<?php echo esc_attr($opt['heading_count'] ?? 1); ?>" class="small-text">
+                    <p class="description">
+                        <?php esc_html_e('Set how many headings to generate for each article.', WABE_TEXTDOMAIN); ?>
+                    </p>
                 </td>
             </tr>
 
@@ -171,6 +189,71 @@ $ai_provider = $opt['ai_provider'] ?? 'openai';
                         value="<?php echo esc_attr($opt['weekly_posts'] ?? 1); ?>" class="small-text">
                 </td>
             </tr>
+
+            <?php if (WABE_Plan::can_use_images()): ?>
+                <tr>
+                    <th>
+                        <label for="wabe_image_style"><?php esc_html_e('Image Style', WABE_TEXTDOMAIN); ?></label>
+                    </th>
+                    <td>
+                        <select name="wabe_image_style" id="wabe_image_style">
+                            <option value="modern" <?php selected($image_style, 'modern'); ?>>Modern</option>
+                            <option value="business" <?php selected($image_style, 'business'); ?>>Business</option>
+                            <option value="blog" <?php selected($image_style, 'blog'); ?>>Blog</option>
+                            <option value="tech" <?php selected($image_style, 'tech'); ?>>Tech</option>
+                        </select>
+                        <p class="description">
+                            <?php esc_html_e('Choose the style for featured image generation.', WABE_TEXTDOMAIN); ?>
+                        </p>
+                    </td>
+                </tr>
+            <?php endif; ?>
+
+            <?php if (WABE_Plan::is_pro()): ?>
+                <tr>
+                    <th><?php esc_html_e('Topic Prediction', WABE_TEXTDOMAIN); ?></th>
+                    <td>
+                        <label>
+                            <input type="checkbox" name="wabe_enable_topic_prediction" value="1"
+                                <?php checked(($opt['enable_topic_prediction'] ?? '0'), '1'); ?>>
+                            <?php esc_html_e('Enable topic prediction and suggestions.', WABE_TEXTDOMAIN); ?>
+                        </label>
+                    </td>
+                </tr>
+
+                <tr>
+                    <th><?php esc_html_e('Duplicate Check', WABE_TEXTDOMAIN); ?></th>
+                    <td>
+                        <label>
+                            <input type="checkbox" name="wabe_enable_duplicate_check" value="1"
+                                <?php checked(($opt['enable_duplicate_check'] ?? '0'), '1'); ?>>
+                            <?php esc_html_e('Check whether similar posts already exist before generating.', WABE_TEXTDOMAIN); ?>
+                        </label>
+                    </td>
+                </tr>
+
+                <tr>
+                    <th><?php esc_html_e('External Links', WABE_TEXTDOMAIN); ?></th>
+                    <td>
+                        <label>
+                            <input type="checkbox" name="wabe_enable_external_links" value="1"
+                                <?php checked(($opt['enable_external_links'] ?? '0'), '1'); ?>>
+                            <?php esc_html_e('Add related external links to generated posts.', WABE_TEXTDOMAIN); ?>
+                        </label>
+                    </td>
+                </tr>
+
+                <tr>
+                    <th><?php esc_html_e('Featured Image', WABE_TEXTDOMAIN); ?></th>
+                    <td>
+                        <label>
+                            <input type="checkbox" name="wabe_enable_featured_image" value="1"
+                                <?php checked(($opt['enable_featured_image'] ?? '0'), '1'); ?>>
+                            <?php esc_html_e('Generate and attach a featured image automatically.', WABE_TEXTDOMAIN); ?>
+                        </label>
+                    </td>
+                </tr>
+            <?php endif; ?>
         </table>
 
         <?php submit_button(__('Save Settings', WABE_TEXTDOMAIN)); ?>

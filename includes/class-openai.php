@@ -19,14 +19,14 @@ class WABE_OpenAI
         }
 
         $args = wp_parse_args($args, [
-            'model'             => 'gpt-4.1-mini',
+            'model'             => 'gpt-4.1',
             'temperature'       => 0.7,
             'max_output_tokens' => 2200,
         ]);
 
         $model = sanitize_text_field((string)$args['model']);
         if ($model === '') {
-            $model = 'gpt-4.1-mini';
+            $model = 'gpt-4.1';
         }
 
         $payload = [
@@ -37,7 +37,7 @@ class WABE_OpenAI
         ];
 
         $response = wp_remote_post('https://api.openai.com/v1/responses', [
-            'timeout' => 60,
+            'timeout' => 90,
             'headers' => [
                 'Authorization' => 'Bearer ' . $this->key,
                 'Content-Type'  => 'application/json',
@@ -106,6 +106,10 @@ class WABE_OpenAI
             if ($joined !== '') {
                 return $joined;
             }
+        }
+
+        if (!empty($body['output_text']) && is_string($body['output_text'])) {
+            return trim($body['output_text']);
         }
 
         return '';
