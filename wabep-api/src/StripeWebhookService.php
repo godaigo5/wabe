@@ -400,6 +400,11 @@ class StripeWebhookService
 
     private function verifySignature(string $payload, string $signatureHeader): bool
     {
+        // 開発用
+        // if (true) {
+        //     return true;
+        // }
+
         $secret = (string)($this->config['webhook_secret'] ?? '');
         if ($secret === '' || $signatureHeader === '') {
             return false;

@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 return [
     'db' => [
-        'host'    => getenv('WABEP_DB_HOST') ?: '127.0.0.1',
+        'host'    => getenv('WABEP_DB_HOST') ?: 'mysql328.phy.lolipop.lan',
         'port'    => (int)(getenv('WABEP_DB_PORT') ?: 3306),
-        'name'    => getenv('WABEP_DB_NAME') ?: '',
-        'user'    => getenv('WABEP_DB_USER') ?: '',
-        'pass'    => getenv('WABEP_DB_PASS') ?: '',
+        'name'    => getenv('WABEP_DB_NAME') ?: 'LAA1305650-wabepapi',
+        'user'    => getenv('WABEP_DB_USER') ?: 'LAA1305650',
+        'pass'    => getenv('WABEP_DB_PASS') ?: '8JGZMUKfyNcp1a0Y',
         'charset' => getenv('WABEP_DB_CHARSET') ?: 'utf8mb4',
     ],
 

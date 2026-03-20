@@ -557,4 +557,14 @@ class WABE_Admin
 
         return wp_date('Y-m-d H:i:s', $timestamp);
     }
+
+    public function render_settings()
+    {
+        $this->settings_page();
+    }
+
+    public function render_settings_page()
+    {
+        $this->settings_page();
+    }
 }
