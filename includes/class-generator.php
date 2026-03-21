@@ -630,11 +630,11 @@ class WABE_Generator
         $extra = '';
 
         if (!empty($context['site_context'])) {
-            $extra .= "Site context:\n" . $context['site_context'] . "\n\n";
+            $extra .= "Site context:\n" . WABE_Utils::wabe_maybe_base64_decode($context['site_context']) . "\n\n";
         }
 
         if (!empty($context['writing_rules'])) {
-            $extra .= "Writing rules:\n" . $context['writing_rules'] . "\n\n";
+            $extra .= "Writing rules:\n" . WABE_Utils::wabe_maybe_base64_decode($context['writing_rules']) . "\n\n";
         }
 
         if (!empty($context['seo_keyword'])) {
@@ -660,11 +660,11 @@ class WABE_Generator
         $extra = '';
 
         if (!empty($context['site_context'])) {
-            $extra .= "Site context:\n" . $context['site_context'] . "\n\n";
+            $extra .= "Site context:\n" . WABE_Utils::wabe_maybe_base64_decode($context['site_context']) . "\n\n";
         }
 
         if (!empty($context['writing_rules'])) {
-            $extra .= "Writing rules:\n" . $context['writing_rules'] . "\n\n";
+            $extra .= "Writing rules:\n" . WABE_Utils::wabe_maybe_base64_decode($context['writing_rules']) . "\n\n";
         }
 
         if (!empty($context['seo_keyword'])) {
@@ -691,11 +691,11 @@ class WABE_Generator
         $extra = '';
 
         if (!empty($context['site_context'])) {
-            $extra .= "Site context:\n" . $context['site_context'] . "\n\n";
+            $extra .= "Site context:\n" . WABE_Utils::wabe_maybe_base64_decode($context['site_context']) . "\n\n";
         }
 
         if (!empty($context['writing_rules'])) {
-            $extra .= "Writing rules:\n" . $context['writing_rules'] . "\n\n";
+            $extra .= "Writing rules:\n" . WABE_Utils::wabe_maybe_base64_decode($context['writing_rules']) . "\n\n";
         }
 
         if (!empty($context['seo_keyword'])) {
@@ -723,11 +723,11 @@ class WABE_Generator
         $extra = '';
 
         if (!empty($context['site_context'])) {
-            $extra .= "Site context:\n" . $context['site_context'] . "\n\n";
+            $extra .= "Site context:\n" . WABE_Utils::wabe_maybe_base64_decode($context['site_context']) . "\n\n";
         }
 
         if (!empty($context['writing_rules'])) {
-            $extra .= "Writing rules:\n" . $context['writing_rules'] . "\n\n";
+            $extra .= "Writing rules:\n" . WABE_Utils::wabe_maybe_base64_decode($context['writing_rules']) . "\n\n";
         }
 
         if (!empty($context['seo_keyword'])) {

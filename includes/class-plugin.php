@@ -23,6 +23,7 @@ class WABE_Plugin
     private function load_dependencies()
     {
         $files = [
+            'includes/class-utils.php',
             'includes/class-logger.php',
             'includes/class-plan.php',
             'includes/class-license.php',
@@ -143,33 +144,6 @@ class WABE_Plugin
         }
     }
 
-    /**
-     * 旧コード互換: 設定画面レンダリング
-     *
-     * @return void
-     */
-    public function render_settings_page()
-    {
-        if (!class_exists('WABE_Admin')) {
-            wp_die(esc_html__('WABE_Admin class not found.', WABE_TEXTDOMAIN));
-        }
-
-        if ($this->admin === null) {
-            $this->admin = new WABE_Admin();
-        }
-
-        if (method_exists($this->admin, 'settings_page')) {
-            $this->admin->settings_page();
-            return;
-        }
-
-        if (method_exists($this->admin, 'render_settings')) {
-            $this->admin->render_settings();
-            return;
-        }
-
-        wp_die(esc_html__('Settings page method not found.', WABE_TEXTDOMAIN));
-    }
 
     /**
      * プラグイン有効化時
