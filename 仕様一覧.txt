@@ -49,13 +49,19 @@ AIでブログ記事（タイトル・見出し・本文・画像）を自動生
 
 ▼現在の状態 
 ・Webhook → ライセンス発行 → DB保存は完成済み 
-・WordPressプラグインもほぼ完成 
+・WordPressプラグインもほぼ完成 → 現在デバック中
 ・管理画面UI改善済み
 ・多言語化（POT / PO）も完成
 ・WP管理画面 → LP → Stripe → ライセンス登録への動線 未完
 
-▼GitHub 
-https://github.com/godaigo5/wabe
+▼GitHub
+・メインファイル
+https://github.com/godaigo5/wabe/blob/main/wp-ai-blog-engine.php
+・処理ファイル（includes
+https://github.com/godaigo5/wabe/tree/main/includes
+・画面ファイル（admin
+https://github.com/godaigo5/wabe/tree/main/admin
+
 ▼HP
 http://wabe.d-create.online/
 
@@ -68,3 +74,4 @@ http://wabe.d-create.online/
 ・収益化も考慮する 
 
 ▼今回やりたいこと
+題材を入れたのに設定画面の今すぐ生成ボタンがアクティブにならない

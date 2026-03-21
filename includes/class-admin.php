@@ -157,7 +157,6 @@ class WABE_Admin
     public function handle_save_settings()
     {
         $this->guard();
-
         check_admin_referer('wabe_save_settings', 'wabe_settings_nonce');
 
         $current = get_option(WABE_OPTION, []);
@@ -166,17 +165,18 @@ class WABE_Admin
         }
 
         $features = $this->get_plan_features();
+        $plan = $this->get_plan();
 
-        $weekly_posts_max  = max(1, (int)($features['weekly_posts_max'] ?? 1));
+        $weekly_posts_max = max(1, (int)($features['weekly_posts_max'] ?? 1));
         $heading_count_max = max(1, (int)($features['heading_count_max'] ?? ($features['title_count_max'] ?? 1)));
-        $can_publish       = !empty($features['can_publish']);
-        $can_use_images    = !empty($features['can_use_images']);
-        $can_use_seo       = !empty($features['can_use_seo']);
-        $can_use_internal  = !empty($features['can_use_internal_links']);
-        $can_use_external  = !empty($features['can_use_external_links']);
-        $can_use_predict   = !empty($features['can_use_topic_prediction']);
+        $can_publish = !empty($features['can_publish']);
+        $can_use_images = !empty($features['can_use_images']);
+        $can_use_seo = !empty($features['can_use_seo']);
+        $can_use_internal = !empty($features['can_use_internal_links']);
+        $can_use_external = !empty($features['can_use_external_links']);
+        $can_use_predict = !empty($features['can_use_topic_prediction']);
         $can_use_duplicate = !empty($features['can_use_duplicate_check']);
-        $can_use_outline   = !empty($features['can_use_outline_generator']);
+        $can_use_outline = !empty($features['can_use_outline_generator']);
 
         $ai_provider = isset($_POST['ai_provider']) ? sanitize_key(wp_unslash($_POST['ai_provider'])) : 'openai';
         if (!in_array($ai_provider, ['openai', 'gemini'], true)) {
@@ -205,6 +205,25 @@ class WABE_Admin
         $heading_count = isset($_POST['heading_count']) ? (int)$_POST['heading_count'] : 1;
         $heading_count = max(1, min($heading_count_max, $heading_count));
 
+        // 追加: 記事文字数
+        $allowed_article_lengths = ($plan === 'free') ? [1000] : [1000, 3000, 5000];
+        $article_length = isset($_POST['article_length']) ? (int)$_POST['article_length'] : (int)($current['article_length'] ?? 1000);
+        if (!in_array($article_length, $allowed_article_lengths, true)) {
+            $article_length = (int)$allowed_article_lengths[0];
+        }
+
+        // 追加: 詳細度
+        $detail_level = isset($_POST['detail_level']) ? sanitize_key(wp_unslash($_POST['detail_level'])) : 'medium';
+        if (!in_array($detail_level, ['low', 'medium', 'high'], true)) {
+            $detail_level = 'medium';
+        }
+
+        // 追加: 生成品質
+        $generation_quality = isset($_POST['generation_quality']) ? sanitize_key(wp_unslash($_POST['generation_quality'])) : 'high';
+        if (!in_array($generation_quality, ['fast', 'high'], true)) {
+            $generation_quality = 'high';
+        }
+
         $schedule_enabled = !empty($_POST['schedule_enabled']) ? '1' : '0';
         $enable_featured_image = (!empty($_POST['enable_featured_image']) && $can_use_images) ? '1' : '0';
         $enable_seo = (!empty($_POST['enable_seo']) && $can_use_seo) ? '1' : '0';
@@ -220,31 +239,34 @@ class WABE_Admin
         }
 
         $new = [
-            'ai_provider'              => $ai_provider,
-            'openai_api_key'           => $this->resolve_secret_field('openai_api_key', $current),
-            'gemini_api_key'           => $this->resolve_secret_field('gemini_api_key', $current),
-            'openai_model'             => $openai_model,
-            'gemini_model'             => $gemini_model,
-            'heading_count'            => $heading_count,
-            'tone'                     => $tone,
-            'post_status'              => $post_status,
-            'weekly_posts'             => $weekly_posts,
-            'schedule_enabled'         => $schedule_enabled,
-            'enable_featured_image'    => $enable_featured_image,
-            'image_style'              => $image_style,
-            'enable_seo'               => $enable_seo,
-            'enable_internal_links'    => $enable_internal_links,
-            'enable_external_links'    => $enable_external_links,
-            'enable_topic_prediction'  => $enable_topic_prediction,
-            'enable_duplicate_check'   => $enable_duplicate_check,
+            'ai_provider' => $ai_provider,
+            'openai_api_key' => $this->resolve_secret_field('openai_api_key', $current),
+            'gemini_api_key' => $this->resolve_secret_field('gemini_api_key', $current),
+            'openai_model' => $openai_model,
+            'gemini_model' => $gemini_model,
+            'heading_count' => $heading_count,
+            'article_length' => $article_length,
+            'detail_level' => $detail_level,
+            'generation_quality' => $generation_quality,
+            'tone' => $tone,
+            'post_status' => $post_status,
+            'weekly_posts' => $weekly_posts,
+            'schedule_enabled' => $schedule_enabled,
+            'enable_featured_image' => $enable_featured_image,
+            'image_style' => $image_style,
+            'enable_seo' => $enable_seo,
+            'enable_internal_links' => $enable_internal_links,
+            'enable_external_links' => $enable_external_links,
+            'enable_topic_prediction' => $enable_topic_prediction,
+            'enable_duplicate_check' => $enable_duplicate_check,
             'enable_outline_generator' => $enable_outline_generator,
-            'author_name'              => isset($_POST['author_name']) ? sanitize_text_field(wp_unslash($_POST['author_name'])) : '',
-            'site_context'             => isset($_POST['site_context']) ? sanitize_textarea_field(wp_unslash($_POST['site_context'])) : '',
-            'writing_rules'            => isset($_POST['writing_rules']) ? sanitize_textarea_field(wp_unslash($_POST['writing_rules'])) : '',
-            'seo_keyword'              => isset($_POST['seo_keyword']) ? sanitize_text_field(wp_unslash($_POST['seo_keyword'])) : '',
-            'internal_link_url'        => isset($_POST['internal_link_url']) ? esc_url_raw(wp_unslash($_POST['internal_link_url'])) : '',
-            'external_link_url'        => isset($_POST['external_link_url']) ? esc_url_raw(wp_unslash($_POST['external_link_url'])) : '',
-            'license_key'              => isset($_POST['license_key']) ? sanitize_text_field(wp_unslash($_POST['license_key'])) : ($current['license_key'] ?? ''),
+            'author_name' => isset($_POST['author_name']) ? sanitize_text_field(wp_unslash($_POST['author_name'])) : '',
+            'site_context' => isset($_POST['site_context']) ? sanitize_textarea_field(wp_unslash($_POST['site_context'])) : '',
+            'writing_rules' => isset($_POST['writing_rules']) ? sanitize_textarea_field(wp_unslash($_POST['writing_rules'])) : '',
+            'seo_keyword' => isset($_POST['seo_keyword']) ? sanitize_text_field(wp_unslash($_POST['seo_keyword'])) : '',
+            'internal_link_url' => isset($_POST['internal_link_url']) ? esc_url_raw(wp_unslash($_POST['internal_link_url'])) : '',
+            'external_link_url' => isset($_POST['external_link_url']) ? esc_url_raw(wp_unslash($_POST['external_link_url'])) : '',
+            'license_key' => isset($_POST['license_key']) ? sanitize_text_field(wp_unslash($_POST['license_key'])) : ($current['license_key'] ?? ''),
         ];
 
         $merged = array_merge($current, $new);

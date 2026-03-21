@@ -205,7 +205,25 @@ $style_options = wabe_settings_style_options();
                 <div class="postbox" style="padding:20px;margin-bottom:24px;">
                     <h2 style="margin:0 0 16px 0;"><?php echo esc_html__('Generation Settings', WABE_TEXTDOMAIN); ?>
                     </h2>
+                    <?php
+                    $plan = method_exists($this, 'get_plan') ? $this->get_plan() : 'free';
 
+                    $allowed_article_lengths = ($plan === 'free') ? [1000] : [1000, 3000, 5000];
+                    $article_length = (int)($opt['article_length'] ?? 1000);
+                    if (!in_array($article_length, $allowed_article_lengths, true)) {
+                        $article_length = (int)$allowed_article_lengths[0];
+                    }
+
+                    $detail_level = $opt['detail_level'] ?? 'medium';
+                    if (!in_array($detail_level, ['low', 'medium', 'high'], true)) {
+                        $detail_level = 'medium';
+                    }
+
+                    $generation_quality = $opt['generation_quality'] ?? 'high';
+                    if (!in_array($generation_quality, ['fast', 'high'], true)) {
+                        $generation_quality = 'high';
+                    }
+                    ?>
                     <table class="form-table" role="presentation">
                         <tbody>
                             <tr>
@@ -229,7 +247,65 @@ $style_options = wabe_settings_style_options();
                                     </p>
                                 </td>
                             </tr>
+                            <tr>
+                                <th scope="row"><?php echo esc_html__('Article Length', WABE_TEXTDOMAIN); ?></th>
+                                <td>
+                                    <select name="article_length" <?php disabled($plan === 'free'); ?>>
+                                        <?php foreach ($allowed_article_lengths as $len) : ?>
+                                            <option value="<?php echo esc_attr((string)$len); ?>"
+                                                <?php selected($article_length, $len); ?>>
+                                                <?php echo esc_html(number_format_i18n($len)); ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                    <p class="description">
+                                        <?php
+                                        if ($plan === 'free') {
+                                            echo esc_html__('Free plan is fixed at 1000 characters.', WABE_TEXTDOMAIN);
+                                        } else {
+                                            echo esc_html__('Choose the target article length.', WABE_TEXTDOMAIN);
+                                        }
+                                        ?>
+                                    </p>
+                                </td>
+                            </tr>
 
+                            <tr>
+                                <th scope="row"><?php echo esc_html__('Detail Level', WABE_TEXTDOMAIN); ?></th>
+                                <td>
+                                    <select name="detail_level">
+                                        <option value="low" <?php selected($detail_level, 'low'); ?>>
+                                            <?php echo esc_html__('Low', WABE_TEXTDOMAIN); ?>
+                                        </option>
+                                        <option value="medium" <?php selected($detail_level, 'medium'); ?>>
+                                            <?php echo esc_html__('Medium', WABE_TEXTDOMAIN); ?>
+                                        </option>
+                                        <option value="high" <?php selected($detail_level, 'high'); ?>>
+                                            <?php echo esc_html__('High', WABE_TEXTDOMAIN); ?>
+                                        </option>
+                                    </select>
+                                    <p class="description">
+                                        <?php echo esc_html__('Controls how deeply the article explains each point.', WABE_TEXTDOMAIN); ?>
+                                    </p>
+                                </td>
+                            </tr>
+
+                            <tr>
+                                <th scope="row"><?php echo esc_html__('Generation Quality', WABE_TEXTDOMAIN); ?></th>
+                                <td>
+                                    <select name="generation_quality">
+                                        <option value="fast" <?php selected($generation_quality, 'fast'); ?>>
+                                            <?php echo esc_html__('Fast', WABE_TEXTDOMAIN); ?>
+                                        </option>
+                                        <option value="high" <?php selected($generation_quality, 'high'); ?>>
+                                            <?php echo esc_html__('High Quality', WABE_TEXTDOMAIN); ?>
+                                        </option>
+                                    </select>
+                                    <p class="description">
+                                        <?php echo esc_html__('Fast is lighter and cheaper. High Quality is slower but more stable for long-form articles.', WABE_TEXTDOMAIN); ?>
+                                    </p>
+                                </td>
+                            </tr>
                             <tr>
                                 <th scope="row"><?php echo esc_html__('Tone', WABE_TEXTDOMAIN); ?></th>
                                 <td>
