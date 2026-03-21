@@ -1,9 +1,9 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: WP AI Blog Engine\n"
-"POT-Creation-Date: 2026-03-21 00:00+0900\n"
-"PO-Revision-Date: 2026-03-20 22:08+0000\n"
-"Last-Translator: \n"
+"POT-Creation-Date: 2026-03-21 10:50+0000\n"
+"PO-Revision-Date: 2026-03-21 11:35+0000\n"
+"Last-Translator: ChatGPT\n"
 "Language-Team: 日本語\n"
 "Language: ja\n"
 "MIME-Version: 1.0\n"
@@ -12,12 +12,22 @@ msgstr ""
 "Plural-Forms: nplurals=1; plural=0;\n"
 "X-Generator: Loco https://localise.biz/\n"
 "X-Domain: wp-ai-blog-engine\n"
-"Report-Msgid-Bugs-To: \n"
-"X-Loco-Version: 2.8.3; wp-6.9.4; php-8.3.30"
 
 #: admin/topics.php
 msgid "#"
-msgstr "番号"
+msgstr "#"
+
+msgid "$12/mo  $79/yr  $199 lifetime"
+msgstr "$12/月  $79/年  $199 買い切り"
+
+msgid "$12/mo $79/yr $199 lifetime"
+msgstr "$12/月  $79/年  $199 買い切り"
+
+msgid "$24/mo  $159/yr  $399 lifetime"
+msgstr "$24/月 $159/年 $399 買い切り"
+
+msgid "$24/mo $159/yr $399 lifetime"
+msgstr "$24/月 $159/年 $399 買い切り"
 
 #: admin/license.php
 msgid "Active"
@@ -118,6 +128,9 @@ msgstr "記事生成に使用するAIプロバイダーを選択します。"
 msgid "Clear Logs"
 msgstr "ログを削除"
 
+msgid "Compare plans / Upgrade"
+msgstr "プラン比較 / アップグレード"
+
 #: admin/settings.php
 msgid "Compare plans / Upgrade to %s"
 msgstr "プラン比較 / %s にアップグレード"
@@ -203,8 +216,13 @@ msgstr "下書き / 公開"
 msgid "Draft only"
 msgstr "下書きのみ"
 
+msgid "Duplicate Check"
+msgstr "重複チェック"
+
+msgid "Duplicate check"
+msgstr "重複チェック"
+
 #: admin/settings.php
-#| msgid "Duplicate Check"
 msgid "Duplicate Check: %s"
 msgstr "重複チェック: %s"
 
@@ -259,6 +277,9 @@ msgstr "有効期限"
 #: admin/settings.php
 msgid "External Link Support"
 msgstr "外部リンク対応"
+
+msgid "External links"
+msgstr "外部リンク"
 
 #: admin/settings.php
 msgid "External links: %s"
@@ -318,6 +339,9 @@ msgstr "生成はスキップされたか、失敗しました。"
 msgid "Heading Count"
 msgstr "見出し数"
 
+msgid "Heading count"
+msgstr "見出し数"
+
 #: admin/license.php
 msgid "Heading Count Max"
 msgstr "見出し数上限"
@@ -344,6 +368,9 @@ msgid ""
 "If there is at least one topic in the queue, a post will be generated "
 "immediately using the selected AI provider."
 msgstr "題材キューに1件以上あれば、選択中のAIプロバイダーで直ちに投稿を生成します。"
+
+msgid "Image generation"
+msgstr "画像生成"
 
 #: admin/settings.php
 msgid "Image generation: %s"
@@ -379,6 +406,9 @@ msgstr "内部リンク対応"
 
 #: admin/license.php
 msgid "Internal Links"
+msgstr "内部リンク"
+
+msgid "Internal links"
 msgstr "内部リンク"
 
 #: admin/settings.php
@@ -420,6 +450,9 @@ msgstr "ライセンス情報を同期しました。"
 #: admin/topics.php
 msgid "List"
 msgstr "リスト"
+
+msgid "Locked"
+msgstr "ロック中"
 
 #: admin/settings.php
 msgid "Locked."
@@ -533,6 +566,9 @@ msgstr "OpenAIモデル"
 msgid "Outline Generator"
 msgstr "構成生成"
 
+msgid "Outline generator"
+msgstr "構成生成"
+
 #: admin/license.php admin/settings.php
 msgid "Plan Comparison"
 msgstr "プラン比較"
@@ -578,9 +614,15 @@ msgstr "Pro / Advanced 機能"
 msgid "Publish"
 msgstr "公開"
 
+msgid "Publish available"
+msgstr "公開利用可否"
+
 #: admin/settings.php
 msgid "Publish available: %s"
 msgstr "公開利用可否: %s"
+
+msgid "Queued topics"
+msgstr "登録済み題材"
 
 #: admin/settings.php
 msgid "Queued topics: %d / 10"
@@ -750,6 +792,9 @@ msgstr "題材履歴"
 msgid "Topic Prediction"
 msgstr "題材予測"
 
+msgid "Topic prediction"
+msgstr "題材予測"
+
 #: admin/settings.php
 msgid "Topic prediction: %s"
 msgstr "題材予測: %s"
@@ -757,6 +802,9 @@ msgstr "題材予測: %s"
 #: admin/topics.php
 msgid "Topic Queue"
 msgstr "題材キュー"
+
+msgid "Topic queue capacity"
+msgstr "題材キュー上限"
 
 #: admin/settings.php
 msgid "Topic queue capacity: 10"
@@ -769,6 +817,9 @@ msgstr "題材"
 #: includes/class-admin.php
 msgid "Topics saved."
 msgstr "題材を保存しました。"
+
+msgid "up to %d"
+msgstr "最大 %d"
 
 #: admin/topics.php
 msgid ""
@@ -797,6 +848,9 @@ msgstr "WABE_Generator クラスが見つかりません。"
 #: admin/logs.php
 msgid "Warning"
 msgstr "警告"
+
+msgid "Weekly auto posts"
+msgstr "週ごとの自動投稿"
 
 #: admin/settings.php
 msgid "Weekly auto posts: up to %d"

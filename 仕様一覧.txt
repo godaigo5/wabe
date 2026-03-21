@@ -50,11 +50,14 @@ AIでブログ記事（タイトル・見出し・本文・画像）を自動生
 ▼現在の状態 
 ・Webhook → ライセンス発行 → DB保存は完成済み 
 ・WordPressプラグインもほぼ完成 
-・管理画面UI改善済み 
-・多言語化（POT / PO） 
+・管理画面UI改善済み
+・多言語化（POT / PO）も完成
+・WP管理画面 → LP → Stripe → ライセンス登録への動線 未完
 
 ▼GitHub 
-https://github.com/godaigo5/wabe 
+https://github.com/godaigo5/wabe
+▼HP
+http://wabe.d-create.online/
 
 ▼重要ルール 
 ・必ず「実装ベース」で回答 

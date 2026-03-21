@@ -659,8 +659,8 @@ $style_options = wabe_settings_style_options();
                         <tr>
                             <td><?php echo esc_html__('Price', WABE_TEXTDOMAIN); ?></td>
                             <td><?php echo esc_html__('Free', WABE_TEXTDOMAIN); ?></td>
-                            <td>$12/mo $79/yr $199 lifetime</td>
-                            <td>$24/mo $159/yr $399 lifetime</td>
+                            <td><?php echo esc_html__('$12/mo $79/yr $199 lifetime', WABE_TEXTDOMAIN); ?></td>
+                            <td><?php echo esc_html__('$24/mo $159/yr $399 lifetime', WABE_TEXTDOMAIN); ?></td>
                         </tr>
                         <tr>
                             <td><?php echo esc_html__('Automatic posts per week', WABE_TEXTDOMAIN); ?></td>

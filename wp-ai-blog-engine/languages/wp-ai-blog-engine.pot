@@ -1,7 +1,8 @@
+#, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: WP AI Blog Engine\n"
-"POT-Creation-Date: 2026-03-21 00:00+0900\n"
+"POT-Creation-Date: 2026-03-21 11:35+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: \n"
 "Language-Team: \n"
@@ -9,8 +10,10 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Generator: ChatGPT\n"
+"X-Generator: Loco https://localise.biz/\n"
 "X-Domain: wp-ai-blog-engine\n"
+"\n"
+"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;"
 
 #: includes/class-admin.php
 msgid "WP AI Blog Engine"
@@ -141,7 +144,8 @@ msgid "OpenAI API Key"
 msgstr ""
 
 #: admin/settings.php
-msgid "If a masked value is displayed, leaving it as-is will keep the current key."
+msgid ""
+"If a masked value is displayed, leaving it as-is will keep the current key."
 msgstr ""
 
 #: admin/settings.php
@@ -201,7 +205,10 @@ msgid "Enable automatic generation schedule"
 msgstr ""
 
 #: admin/settings.php
-msgid "WordPress Cron runs when your WordPress site is accessed. On low-traffic sites, automatic posting may be delayed. For stable operation, setting a real server cron is recommended."
+msgid ""
+"WordPress Cron runs when your WordPress site is accessed. On low-traffic "
+"sites, automatic posting may be delayed. For stable operation, setting a "
+"real server cron is recommended."
 msgstr ""
 
 #: admin/settings.php
@@ -221,7 +228,9 @@ msgid "API key required"
 msgstr ""
 
 #: admin/settings.php
-msgid "The selected provider must have a valid API key saved before generation can run."
+msgid ""
+"The selected provider must have a valid API key saved before generation can "
+"run."
 msgstr ""
 
 #: admin/settings.php
@@ -237,7 +246,9 @@ msgid "Site Context"
 msgstr ""
 
 #: admin/settings.php
-msgid "Describe the purpose, audience, and direction of the site so the AI can generate more suitable articles."
+msgid ""
+"Describe the purpose, audience, and direction of the site so the AI can "
+"generate more suitable articles."
 msgstr ""
 
 #: admin/settings.php
@@ -245,7 +256,9 @@ msgid "Writing Rules"
 msgstr ""
 
 #: admin/settings.php
-msgid "Example: sentence length, tone policy, forbidden expressions, CTA style, formatting policy."
+msgid ""
+"Example: sentence length, tone policy, forbidden expressions, CTA style, "
+"formatting policy."
 msgstr ""
 
 #: admin/settings.php
@@ -297,7 +310,8 @@ msgid "Topic Prediction"
 msgstr ""
 
 #: admin/settings.php
-msgid "Predict topic ideas based on site trends and auto-fill the queue when needed"
+msgid ""
+"Predict topic ideas based on site trends and auto-fill the queue when needed"
 msgstr ""
 
 #: admin/license.php admin/settings.php
@@ -393,7 +407,9 @@ msgid "Generate Now"
 msgstr ""
 
 #: admin/settings.php
-msgid "If there is at least one topic in the queue, a post will be generated immediately using the selected AI provider."
+msgid ""
+"If there is at least one topic in the queue, a post will be generated "
+"immediately using the selected AI provider."
 msgstr ""
 
 #: admin/settings.php
@@ -437,11 +453,16 @@ msgid "Important Note"
 msgstr ""
 
 #: admin/settings.php
-msgid "Automatic posting depends on WordPress Cron. If your site has low traffic, scheduled execution may be delayed until someone opens the site."
+msgid ""
+"Automatic posting depends on WordPress Cron. If your site has low traffic, "
+"scheduled execution may be delayed until someone opens the site."
 msgstr ""
 
 #: admin/settings.php
-msgid "Defines the brand voice, author persona, and writing identity used during content generation. This strongly affects tone consistency and article quality."
+msgid ""
+"Defines the brand voice, author persona, and writing identity used during "
+"content generation. This strongly affects tone consistency and article "
+"quality."
 msgstr ""
 
 #: admin/settings.php
@@ -449,11 +470,15 @@ msgid "Site Context / Niche"
 msgstr ""
 
 #: admin/settings.php
-msgid "Describe your site, audience, niche, and product focus. This improves article relevance and consistency."
+msgid ""
+"Describe your site, audience, niche, and product focus. This improves "
+"article relevance and consistency."
 msgstr ""
 
 #: admin/settings.php
-msgid "Examples: avoid exaggerated claims, use short paragraphs, include practical examples, write in Japanese, etc."
+msgid ""
+"Examples: avoid exaggerated claims, use short paragraphs, include practical "
+"examples, write in Japanese, etc."
 msgstr ""
 
 #: admin/settings.php
@@ -461,7 +486,9 @@ msgid "Automation"
 msgstr ""
 
 #: admin/settings.php
-msgid "Configure automatic posting. Posting requires registered topics on the Topics screen."
+msgid ""
+"Configure automatic posting. Posting requires registered topics on the "
+"Topics screen."
 msgstr ""
 
 #: admin/settings.php
@@ -473,7 +500,9 @@ msgid "Enable Automatic Generation"
 msgstr ""
 
 #: admin/settings.php
-msgid "When enabled, WordPress will try to generate posts automatically based on your weekly posting limit."
+msgid ""
+"When enabled, WordPress will try to generate posts automatically based on "
+"your weekly posting limit."
 msgstr ""
 
 #: admin/settings.php
@@ -481,11 +510,15 @@ msgid "Important:"
 msgstr ""
 
 #: admin/settings.php
-msgid "Automatic posting runs when WordPress is accessed. If nobody visits your site or dashboard, scheduled posting may not run on time."
+msgid ""
+"Automatic posting runs when WordPress is accessed. If nobody visits your "
+"site or dashboard, scheduled posting may not run on time."
 msgstr ""
 
 #: admin/settings.php
-msgid "You can register up to 10 topics. Automatic generation works best when topics are prepared in advance."
+msgid ""
+"You can register up to 10 topics. Automatic generation works best when "
+"topics are prepared in advance."
 msgstr ""
 
 #: admin/topics.php
@@ -513,7 +546,9 @@ msgid "Topic Queue"
 msgstr ""
 
 #: admin/topics.php
-msgid "Up to 10 topics can be registered. When a post is generated, the first topic is removed and the remaining topics are shifted up."
+msgid ""
+"Up to 10 topics can be registered. When a post is generated, the first topic "
+"is removed and the remaining topics are shifted up."
 msgstr ""
 
 #: admin/topics.php
@@ -561,7 +596,9 @@ msgid "Open"
 msgstr ""
 
 #: admin/topics.php
-msgid "Register up to 10 topics. After a post is generated successfully, the first topic is removed automatically and the list shifts up."
+msgid ""
+"Register up to 10 topics. After a post is generated successfully, the first "
+"topic is removed automatically and the list shifts up."
 msgstr ""
 
 #: admin/topics.php
@@ -741,7 +778,9 @@ msgid "The plugin syncs with your license API and reflects the active plan."
 msgstr ""
 
 #: admin/license.php
-msgid "Features are locked or unlocked automatically based on the returned plan and license status."
+msgid ""
+"Features are locked or unlocked automatically based on the returned plan and "
+"license status."
 msgstr ""
 
 #: admin/license.php
@@ -773,7 +812,9 @@ msgid "Sales Page / Upgrade"
 msgstr ""
 
 #: admin/license.php
-msgid "Upgrade links can be placed here later. For now, direct users to your sales site or customer portal."
+msgid ""
+"Upgrade links can be placed here later. For now, direct users to your sales "
+"site or customer portal."
 msgstr ""
 
 #: admin/license.php
@@ -809,9 +850,64 @@ msgid "WABE_Generator class not found."
 msgstr ""
 
 #: wp-ai-blog-engine.php
-msgid "AI-powered blog generation plugin for WordPress with OpenAI / Gemini support and license-based plan control."
+msgid ""
+"AI-powered blog generation plugin for WordPress with OpenAI / Gemini support "
+"and license-based plan control."
 msgstr ""
 
-#: wp-ai-blog-engine.php
-msgid "AI-powered blog generation plugin for WordPress with OpenAI / Gemini support and license-based plan control."
+msgid "Queued topics"
+msgstr ""
+
+msgid "$12/mo  $79/yr  $199 lifetime"
+msgstr ""
+
+msgid "$24/mo  $159/yr  $399 lifetime"
+msgstr ""
+
+msgid "Heading count"
+msgstr ""
+
+msgid "Duplicate check"
+msgstr ""
+
+msgid "Internal links"
+msgstr ""
+
+msgid "External links"
+msgstr ""
+
+msgid "Topic prediction"
+msgstr ""
+
+msgid "Outline generator"
+msgstr ""
+
+msgid "Weekly auto posts"
+msgstr ""
+
+msgid "up to %d"
+msgstr ""
+
+msgid "Topic queue capacity"
+msgstr ""
+
+msgid "Publish available"
+msgstr ""
+
+msgid "Image generation"
+msgstr ""
+
+msgid "Locked"
+msgstr ""
+
+msgid "$24/mo $159/yr $399 lifetime"
+msgstr ""
+
+msgid "$12/mo $79/yr $199 lifetime"
+msgstr ""
+
+msgid "Duplicate Check"
+msgstr ""
+
+msgid "Compare plans / Upgrade"
 msgstr ""

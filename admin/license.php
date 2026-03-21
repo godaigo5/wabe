@@ -156,8 +156,8 @@ if (!function_exists('wabe_license_mask_key')) {
                         <tr>
                             <td><?php echo esc_html__('Price', WABE_TEXTDOMAIN); ?></td>
                             <td><?php echo esc_html__('Free', WABE_TEXTDOMAIN); ?></td>
-                            <td>$12/mo $79/yr $199 lifetime</td>
-                            <td>$24/mo $159/yr $399 lifetime</td>
+                            <td><?php echo esc_html__('$12/mo $79/yr $199 lifetime', WABE_TEXTDOMAIN); ?></td>
+                            <td><?php echo esc_html__('$24/mo $159/yr $399 lifetime', WABE_TEXTDOMAIN); ?></td>
                         </tr>
                         <tr>
                             <td><?php echo esc_html__('Automatic posts per week', WABE_TEXTDOMAIN); ?></td>
@@ -225,23 +225,6 @@ if (!function_exists('wabe_license_mask_key')) {
         </div>
 
         <div>
-            <div class="postbox" style="padding:20px;margin-bottom:24px;">
-                <h2 style="margin:0 0 16px 0;"><?php echo esc_html__('How Licensing Works', WABE_TEXTDOMAIN); ?></h2>
-
-                <ol style="padding-left:18px;margin:0;">
-                    <li style="margin-bottom:10px;">
-                        <?php echo esc_html__('The customer purchases a plan through Stripe.', WABE_TEXTDOMAIN); ?></li>
-                    <li style="margin-bottom:10px;">
-                        <?php echo esc_html__('Stripe Webhook issues or updates the license on your API server.', WABE_TEXTDOMAIN); ?>
-                    </li>
-                    <li style="margin-bottom:10px;">
-                        <?php echo esc_html__('The plugin syncs with your license API and reflects the active plan.', WABE_TEXTDOMAIN); ?>
-                    </li>
-                    <li><?php echo esc_html__('Features are locked or unlocked automatically based on the returned plan and license status.', WABE_TEXTDOMAIN); ?>
-                    </li>
-                </ol>
-            </div>
-
             <div class="postbox" style="padding:20px;margin-bottom:24px;">
                 <h2 style="margin:0 0 16px 0;">
                     <?php echo esc_html__('What to Check When License Sync Fails', WABE_TEXTDOMAIN); ?></h2>
