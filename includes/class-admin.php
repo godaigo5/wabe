@@ -354,8 +354,21 @@ class WABE_Admin
     public function handle_generate_now()
     {
         $this->guard();
-
         check_admin_referer('wabe_generate_now', 'wabe_generate_now_nonce');
+
+        $state = $this->get_ready_state();
+
+        if (empty($state['ready'])) {
+            $message = implode(' / ', array_map('wp_strip_all_tags', $state['reasons']));
+            if ($message === '') {
+                $message = __('Generation is not ready. Please check your settings.', WABE_TEXTDOMAIN);
+            }
+
+            $this->redirect_with_message(
+                admin_url('admin.php?page=wabe'),
+                $message
+            );
+        }
 
         if (!class_exists('WABE_Generator')) {
             $this->redirect_with_message(
@@ -365,10 +378,13 @@ class WABE_Admin
         }
 
         $generator = new WABE_Generator();
-        $post_id = $generator->run();
+        $post_id   = $generator->run();
 
         if ($post_id) {
-            $message = sprintf(__('Post generated successfully. Post ID: %d', WABE_TEXTDOMAIN), (int)$post_id);
+            $message = sprintf(
+                __('Post generated successfully. Post ID: %d', WABE_TEXTDOMAIN),
+                (int)$post_id
+            );
         } else {
             $message = __('Generation finished, but no post was created.', WABE_TEXTDOMAIN);
         }
@@ -654,13 +670,8 @@ class WABE_Admin
      */
     public function is_ready_to_post()
     {
-        $provider = sanitize_key($this->options['ai_provider'] ?? 'openai');
-
-        if ($provider === 'gemini') {
-            return !empty($this->options['gemini_api_key']);
-        }
-
-        return !empty($this->options['openai_api_key']);
+        $state = $this->get_ready_state();
+        return !empty($state['ready']);
     }
 
     /**
@@ -688,19 +699,24 @@ class WABE_Admin
      * @param array $current
      * @return string
      */
-    private function resolve_secret_field($key, array $current)
+    private function resolve_secret_field($field_name, array $current)
     {
-        $raw = isset($_POST[$key]) ? trim((string)wp_unslash($_POST[$key])) : '';
+        if (!isset($_POST[$field_name])) {
+            return $current[$field_name] ?? '';
+        }
+
+        $raw = sanitize_text_field(wp_unslash($_POST[$field_name]));
+        $raw = trim($raw);
 
         if ($raw === '') {
-            return (string)($current[$key] ?? '');
+            return '';
         }
 
-        if (strpos($raw, '*') !== false) {
-            return (string)($current[$key] ?? '');
+        if ($raw === '********' || preg_match('/^\*+$/', $raw)) {
+            return $current[$field_name] ?? '';
         }
 
-        return sanitize_text_field($raw);
+        return $raw;
     }
 
     /**
@@ -765,5 +781,70 @@ class WABE_Admin
         $url = add_query_arg('wabe_message', rawurlencode($message), $url);
         wp_safe_redirect($url);
         exit;
+    }
+
+    public function get_ready_state()
+    {
+        $this->reload_options();
+
+        $provider = sanitize_key($this->options['ai_provider'] ?? 'openai');
+        if (!in_array($provider, ['openai', 'gemini'], true)) {
+            $provider = 'openai';
+        }
+
+        $topics = $this->options['topics'] ?? [];
+        $topics_count = 0;
+
+        if (is_array($topics)) {
+            foreach ($topics as $row) {
+                $topic_text = '';
+                if (is_array($row)) {
+                    $topic_text = trim((string)($row['topic'] ?? ''));
+                } elseif (is_string($row)) {
+                    $topic_text = trim($row);
+                }
+
+                if ($topic_text !== '') {
+                    $topics_count++;
+                }
+            }
+        }
+
+        $has_provider_key = false;
+        if ($provider === 'gemini') {
+            $has_provider_key = !empty($this->options['gemini_api_key']);
+        } else {
+            $has_provider_key = !empty($this->options['openai_api_key']);
+        }
+
+        $reasons = [];
+
+        if ($topics_count < 1) {
+            $reasons[] = __('Please add at least one topic in Topics.', WABE_TEXTDOMAIN);
+        }
+
+        if (!$has_provider_key) {
+            if ($provider === 'gemini') {
+                $reasons[] = __('Gemini is selected, but the Gemini API key is not set.', WABE_TEXTDOMAIN);
+            } else {
+                $reasons[] = __('OpenAI is selected, but the OpenAI API key is not set.', WABE_TEXTDOMAIN);
+            }
+        }
+
+        return [
+            'ready'            => empty($reasons),
+            'provider'         => $provider,
+            'has_provider_key' => $has_provider_key,
+            'topics_count'     => $topics_count,
+            'reasons'          => $reasons,
+        ];
+    }
+    public function render_settings_page()
+    {
+        $this->guard();
+        $this->reload_options();
+
+        $opt = $this->options;
+        include WABE_PATH . 'admin/settings.php';
     }
 }
