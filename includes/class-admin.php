@@ -156,6 +156,9 @@ class WABE_Admin
      */
     public function handle_save_settings()
     {
+        if (class_exists('WABE_Logger') && method_exists('WABE_Logger', 'info')) {
+            WABE_Logger::info('DEBUG: NEW handle_save_settings reached');
+        }
         $this->guard();
         check_admin_referer('wabe_save_settings', 'wabe_settings_nonce');
 
@@ -223,11 +226,14 @@ class WABE_Admin
             $image_style = 'modern';
         }
 
+        $openai_api_key = $this->resolve_secret_field('openai_api_key', $current);
+        $gemini_api_key = $this->resolve_secret_field('gemini_api_key', $current);
+
         $new = [
             'plan' => $plan,
             'ai_provider' => $ai_provider,
-            'openai_api_key' => $this->resolve_secret_field('openai_api_key', $current),
-            'gemini_api_key' => $this->resolve_secret_field('gemini_api_key', $current),
+            'openai_api_key' => $openai_api_key,
+            'gemini_api_key' => $gemini_api_key,
             'openai_model' => $openai_model,
             'gemini_model' => $gemini_model,
             'detail_level' => $detail_level,
@@ -255,11 +261,14 @@ class WABE_Admin
         $merged = array_merge($current, $new);
         update_option(WABE_OPTION, $merged);
 
-        $this->reschedule_cron($weekly_posts, $schedule_enabled === '1');
-
         if (class_exists('WABE_Logger') && method_exists('WABE_Logger', 'info')) {
             WABE_Logger::info('Settings saved.');
+            WABE_Logger::info('Saved ai_provider: ' . $ai_provider);
+            WABE_Logger::info('Saved openai_api_key length: ' . strlen((string)$openai_api_key));
+            WABE_Logger::info('Saved gemini_api_key length: ' . strlen((string)$gemini_api_key));
         }
+
+        $this->reschedule_cron($weekly_posts, $schedule_enabled === '1');
 
         $this->redirect_with_message(
             admin_url('admin.php?page=wabe'),
@@ -685,11 +694,23 @@ class WABE_Admin
     private function resolve_secret_field($field_name, array $current)
     {
         if (!isset($_POST[$field_name])) {
+            if (class_exists('WABE_Logger') && method_exists('WABE_Logger', 'info')) {
+                WABE_Logger::info('Secret field missing in POST: ' . $field_name);
+            }
             return $current[$field_name] ?? '';
         }
 
-        $raw = sanitize_text_field(wp_unslash($_POST[$field_name]));
-        $raw = trim($raw);
+        $raw = wp_unslash($_POST[$field_name]);
+
+        if (is_array($raw)) {
+            $raw = '';
+        }
+
+        $raw = trim((string)$raw);
+
+        if (class_exists('WABE_Logger') && method_exists('WABE_Logger', 'info')) {
+            WABE_Logger::info('Secret field received: ' . $field_name . ' / length=' . strlen($raw));
+        }
 
         if ($raw === '') {
             return '';
@@ -699,7 +720,7 @@ class WABE_Admin
             return $current[$field_name] ?? '';
         }
 
-        return $raw;
+        return sanitize_text_field($raw);
     }
 
     /**

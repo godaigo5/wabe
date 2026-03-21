@@ -170,7 +170,7 @@ if (!in_array($image_style, ['modern', 'business', 'blog', 'tech', 'luxury', 'na
                 <tr>
                     <th scope="row"><?php echo esc_html__('OpenAI API Key', WABE_TEXTDOMAIN); ?></th>
                     <td>
-                        <input type="password" name="openai_api_key"
+                        <input type="text" name="openai_api_key"
                             value="<?php echo !empty($opt['openai_api_key']) ? '********' : ''; ?>" class="regular-text"
                             autocomplete="off">
                     </td>
@@ -187,7 +187,7 @@ if (!in_array($image_style, ['modern', 'business', 'blog', 'tech', 'luxury', 'na
                 <tr>
                     <th scope="row"><?php echo esc_html__('Gemini API Key', WABE_TEXTDOMAIN); ?></th>
                     <td>
-                        <input type="password" name="gemini_api_key"
+                        <input type="text" name="gemini_api_key"
                             value="<?php echo !empty($opt['gemini_api_key']) ? '********' : ''; ?>" class="regular-text"
                             autocomplete="off">
                     </td>

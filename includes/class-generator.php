@@ -767,6 +767,8 @@ class WABE_Generator
 
     private function generate_full_article(array $context, $article_title)
     {
+        WABE_Logger::info('AI provider used: ' . $this->ai->provider());
+        WABE_Logger::info('AI model used: ' . $this->ai->model());
         $prompt = $this->build_full_article_prompt($context, $article_title);
 
         $quality = $context['generation_quality'] ?? 'high';

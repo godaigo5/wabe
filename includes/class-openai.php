@@ -53,6 +53,9 @@ class WABE_OpenAI
         $status_code = (int) wp_remote_retrieve_response_code($response);
         $raw_body    = wp_remote_retrieve_body($response);
         $body        = json_decode($raw_body, true);
+        if (class_exists('WABE_Logger') && method_exists('WABE_Logger', 'info')) {
+            WABE_Logger::info('OpenAI raw response preview: ' . mb_substr($raw_body, 0, 2000));
+        }
 
         if ($status_code < 200 || $status_code >= 300) {
             $error_message = '';
