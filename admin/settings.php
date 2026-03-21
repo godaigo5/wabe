@@ -327,23 +327,35 @@ $style_options = wabe_settings_style_options();
                                         value="<?php echo esc_attr($opt['author_name'] ?? ''); ?>" class="regular-text">
                                 </td>
                             </tr>
-
+                            <?php
+                            $stored_rules = (string) ($opt['site_context'] ?? '');
+                            $decoded_rules = base64_decode($stored_rules, true);
+                            if ($decoded_rules === false) {
+                                $decoded_rules = $stored_rules;
+                            }
+                            ?>
                             <tr>
                                 <th scope="row"><?php echo esc_html__('Site Context', WABE_TEXTDOMAIN); ?></th>
                                 <td>
-                                    <textarea name="site_context" rows="5"
-                                        class="large-text"><?php echo esc_textarea($opt['site_context'] ?? ''); ?></textarea>
+                                    <textarea name="site_context" rows="6" class="regular-text"
+                                        style="width:100%;max-width:900px;"><?php echo esc_textarea($decoded_rules); ?></textarea>
                                     <p class="description">
                                         <?php echo esc_html__('Describe the purpose, audience, and direction of the site so the AI can generate more suitable articles.', WABE_TEXTDOMAIN); ?>
                                     </p>
                                 </td>
                             </tr>
-
+                            <?php
+                            $stored_rules = (string) ($opt['writing_rules'] ?? '');
+                            $decoded_rules = base64_decode($stored_rules, true);
+                            if ($decoded_rules === false) {
+                                $decoded_rules = $stored_rules;
+                            }
+                            ?>
                             <tr>
                                 <th scope="row"><?php echo esc_html__('Writing Rules', WABE_TEXTDOMAIN); ?></th>
                                 <td>
-                                    <textarea name="writing_rules" rows="5"
-                                        class="large-text"><?php echo esc_textarea($opt['writing_rules'] ?? ''); ?></textarea>
+                                    <textarea name="writing_rules" rows="8" class="regular-text"
+                                        style="width:100%;max-width:900px;"><?php echo esc_textarea($decoded_rules); ?></textarea>
                                     <p class="description">
                                         <?php echo esc_html__('Example: sentence length, tone policy, forbidden expressions, CTA style, formatting policy.', WABE_TEXTDOMAIN); ?>
                                     </p>
@@ -564,7 +576,6 @@ $style_options = wabe_settings_style_options();
                         </a>
                     </p>
                 </div>
-
                 <p>
                     <button type="submit" class="button button-primary button-large">
                         <?php echo esc_html__('Save Settings', WABE_TEXTDOMAIN); ?>
@@ -572,7 +583,32 @@ $style_options = wabe_settings_style_options();
                 </p>
             </form>
         </div>
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                function encodeBase64Unicode(str) {
+                    try {
+                        return btoa(unescape(encodeURIComponent(str)));
+                    } catch (e) {
+                        return str;
+                    }
+                }
+                // 保存時にエンコード
+                const form = document.querySelector('form');
+                if (form) {
+                    form.addEventListener('submit', function() {
+                        const context = document.querySelector('textarea[name="site_context"]');
+                        const rules = document.querySelector('textarea[name="writing_rules"]');
 
+                        if (context) {
+                            context.value = encodeBase64Unicode(context.value);
+                        }
+                        if (rules) {
+                            rules.value = encodeBase64Unicode(rules.value);
+                        }
+                    });
+                }
+            });
+        </script>
         <div>
             <div class="postbox"
                 style="padding:20px;margin-bottom:24px;border-top:4px solid <?php echo esc_attr($plan_color); ?>;">
