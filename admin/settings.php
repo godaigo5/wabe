@@ -1,843 +1,484 @@
 <?php
 if (!defined('ABSPATH')) exit;
 
-$opt = is_array($this->options ?? null) ? $this->options : [];
+$opt = is_array($opt ?? null) ? $opt : [];
 
 $plan = method_exists($this, 'get_plan') ? $this->get_plan() : 'free';
-$plan_label = method_exists($this, 'get_plan_label') ? $this->get_plan_label($plan) : ucfirst((string)$plan);
-$license = method_exists($this, 'get_license_data') ? $this->get_license_data() : [];
+$plan = in_array($plan, ['free', 'advanced', 'pro'], true) ? $plan : 'free';
 
-$license_status = sanitize_text_field($license['status'] ?? ($opt['license_status'] ?? 'free'));
-$license_checked_at = sanitize_text_field($license['checked_at'] ?? ($opt['license_checked_at'] ?? ''));
-$license_expires_at = sanitize_text_field($license['expires_at'] ?? ($opt['license_expires_at'] ?? ''));
-$license_customer_email = sanitize_text_field($license['customer_email'] ?? ($opt['license_customer_email'] ?? ''));
-
-$openai_masked = !empty($opt['openai_api_key']) ? $this->mask_api_key($opt['openai_api_key']) : '';
-$gemini_masked = !empty($opt['gemini_api_key']) ? $this->mask_api_key($opt['gemini_api_key']) : '';
-
-$ai_provider = $opt['ai_provider'] ?? 'openai';
-$openai_model = $opt['openai_model'] ?? 'gpt-4.1';
-$gemini_model = $opt['gemini_model'] ?? 'gemini-2.5-flash';
-
-$heading_count_max = method_exists($this, 'plan_heading_count_max') ? (int)$this->plan_heading_count_max() : 1;
-$weekly_posts_max = method_exists($this, 'plan_weekly_posts_max') ? (int)$this->plan_weekly_posts_max() : 1;
-
-$can_publish = method_exists($this, 'plan_can_publish') ? (bool)$this->plan_can_publish() : false;
-$can_use_images = method_exists($this, 'plan_can_use_images') ? (bool)$this->plan_can_use_images() : false;
-$can_use_seo = method_exists($this, 'plan_can_use_seo') ? (bool)$this->plan_can_use_seo() : false;
-$can_use_internal = method_exists($this, 'plan_can_use_internal_links') ? (bool)$this->plan_can_use_internal_links() : false;
-$can_use_external = method_exists($this, 'plan_can_use_external_links') ? (bool)$this->plan_can_use_external_links() : false;
-$can_use_prediction = method_exists($this, 'plan_can_use_topic_prediction') ? (bool)$this->plan_can_use_topic_prediction() : false;
-$can_use_duplicate = method_exists($this, 'plan_can_use_duplicate_check') ? (bool)$this->plan_can_use_duplicate_check() : false;
-$can_use_outline = method_exists($this, 'plan_can_use_outline_generator') ? (bool)$this->plan_can_use_outline_generator() : false;
-
-$heading_count = max(1, min($heading_count_max, (int)($opt['heading_count'] ?? 1)));
-$tone = $opt['tone'] ?? 'standard';
-$post_status = $opt['post_status'] ?? 'draft';
-$weekly_posts = max(1, min($weekly_posts_max, (int)($opt['weekly_posts'] ?? 1)));
-$image_style = $opt['image_style'] ?? 'modern';
-
-$schedule_enabled = !empty($opt['schedule_enabled']);
-$enable_featured_image = !empty($opt['enable_featured_image']) && $can_use_images;
-$enable_seo = !empty($opt['enable_seo']) && $can_use_seo;
-$enable_internal_links = !empty($opt['enable_internal_links']) && $can_use_internal;
-$enable_external_links = !empty($opt['enable_external_links']) && $can_use_external;
-$enable_topic_prediction = !empty($opt['enable_topic_prediction']) && $can_use_prediction;
-$enable_duplicate_check = !empty($opt['enable_duplicate_check']) && $can_use_duplicate;
-$enable_outline_generator = !empty($opt['enable_outline_generator']) && $can_use_outline;
-
-$topics_count = is_array($opt['topics'] ?? null) ? count($opt['topics']) : 0;
-$is_ready = method_exists($this, 'is_ready_to_post') ? (bool)$this->is_ready_to_post() : false;
-$next_run_display = !empty($this->next_post_date) ? (string)$this->next_post_date : __('Not scheduled', WABE_TEXTDOMAIN);
-
-$plan_colors = [
-    'free'     => '#64748b',
-    'advanced' => '#2563eb',
-    'pro'      => '#7c3aed',
+$features = method_exists($this, 'get_plan_features') ? $this->get_plan_features() : [];
+$ready_state = method_exists($this, 'get_ready_state') ? $this->get_ready_state() : [
+    'ready' => false,
+    'provider' => sanitize_key($opt['ai_provider'] ?? 'openai'),
+    'has_provider_key' => false,
+    'topics_count' => 0,
+    'reasons' => [__('Generation is not ready.', WABE_TEXTDOMAIN)],
 ];
-$plan_color = $plan_colors[$plan] ?? '#2563eb';
+$is_ready = !empty($ready_state['ready']);
 
-if (!function_exists('wabe_settings_bool_label')) {
-    function wabe_settings_bool_label($value)
-    {
-        return $value ? __('Yes', WABE_TEXTDOMAIN) : __('No', WABE_TEXTDOMAIN);
+if (method_exists($this, 'get_plan_length_profile')) {
+    $length_profile = $this->get_plan_length_profile($plan);
+} else {
+    switch ($plan) {
+        case 'pro':
+            $length_profile = ['band' => 5000, 'min' => 4500, 'target' => 5000, 'max' => 5300];
+            break;
+        case 'advanced':
+            $length_profile = ['band' => 3000, 'min' => 2500, 'target' => 3000, 'max' => 3300];
+            break;
+        case 'free':
+        default:
+            $length_profile = ['band' => 1000, 'min' => 900, 'target' => 1000, 'max' => 1100];
+            break;
     }
 }
 
-if (!function_exists('wabe_settings_tone_options')) {
-    function wabe_settings_tone_options()
-    {
-        return [
-            'standard' => __('Standard', WABE_TEXTDOMAIN),
-            'polite'   => __('Polite', WABE_TEXTDOMAIN),
-            'casual'   => __('Casual', WABE_TEXTDOMAIN),
-        ];
-    }
+$title_profile = ['min' => 18, 'target_max' => 25, 'soft_max' => 27];
+$heading_profile = ['min' => 12, 'target_max' => 20, 'soft_max' => 22];
+
+$ai_provider = sanitize_key($opt['ai_provider'] ?? 'openai');
+if (!in_array($ai_provider, ['openai', 'gemini'], true)) {
+    $ai_provider = 'openai';
 }
 
-if (!function_exists('wabe_settings_style_options')) {
-    function wabe_settings_style_options()
-    {
-        return [
-            'modern'   => __('Modern', WABE_TEXTDOMAIN),
-            'business' => __('Business', WABE_TEXTDOMAIN),
-            'blog'     => __('Blog', WABE_TEXTDOMAIN),
-            'tech'     => __('Tech', WABE_TEXTDOMAIN),
-            'luxury'   => __('Luxury', WABE_TEXTDOMAIN),
-            'natural'  => __('Natural', WABE_TEXTDOMAIN),
-        ];
-    }
+$openai_model = sanitize_text_field($opt['openai_model'] ?? 'gpt-4.1');
+$gemini_model = sanitize_text_field($opt['gemini_model'] ?? 'gemini-2.5-flash');
+
+$tone = sanitize_key($opt['tone'] ?? 'standard');
+if (!in_array($tone, ['standard', 'polite', 'casual'], true)) {
+    $tone = 'standard';
 }
 
-if (!function_exists('wabe_settings_lock_text')) {
-    function wabe_settings_lock_text($plan_text = '')
-    {
-        if ($plan_text !== '') {
-            return sprintf(__('Locked. Upgrade to %s to use this feature.', WABE_TEXTDOMAIN), $plan_text);
-        }
-        return __('Locked.', WABE_TEXTDOMAIN);
-    }
+$post_status = sanitize_key($opt['post_status'] ?? 'draft');
+if (!in_array($post_status, ['draft', 'publish'], true)) {
+    $post_status = 'draft';
 }
 
-if (!function_exists('wabe_settings_feature_badge')) {
-    function wabe_settings_feature_badge($enabled)
-    {
-        if ($enabled) {
-            return '<span style="display:inline-block;padding:4px 10px;border-radius:999px;background:#dcfce7;color:#166534;font-size:12px;font-weight:600;">' . esc_html__('Available', WABE_TEXTDOMAIN) . '</span>';
-        }
-
-        return '<span style="display:inline-block;padding:4px 10px;border-radius:999px;background:#fee2e2;color:#991b1b;font-size:12px;font-weight:600;">' . esc_html__('Locked', WABE_TEXTDOMAIN) . '</span>';
-    }
+$detail_level = sanitize_key($opt['detail_level'] ?? 'medium');
+if (!in_array($detail_level, ['low', 'medium', 'high'], true)) {
+    $detail_level = 'medium';
 }
 
-$tone_options = wabe_settings_tone_options();
-$style_options = wabe_settings_style_options();
+$generation_quality = sanitize_key($opt['generation_quality'] ?? 'high');
+if (!in_array($generation_quality, ['fast', 'high'], true)) {
+    $generation_quality = 'high';
+}
+
+$weekly_posts_max = max(1, (int)($features['weekly_posts_max'] ?? 1));
+$weekly_posts = (int)($opt['weekly_posts'] ?? 1);
+$weekly_posts = max(1, min($weekly_posts_max, $weekly_posts));
+
+$can_publish = !empty($features['can_publish']);
+$can_use_images = !empty($features['can_use_images']);
+$can_use_seo = !empty($features['can_use_seo']);
+$can_use_internal = !empty($features['can_use_internal_links']);
+$can_use_external = !empty($features['can_use_external_links']);
+$can_use_predict = !empty($features['can_use_topic_prediction']);
+$can_use_duplicate = !empty($features['can_use_duplicate_check']);
+
+$image_style = sanitize_key($opt['image_style'] ?? 'modern');
+if (!in_array($image_style, ['modern', 'business', 'blog', 'tech', 'luxury', 'natural'], true)) {
+    $image_style = 'modern';
+}
 ?>
+
 <div class="wrap">
     <h1><?php echo esc_html__('WP AI Blog Engine Settings', WABE_TEXTDOMAIN); ?></h1>
 
-    <?php if (!empty($_GET['wabe_message'])) : ?>
+    <?php if (!empty($_GET['message'])) : ?>
         <div class="notice notice-success is-dismissible">
-            <p><?php echo esc_html(wp_unslash($_GET['wabe_message'])); ?></p>
+            <p><?php echo esc_html(wp_unslash($_GET['message'])); ?></p>
         </div>
     <?php endif; ?>
 
-    <div style="display:grid;grid-template-columns:2fr 1fr;gap:24px;align-items:start;max-width:1400px;">
-        <div>
-            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
-                <input type="hidden" name="action" value="wabe_save_settings">
-                <?php wp_nonce_field('wabe_save_settings', 'wabe_settings_nonce'); ?>
+    <div class="postbox" style="padding:20px;margin-bottom:24px;">
+        <h2 style="margin:0 0 14px 0;"><?php echo esc_html__('Current Plan Summary', WABE_TEXTDOMAIN); ?></h2>
 
-                <div class="postbox" style="padding:20px;margin-bottom:24px;">
-                    <h2 style="margin:0 0 16px 0;"><?php echo esc_html__('AI Provider', WABE_TEXTDOMAIN); ?></h2>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;">
+            <div style="border:1px solid #e5e7eb;border-radius:10px;padding:14px;background:#fff;">
+                <div style="font-size:12px;color:#64748b;margin-bottom:6px;">
+                    <?php echo esc_html__('Plan', WABE_TEXTDOMAIN); ?></div>
+                <div style="font-size:22px;font-weight:700;"><?php echo esc_html(ucfirst($plan)); ?></div>
+            </div>
 
-                    <table class="form-table" role="presentation">
-                        <tbody>
-                            <tr>
-                                <th scope="row"><?php echo esc_html__('AI Provider', WABE_TEXTDOMAIN); ?></th>
-                                <td>
-                                    <select name="ai_provider">
-                                        <option value="openai" <?php selected($ai_provider, 'openai'); ?>>OpenAI
-                                        </option>
-                                        <option value="gemini" <?php selected($ai_provider, 'gemini'); ?>>Gemini
-                                        </option>
-                                    </select>
-                                    <p class="description">
-                                        <?php echo esc_html__('Choose which AI provider will be used for article generation.', WABE_TEXTDOMAIN); ?>
-                                    </p>
-                                </td>
-                            </tr>
+            <div style="border:1px solid #e5e7eb;border-radius:10px;padding:14px;background:#fff;">
+                <div style="font-size:12px;color:#64748b;margin-bottom:6px;">
+                    <?php echo esc_html__('Article Length Band', WABE_TEXTDOMAIN); ?></div>
+                <div style="font-size:22px;font-weight:700;">
+                    <?php echo esc_html(number_format_i18n($length_profile['band'])); ?></div>
+            </div>
 
-                            <tr>
-                                <th scope="row"><?php echo esc_html__('OpenAI API Key', WABE_TEXTDOMAIN); ?></th>
-                                <td>
-                                    <input type="text" name="openai_api_key"
-                                        value="<?php echo esc_attr($openai_masked); ?>" class="regular-text"
-                                        autocomplete="off" placeholder="sk-...">
-                                    <p class="description">
-                                        <?php echo esc_html__('If a masked value is displayed, leaving it as-is will keep the current key.', WABE_TEXTDOMAIN); ?>
-                                    </p>
-                                </td>
-                            </tr>
-
-                            <tr>
-                                <th scope="row"><?php echo esc_html__('OpenAI Model', WABE_TEXTDOMAIN); ?></th>
-                                <td>
-                                    <select name="openai_model">
-                                        <option value="gpt-4.1-mini" <?php selected($openai_model, 'gpt-4.1-mini'); ?>>
-                                            gpt-4.1-mini</option>
-                                        <option value="gpt-4.1" <?php selected($openai_model, 'gpt-4.1'); ?>>gpt-4.1
-                                        </option>
-                                        <option value="gpt-5-mini" <?php selected($openai_model, 'gpt-5-mini'); ?>>
-                                            gpt-5-mini</option>
-                                    </select>
-                                </td>
-                            </tr>
-
-                            <tr>
-                                <th scope="row"><?php echo esc_html__('Gemini API Key', WABE_TEXTDOMAIN); ?></th>
-                                <td>
-                                    <input type="text" name="gemini_api_key"
-                                        value="<?php echo esc_attr($gemini_masked); ?>" class="regular-text"
-                                        autocomplete="off" placeholder="AIza...">
-                                    <p class="description">
-                                        <?php echo esc_html__('If a masked value is displayed, leaving it as-is will keep the current key.', WABE_TEXTDOMAIN); ?>
-                                    </p>
-                                </td>
-                            </tr>
-
-                            <tr>
-                                <th scope="row"><?php echo esc_html__('Gemini Model', WABE_TEXTDOMAIN); ?></th>
-                                <td>
-                                    <select name="gemini_model">
-                                        <option value="gemini-2.5-flash"
-                                            <?php selected($gemini_model, 'gemini-2.5-flash'); ?>>gemini-2.5-flash
-                                        </option>
-                                        <option value="gemini-2.5-pro"
-                                            <?php selected($gemini_model, 'gemini-2.5-pro'); ?>>gemini-2.5-pro</option>
-                                    </select>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+            <div style="border:1px solid #e5e7eb;border-radius:10px;padding:14px;background:#fff;">
+                <div style="font-size:12px;color:#64748b;margin-bottom:6px;">
+                    <?php echo esc_html__('Valid Body Range', WABE_TEXTDOMAIN); ?></div>
+                <div style="font-size:20px;font-weight:700;">
+                    <?php echo esc_html(number_format_i18n($length_profile['min']) . ' - ' . number_format_i18n($length_profile['max'])); ?>
                 </div>
+            </div>
 
-                <div class="postbox" style="padding:20px;margin-bottom:24px;">
-                    <h2 style="margin:0 0 16px 0;"><?php echo esc_html__('Generation Settings', WABE_TEXTDOMAIN); ?>
-                    </h2>
-                    <?php
-                    $plan = method_exists($this, 'get_plan') ? $this->get_plan() : 'free';
-
-                    $allowed_article_lengths = ($plan === 'free') ? [1000] : [1000, 3000, 5000];
-                    $article_length = (int)($opt['article_length'] ?? 1000);
-                    if (!in_array($article_length, $allowed_article_lengths, true)) {
-                        $article_length = (int)$allowed_article_lengths[0];
-                    }
-
-                    $detail_level = $opt['detail_level'] ?? 'medium';
-                    if (!in_array($detail_level, ['low', 'medium', 'high'], true)) {
-                        $detail_level = 'medium';
-                    }
-
-                    $generation_quality = $opt['generation_quality'] ?? 'high';
-                    if (!in_array($generation_quality, ['fast', 'high'], true)) {
-                        $generation_quality = 'high';
-                    }
-                    ?>
-                    <table class="form-table" role="presentation">
-                        <tbody>
-                            <tr>
-                                <th scope="row"><?php echo esc_html__('Heading Count', WABE_TEXTDOMAIN); ?></th>
-                                <td>
-                                    <select name="heading_count">
-                                        <?php for ($i = 1; $i <= $heading_count_max; $i++) : ?>
-                                            <option value="<?php echo esc_attr((string)$i); ?>"
-                                                <?php selected($heading_count, $i); ?>>
-                                                <?php echo esc_html((string)$i); ?>
-                                            </option>
-                                        <?php endfor; ?>
-                                    </select>
-                                    <p class="description">
-                                        <?php
-                                        echo esc_html(sprintf(
-                                            __('Current plan allows 1 to %d headings.', WABE_TEXTDOMAIN),
-                                            (int)$heading_count_max
-                                        ));
-                                        ?>
-                                    </p>
-                                </td>
-                            </tr>
-                            <tr>
-                                <th scope="row"><?php echo esc_html__('Article Length', WABE_TEXTDOMAIN); ?></th>
-                                <td>
-                                    <select name="article_length" <?php disabled($plan === 'free'); ?>>
-                                        <?php foreach ($allowed_article_lengths as $len) : ?>
-                                            <option value="<?php echo esc_attr((string)$len); ?>"
-                                                <?php selected($article_length, $len); ?>>
-                                                <?php echo esc_html(number_format_i18n($len)); ?>
-                                            </option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                    <p class="description">
-                                        <?php
-                                        if ($plan === 'free') {
-                                            echo esc_html__('Free plan is fixed at 1000 characters.', WABE_TEXTDOMAIN);
-                                        } else {
-                                            echo esc_html__('Choose the target article length.', WABE_TEXTDOMAIN);
-                                        }
-                                        ?>
-                                    </p>
-                                </td>
-                            </tr>
-
-                            <tr>
-                                <th scope="row"><?php echo esc_html__('Detail Level', WABE_TEXTDOMAIN); ?></th>
-                                <td>
-                                    <select name="detail_level">
-                                        <option value="low" <?php selected($detail_level, 'low'); ?>>
-                                            <?php echo esc_html__('Low', WABE_TEXTDOMAIN); ?>
-                                        </option>
-                                        <option value="medium" <?php selected($detail_level, 'medium'); ?>>
-                                            <?php echo esc_html__('Medium', WABE_TEXTDOMAIN); ?>
-                                        </option>
-                                        <option value="high" <?php selected($detail_level, 'high'); ?>>
-                                            <?php echo esc_html__('High', WABE_TEXTDOMAIN); ?>
-                                        </option>
-                                    </select>
-                                    <p class="description">
-                                        <?php echo esc_html__('Controls how deeply the article explains each point.', WABE_TEXTDOMAIN); ?>
-                                    </p>
-                                </td>
-                            </tr>
-
-                            <tr>
-                                <th scope="row"><?php echo esc_html__('Generation Quality', WABE_TEXTDOMAIN); ?></th>
-                                <td>
-                                    <select name="generation_quality">
-                                        <option value="fast" <?php selected($generation_quality, 'fast'); ?>>
-                                            <?php echo esc_html__('Fast', WABE_TEXTDOMAIN); ?>
-                                        </option>
-                                        <option value="high" <?php selected($generation_quality, 'high'); ?>>
-                                            <?php echo esc_html__('High Quality', WABE_TEXTDOMAIN); ?>
-                                        </option>
-                                    </select>
-                                    <p class="description">
-                                        <?php echo esc_html__('Fast is lighter and cheaper. High Quality is slower but more stable for long-form articles.', WABE_TEXTDOMAIN); ?>
-                                    </p>
-                                </td>
-                            </tr>
-                            <tr>
-                                <th scope="row"><?php echo esc_html__('Tone', WABE_TEXTDOMAIN); ?></th>
-                                <td>
-                                    <select name="tone">
-                                        <?php foreach ($tone_options as $tone_key => $tone_label) : ?>
-                                            <option value="<?php echo esc_attr($tone_key); ?>"
-                                                <?php selected($tone, $tone_key); ?>>
-                                                <?php echo esc_html($tone_label); ?>
-                                            </option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                </td>
-                            </tr>
-
-                            <tr>
-                                <th scope="row"><?php echo esc_html__('Post Status', WABE_TEXTDOMAIN); ?></th>
-                                <td>
-                                    <select name="post_status">
-                                        <option value="draft" <?php selected($post_status, 'draft'); ?>>
-                                            <?php echo esc_html__('Draft', WABE_TEXTDOMAIN); ?></option>
-                                        <option value="publish" <?php selected($post_status, 'publish'); ?>
-                                            <?php disabled(!$can_publish); ?>>
-                                            <?php echo esc_html__('Publish', WABE_TEXTDOMAIN); ?></option>
-                                    </select>
-                                    <?php if (!$can_publish) : ?>
-                                        <p class="description"><?php echo esc_html(wabe_settings_lock_text('Advanced')); ?>
-                                        </p>
-                                    <?php endif; ?>
-                                </td>
-                            </tr>
-
-                            <tr>
-                                <th scope="row"><?php echo esc_html__('Weekly Posts', WABE_TEXTDOMAIN); ?></th>
-                                <td>
-                                    <select name="weekly_posts">
-                                        <?php for ($i = 1; $i <= $weekly_posts_max; $i++) : ?>
-                                            <option value="<?php echo esc_attr((string)$i); ?>"
-                                                <?php selected($weekly_posts, $i); ?>>
-                                                <?php echo esc_html((string)$i); ?>
-                                            </option>
-                                        <?php endfor; ?>
-                                    </select>
-                                    <p class="description">
-                                        <?php
-                                        echo esc_html(sprintf(
-                                            __('Current plan allows 1 to %d automatic posts per week.', WABE_TEXTDOMAIN),
-                                            (int)$weekly_posts_max
-                                        ));
-                                        ?>
-                                    </p>
-                                </td>
-                            </tr>
-
-                            <tr>
-                                <th scope="row">
-                                    <?php echo esc_html__('Enable Auto Posting Schedule', WABE_TEXTDOMAIN); ?></th>
-                                <td>
-                                    <label>
-                                        <input type="checkbox" name="schedule_enabled" value="1"
-                                            <?php checked($schedule_enabled); ?>>
-                                        <?php echo esc_html__('Enable automatic generation schedule', WABE_TEXTDOMAIN); ?>
-                                    </label>
-                                    <p class="description">
-                                        <?php echo esc_html__('WordPress Cron runs when your WordPress site is accessed. On low-traffic sites, automatic posting may be delayed. For stable operation, setting a real server cron is recommended.', WABE_TEXTDOMAIN); ?>
-                                    </p>
-                                </td>
-                            </tr>
-
-                            <tr>
-                                <th scope="row"><?php echo esc_html__('Next Scheduled Run', WABE_TEXTDOMAIN); ?></th>
-                                <td><strong><?php echo esc_html($next_run_display); ?></strong></td>
-                            </tr>
-
-                            <tr>
-                                <th scope="row"><?php echo esc_html__('Ready Status', WABE_TEXTDOMAIN); ?></th>
-                                <td>
-                                    <strong><?php echo esc_html($is_ready ? __('Ready', WABE_TEXTDOMAIN) : __('API key required', WABE_TEXTDOMAIN)); ?></strong>
-                                    <p class="description">
-                                        <?php echo esc_html__('The selected provider must have a valid API key saved before generation can run.', WABE_TEXTDOMAIN); ?>
-                                    </p>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+            <div style="border:1px solid #e5e7eb;border-radius:10px;padding:14px;background:#fff;">
+                <div style="font-size:12px;color:#64748b;margin-bottom:6px;">
+                    <?php echo esc_html__('Ready Status', WABE_TEXTDOMAIN); ?></div>
+                <div style="font-size:22px;font-weight:700;color:<?php echo $is_ready ? '#16a34a' : '#dc2626'; ?>;">
+                    <?php echo $is_ready ? esc_html__('Ready', WABE_TEXTDOMAIN) : esc_html__('Not Ready', WABE_TEXTDOMAIN); ?>
                 </div>
-
-                <div class="postbox" style="padding:20px;margin-bottom:24px;">
-                    <h2 style="margin:0 0 16px 0;"><?php echo esc_html__('Content Settings', WABE_TEXTDOMAIN); ?></h2>
-
-                    <table class="form-table" role="presentation">
-                        <tbody>
-                            <tr>
-                                <th scope="row"><?php echo esc_html__('Author Name', WABE_TEXTDOMAIN); ?></th>
-                                <td><input type="text" name="author_name"
-                                        value="<?php echo esc_attr($opt['author_name'] ?? ''); ?>" class="regular-text">
-                                </td>
-                            </tr>
-                            <?php
-                            $stored_rules = (string) ($opt['site_context'] ?? '');
-                            $decoded_rules = base64_decode($stored_rules, true);
-                            if ($decoded_rules === false) {
-                                $decoded_rules = $stored_rules;
-                            }
-                            ?>
-                            <tr>
-                                <th scope="row"><?php echo esc_html__('Site Context', WABE_TEXTDOMAIN); ?></th>
-                                <td>
-                                    <textarea name="site_context" rows="6" class="regular-text"
-                                        style="width:100%;max-width:900px;"><?php echo esc_textarea($decoded_rules); ?></textarea>
-                                    <p class="description">
-                                        <?php echo esc_html__('Describe the purpose, audience, and direction of the site so the AI can generate more suitable articles.', WABE_TEXTDOMAIN); ?>
-                                    </p>
-                                </td>
-                            </tr>
-                            <?php
-                            $stored_rules = (string) ($opt['writing_rules'] ?? '');
-                            $decoded_rules = base64_decode($stored_rules, true);
-                            if ($decoded_rules === false) {
-                                $decoded_rules = $stored_rules;
-                            }
-                            ?>
-                            <tr>
-                                <th scope="row"><?php echo esc_html__('Writing Rules', WABE_TEXTDOMAIN); ?></th>
-                                <td>
-                                    <textarea name="writing_rules" rows="8" class="regular-text"
-                                        style="width:100%;max-width:900px;"><?php echo esc_textarea($decoded_rules); ?></textarea>
-                                    <p class="description">
-                                        <?php echo esc_html__('Example: sentence length, tone policy, forbidden expressions, CTA style, formatting policy.', WABE_TEXTDOMAIN); ?>
-                                    </p>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="postbox" style="padding:20px;margin-bottom:24px;">
-                    <h2 style="margin:0 0 16px 0;"><?php echo esc_html__('Pro / Advanced Features', WABE_TEXTDOMAIN); ?>
-                    </h2>
-
-                    <table class="form-table" role="presentation">
-                        <tbody>
-                            <tr>
-                                <th scope="row">
-                                    <?php echo esc_html__('Featured image generation', WABE_TEXTDOMAIN); ?>
-                                    <div style="margin-top:6px;">
-                                        <?php echo wp_kses_post(wabe_settings_feature_badge($can_use_images)); ?></div>
-                                </th>
-                                <td>
-                                    <label>
-                                        <input type="checkbox" name="enable_featured_image" value="1"
-                                            <?php checked($enable_featured_image); ?>
-                                            <?php disabled(!$can_use_images); ?>>
-                                        <?php echo esc_html__('Automatically generate a featured image', WABE_TEXTDOMAIN); ?>
-                                    </label>
-                                    <div style="margin-top:10px;">
-                                        <select name="image_style" <?php disabled(!$can_use_images); ?>>
-                                            <?php foreach ($style_options as $style_key => $style_label) : ?>
-                                                <option value="<?php echo esc_attr($style_key); ?>"
-                                                    <?php selected($image_style, $style_key); ?>>
-                                                    <?php echo esc_html($style_label); ?>
-                                                </option>
-                                            <?php endforeach; ?>
-                                        </select>
-                                    </div>
-                                    <?php if (!$can_use_images) : ?>
-                                        <p class="description"><?php echo esc_html(wabe_settings_lock_text('Advanced')); ?>
-                                        </p>
-                                    <?php endif; ?>
-                                </td>
-                            </tr>
-
-                            <tr>
-                                <th scope="row">
-                                    <?php echo esc_html__('SEO support', WABE_TEXTDOMAIN); ?>
-                                    <div style="margin-top:6px;">
-                                        <?php echo wp_kses_post(wabe_settings_feature_badge($can_use_seo)); ?></div>
-                                </th>
-                                <td>
-                                    <label>
-                                        <input type="checkbox" name="enable_seo" value="1"
-                                            <?php checked($enable_seo); ?> <?php disabled(!$can_use_seo); ?>>
-                                        <?php echo esc_html__('Enable SEO metadata support', WABE_TEXTDOMAIN); ?>
-                                    </label>
-                                    <div style="margin-top:10px;">
-                                        <input type="text" name="seo_keyword"
-                                            value="<?php echo esc_attr($opt['seo_keyword'] ?? ''); ?>"
-                                            class="regular-text" <?php disabled(!$can_use_seo); ?>>
-                                    </div>
-                                    <?php if (!$can_use_seo) : ?>
-                                        <p class="description"><?php echo esc_html(wabe_settings_lock_text('Advanced')); ?>
-                                        </p>
-                                    <?php endif; ?>
-                                </td>
-                            </tr>
-
-                            <tr>
-                                <th scope="row">
-                                    <?php echo esc_html__('Internal Link Support', WABE_TEXTDOMAIN); ?>
-                                    <div style="margin-top:6px;">
-                                        <?php echo wp_kses_post(wabe_settings_feature_badge($can_use_internal)); ?>
-                                    </div>
-                                </th>
-                                <td>
-                                    <label>
-                                        <input type="checkbox" name="enable_internal_links" value="1"
-                                            <?php checked($enable_internal_links); ?>
-                                            <?php disabled(!$can_use_internal); ?>>
-                                        <?php echo esc_html__('Insert internal link guidance into generated content', WABE_TEXTDOMAIN); ?>
-                                    </label>
-                                    <div style="margin-top:10px;">
-                                        <input type="url" name="internal_link_url"
-                                            value="<?php echo esc_attr($opt['internal_link_url'] ?? ''); ?>"
-                                            class="regular-text" placeholder="https://example.com/internal-page"
-                                            <?php disabled(!$can_use_internal); ?>>
-                                    </div>
-                                    <?php if (!$can_use_internal) : ?>
-                                        <p class="description"><?php echo esc_html(wabe_settings_lock_text('Pro')); ?></p>
-                                    <?php endif; ?>
-                                </td>
-                            </tr>
-
-                            <tr>
-                                <th scope="row">
-                                    <?php echo esc_html__('External Link Support', WABE_TEXTDOMAIN); ?>
-                                    <div style="margin-top:6px;">
-                                        <?php echo wp_kses_post(wabe_settings_feature_badge($can_use_external)); ?>
-                                    </div>
-                                </th>
-                                <td>
-                                    <label>
-                                        <input type="checkbox" name="enable_external_links" value="1"
-                                            <?php checked($enable_external_links); ?>
-                                            <?php disabled(!$can_use_external); ?>>
-                                        <?php echo esc_html__('Append an external reference link block', WABE_TEXTDOMAIN); ?>
-                                    </label>
-                                    <div style="margin-top:10px;">
-                                        <input type="url" name="external_link_url"
-                                            value="<?php echo esc_attr($opt['external_link_url'] ?? ''); ?>"
-                                            class="regular-text" placeholder="https://example.com/reference"
-                                            <?php disabled(!$can_use_external); ?>>
-                                    </div>
-                                    <?php if (!$can_use_external) : ?>
-                                        <p class="description"><?php echo esc_html(wabe_settings_lock_text('Pro')); ?></p>
-                                    <?php endif; ?>
-                                </td>
-                            </tr>
-
-                            <tr>
-                                <th scope="row">
-                                    <?php echo esc_html__('Duplicate Check', WABE_TEXTDOMAIN); ?>
-                                    <div style="margin-top:6px;">
-                                        <?php echo wp_kses_post(wabe_settings_feature_badge($can_use_duplicate)); ?>
-                                    </div>
-                                </th>
-                                <td>
-                                    <label>
-                                        <input type="checkbox" name="enable_duplicate_check" value="1"
-                                            <?php checked($enable_duplicate_check); ?>
-                                            <?php disabled(!$can_use_duplicate); ?>>
-                                        <?php echo esc_html__('Skip generation when a similar post already exists', WABE_TEXTDOMAIN); ?>
-                                    </label>
-                                    <?php if (!$can_use_duplicate) : ?>
-                                        <p class="description"><?php echo esc_html(wabe_settings_lock_text('Pro')); ?></p>
-                                    <?php endif; ?>
-                                </td>
-                            </tr>
-
-                            <tr>
-                                <th scope="row">
-                                    <?php echo esc_html__('Topic Prediction', WABE_TEXTDOMAIN); ?>
-                                    <div style="margin-top:6px;">
-                                        <?php echo wp_kses_post(wabe_settings_feature_badge($can_use_prediction)); ?>
-                                    </div>
-                                </th>
-                                <td>
-                                    <label>
-                                        <input type="checkbox" name="enable_topic_prediction" value="1"
-                                            <?php checked($enable_topic_prediction); ?>
-                                            <?php disabled(!$can_use_prediction); ?>>
-                                        <?php echo esc_html__('Predict topic ideas based on site trends and auto-fill the queue when needed', WABE_TEXTDOMAIN); ?>
-                                    </label>
-                                    <?php if (!$can_use_prediction) : ?>
-                                        <p class="description"><?php echo esc_html(wabe_settings_lock_text('Pro')); ?></p>
-                                    <?php endif; ?>
-                                </td>
-                            </tr>
-
-                            <tr>
-                                <th scope="row">
-                                    <?php echo esc_html__('Outline Generator', WABE_TEXTDOMAIN); ?>
-                                    <div style="margin-top:6px;">
-                                        <?php echo wp_kses_post(wabe_settings_feature_badge($can_use_outline)); ?></div>
-                                </th>
-                                <td>
-                                    <label>
-                                        <input type="checkbox" name="enable_outline_generator" value="1"
-                                            <?php checked($enable_outline_generator); ?>
-                                            <?php disabled(!$can_use_outline); ?>>
-                                        <?php echo esc_html__('Enable outline generation helper for article structure', WABE_TEXTDOMAIN); ?>
-                                    </label>
-                                    <?php if (!$can_use_outline) : ?>
-                                        <p class="description"><?php echo esc_html(wabe_settings_lock_text('Pro')); ?></p>
-                                    <?php endif; ?>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="postbox" style="padding:20px;margin-bottom:24px;">
-                    <h2 style="margin:0 0 16px 0;"><?php echo esc_html__('License', WABE_TEXTDOMAIN); ?></h2>
-
-                    <table class="form-table" role="presentation">
-                        <tbody>
-                            <tr>
-                                <th scope="row"><?php echo esc_html__('License Key', WABE_TEXTDOMAIN); ?></th>
-                                <td><input type="text" name="license_key"
-                                        value="<?php echo esc_attr($opt['license_key'] ?? ''); ?>" class="regular-text">
-                                </td>
-                            </tr>
-                            <tr>
-                                <th scope="row"><?php echo esc_html__('License Status', WABE_TEXTDOMAIN); ?></th>
-                                <td><?php echo esc_html($license_status !== '' ? $license_status : 'free'); ?></td>
-                            </tr>
-                            <tr>
-                                <th scope="row"><?php echo esc_html__('Checked At', WABE_TEXTDOMAIN); ?></th>
-                                <td><?php echo esc_html($license_checked_at !== '' ? $license_checked_at : '—'); ?></td>
-                            </tr>
-                            <tr>
-                                <th scope="row"><?php echo esc_html__('Expires At', WABE_TEXTDOMAIN); ?></th>
-                                <td><?php echo esc_html($license_expires_at !== '' ? $license_expires_at : '—'); ?></td>
-                            </tr>
-                            <tr>
-                                <th scope="row"><?php echo esc_html__('Customer Email', WABE_TEXTDOMAIN); ?></th>
-                                <td><?php echo esc_html($license_customer_email !== '' ? $license_customer_email : '—'); ?>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-
-                    <p>
-                        <a class="button" href="<?php echo esc_url(admin_url('admin.php?page=wabe-license')); ?>">
-                            <?php echo esc_html__('Open License Page', WABE_TEXTDOMAIN); ?>
-                        </a>
-                    </p>
-                </div>
-                <p>
-                    <button type="submit" class="button button-primary button-large">
-                        <?php echo esc_html__('Save Settings', WABE_TEXTDOMAIN); ?>
-                    </button>
-                </p>
-            </form>
+            </div>
         </div>
-        <script>
-            document.addEventListener('DOMContentLoaded', function() {
-                function encodeBase64Unicode(str) {
-                    try {
-                        return btoa(unescape(encodeURIComponent(str)));
-                    } catch (e) {
-                        return str;
-                    }
-                }
-                // 保存時にエンコード
-                const form = document.querySelector('form');
-                if (form) {
-                    form.addEventListener('submit', function() {
-                        const context = document.querySelector('textarea[name="site_context"]');
-                        const rules = document.querySelector('textarea[name="writing_rules"]');
 
-                        if (context) {
-                            context.value = encodeBase64Unicode(context.value);
-                        }
-                        if (rules) {
-                            rules.value = encodeBase64Unicode(rules.value);
-                        }
-                    });
-                }
-            });
-        </script>
-        <div>
-            <div class="postbox"
-                style="padding:20px;margin-bottom:24px;border-top:4px solid <?php echo esc_attr($plan_color); ?>;">
-                <h2 style="margin:0 0 14px 0;"><?php echo esc_html__('Current Plan', WABE_TEXTDOMAIN); ?></h2>
+        <div style="margin-top:14px;padding:12px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;">
+            <div style="margin-bottom:6px;font-weight:600;"><?php echo esc_html__('Content Rules', WABE_TEXTDOMAIN); ?>
+            </div>
+            <div><?php echo esc_html__('Title: 18-25 characters target, up to 27 allowed.', WABE_TEXTDOMAIN); ?></div>
+            <div><?php echo esc_html__('H2 Heading: 12-20 characters target, up to 22 allowed.', WABE_TEXTDOMAIN); ?>
+            </div>
+            <div><?php echo esc_html__('Body length includes headings and body text.', WABE_TEXTDOMAIN); ?></div>
+        </div>
 
-                <p style="margin:0 0 10px 0;">
-                    <strong style="font-size:18px;"><?php echo esc_html($plan_label); ?></strong>
-                </p>
+        <?php if (!$is_ready) : ?>
+            <div style="margin-top:14px;padding:14px 16px;border:1px solid #fecaca;background:#fef2f2;border-radius:10px;">
+                <div style="font-weight:700;margin-bottom:8px;color:#991b1b;">
+                    <?php echo esc_html__('Why Generate Now is disabled', WABE_TEXTDOMAIN); ?>
+                </div>
 
-                <ul style="margin:0;padding-left:18px;">
-                    <li><?php echo esc_html__('Weekly auto posts', WABE_TEXTDOMAIN); ?>:
-                        <?php echo esc_html(sprintf(__('up to %d', WABE_TEXTDOMAIN), (int)$weekly_posts_max)); ?></li>
-                    <li><?php echo esc_html__('Heading count', WABE_TEXTDOMAIN); ?>:
-                        <?php echo esc_html(sprintf(__('up to %d', WABE_TEXTDOMAIN), (int)$heading_count_max)); ?></li>
-                    <li><?php echo esc_html__('Topic queue capacity', WABE_TEXTDOMAIN); ?>: 10</li>
-                    <li><?php echo esc_html__('Publish available', WABE_TEXTDOMAIN); ?>:
-                        <?php echo esc_html(wabe_settings_bool_label($can_publish)); ?></li>
-                    <li><?php echo esc_html__('Image generation', WABE_TEXTDOMAIN); ?>:
-                        <?php echo esc_html(wabe_settings_bool_label($can_use_images)); ?></li>
-                    <li><?php echo esc_html__('SEO support', WABE_TEXTDOMAIN); ?>:
-                        <?php echo esc_html(wabe_settings_bool_label($can_use_seo)); ?></li>
-                    <li><?php echo esc_html__('Internal links', WABE_TEXTDOMAIN); ?>:
-                        <?php echo esc_html(wabe_settings_bool_label($can_use_internal)); ?></li>
-                    <li><?php echo esc_html__('External links', WABE_TEXTDOMAIN); ?>:
-                        <?php echo esc_html(wabe_settings_bool_label($can_use_external)); ?></li>
-                    <li><?php echo esc_html__('Topic prediction', WABE_TEXTDOMAIN); ?>:
-                        <?php echo esc_html(wabe_settings_bool_label($can_use_prediction)); ?></li>
-                    <li><?php echo esc_html__('Duplicate check', WABE_TEXTDOMAIN); ?>:
-                        <?php echo esc_html(wabe_settings_bool_label($can_use_duplicate)); ?></li>
+                <ul style="margin:0 0 0 18px;color:#7f1d1d;">
+                    <?php foreach (($ready_state['reasons'] ?? []) as $reason) : ?>
+                        <li><?php echo esc_html($reason); ?></li>
+                    <?php endforeach; ?>
                 </ul>
-
-                <?php if ($plan !== 'pro') : ?>
-                    <p style="margin-top:14px;">
-                        <a class="button button-secondary"
-                            href="<?php echo esc_url(admin_url('admin.php?page=wabe-license')); ?>">
-                            <?php echo esc_html__('Compare plans / Upgrade', WABE_TEXTDOMAIN); ?>
-                        </a>
-                    </p>
-                <?php endif; ?>
             </div>
+        <?php endif; ?>
+    </div>
 
-            <div class="postbox" style="padding:20px;margin-bottom:24px;">
-                <h2 style="margin:0 0 14px 0;"><?php echo esc_html__('Quick Actions', WABE_TEXTDOMAIN); ?></h2>
+    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+        <input type="hidden" name="action" value="wabe_save_settings">
+        <?php wp_nonce_field('wabe_save_settings', 'wabe_settings_nonce'); ?>
 
-                <p style="margin-bottom:12px;">
-                    <?php echo esc_html__('Queued topics', WABE_TEXTDOMAIN); ?>:
-                    <?php echo esc_html((string)$topics_count); ?> / 10
-                </p>
+        <div class="postbox" style="padding:20px;margin-bottom:24px;">
+            <h2 style="margin:0 0 14px 0;"><?php echo esc_html__('AI Provider Settings', WABE_TEXTDOMAIN); ?></h2>
 
-                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>"
-                    style="margin-bottom:12px;">
-                    <input type="hidden" name="action" value="wabe_generate_now">
-                    <?php wp_nonce_field('wabe_generate_now', 'wabe_generate_now_nonce'); ?>
-                    <button type="submit" class="button button-primary"
-                        <?php disabled(!$is_ready || $topics_count < 1); ?>>
-                        <?php echo esc_html__('Generate Now', WABE_TEXTDOMAIN); ?>
-                    </button>
-                </form>
+            <table class="form-table" role="presentation">
+                <tr>
+                    <th scope="row"><?php echo esc_html__('AI Provider', WABE_TEXTDOMAIN); ?></th>
+                    <td>
+                        <select name="ai_provider">
+                            <option value="openai" <?php selected($ai_provider, 'openai'); ?>>OpenAI</option>
+                            <option value="gemini" <?php selected($ai_provider, 'gemini'); ?>>Gemini</option>
+                        </select>
+                    </td>
+                </tr>
 
-                <p class="description" style="margin-top:0;">
-                    <?php echo esc_html__('If there is at least one topic in the queue, a post will be generated immediately using the selected AI provider.', WABE_TEXTDOMAIN); ?>
-                </p>
+                <tr>
+                    <th scope="row"><?php echo esc_html__('OpenAI API Key', WABE_TEXTDOMAIN); ?></th>
+                    <td>
+                        <input type="password" name="openai_api_key"
+                            value="<?php echo !empty($opt['openai_api_key']) ? '********' : ''; ?>" class="regular-text"
+                            autocomplete="off">
+                    </td>
+                </tr>
 
-                <p style="margin-top:16px;">
-                    <a class="button" href="<?php echo esc_url(admin_url('admin.php?page=wabe-topics')); ?>">
-                        <?php echo esc_html__('Open Topics Page', WABE_TEXTDOMAIN); ?>
-                    </a>
-                </p>
-            </div>
+                <tr>
+                    <th scope="row"><?php echo esc_html__('OpenAI Model', WABE_TEXTDOMAIN); ?></th>
+                    <td>
+                        <input type="text" name="openai_model" value="<?php echo esc_attr($openai_model); ?>"
+                            class="regular-text">
+                    </td>
+                </tr>
 
-            <div class="postbox" style="padding:20px;margin-bottom:24px;">
-                <h2 style="margin:0 0 14px 0;"><?php echo esc_html__('Plan Comparison', WABE_TEXTDOMAIN); ?></h2>
+                <tr>
+                    <th scope="row"><?php echo esc_html__('Gemini API Key', WABE_TEXTDOMAIN); ?></th>
+                    <td>
+                        <input type="password" name="gemini_api_key"
+                            value="<?php echo !empty($opt['gemini_api_key']) ? '********' : ''; ?>" class="regular-text"
+                            autocomplete="off">
+                    </td>
+                </tr>
 
-                <table class="widefat striped">
-                    <thead>
-                        <tr>
-                            <th><?php echo esc_html__('Feature', WABE_TEXTDOMAIN); ?></th>
-                            <th>Free</th>
-                            <th>Advanced</th>
-                            <th>Pro</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td><?php echo esc_html__('Price', WABE_TEXTDOMAIN); ?></td>
-                            <td><?php echo esc_html__('Free', WABE_TEXTDOMAIN); ?></td>
-                            <td><?php echo esc_html__('$12/mo $79/yr $199 lifetime', WABE_TEXTDOMAIN); ?></td>
-                            <td><?php echo esc_html__('$24/mo $159/yr $399 lifetime', WABE_TEXTDOMAIN); ?></td>
-                        </tr>
-                        <tr>
-                            <td><?php echo esc_html__('Automatic posts per week', WABE_TEXTDOMAIN); ?></td>
-                            <td>1</td>
-                            <td>1 - 7</td>
-                            <td>1 - 7</td>
-                        </tr>
-                        <tr>
-                            <td><?php echo esc_html__('Heading count', WABE_TEXTDOMAIN); ?></td>
-                            <td>1</td>
-                            <td>1 - 6</td>
-                            <td>1 - 6</td>
-                        </tr>
-                        <tr>
-                            <td><?php echo esc_html__('Post status', WABE_TEXTDOMAIN); ?></td>
-                            <td><?php echo esc_html__('Draft only', WABE_TEXTDOMAIN); ?></td>
-                            <td><?php echo esc_html__('Draft / Publish', WABE_TEXTDOMAIN); ?></td>
-                            <td><?php echo esc_html__('Draft / Publish', WABE_TEXTDOMAIN); ?></td>
-                        </tr>
-                        <tr>
-                            <td><?php echo esc_html__('Featured image generation', WABE_TEXTDOMAIN); ?></td>
-                            <td>—</td>
-                            <td>✓</td>
-                            <td>✓</td>
-                        </tr>
-                        <tr>
-                            <td><?php echo esc_html__('SEO support', WABE_TEXTDOMAIN); ?></td>
-                            <td>—</td>
-                            <td>✓</td>
-                            <td>✓</td>
-                        </tr>
-                        <tr>
-                            <td><?php echo esc_html__('Duplicate check', WABE_TEXTDOMAIN); ?></td>
-                            <td>—</td>
-                            <td>—</td>
-                            <td>✓</td>
-                        </tr>
-                        <tr>
-                            <td><?php echo esc_html__('Internal links', WABE_TEXTDOMAIN); ?></td>
-                            <td>—</td>
-                            <td>—</td>
-                            <td>✓</td>
-                        </tr>
-                        <tr>
-                            <td><?php echo esc_html__('External links', WABE_TEXTDOMAIN); ?></td>
-                            <td>—</td>
-                            <td>—</td>
-                            <td>✓</td>
-                        </tr>
-                        <tr>
-                            <td><?php echo esc_html__('Topic prediction', WABE_TEXTDOMAIN); ?></td>
-                            <td>—</td>
-                            <td>—</td>
-                            <td>✓</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-
-            <div class="postbox" style="padding:20px;">
-                <h2 style="margin:0 0 14px 0;"><?php echo esc_html__('Important Note', WABE_TEXTDOMAIN); ?></h2>
-                <p style="margin:0;">
-                    <?php echo esc_html__('Automatic posting depends on WordPress Cron. If your site has low traffic, scheduled execution may be delayed until someone opens the site.', WABE_TEXTDOMAIN); ?>
-                </p>
-            </div>
+                <tr>
+                    <th scope="row"><?php echo esc_html__('Gemini Model', WABE_TEXTDOMAIN); ?></th>
+                    <td>
+                        <input type="text" name="gemini_model" value="<?php echo esc_attr($gemini_model); ?>"
+                            class="regular-text">
+                    </td>
+                </tr>
+            </table>
         </div>
+
+        <div class="postbox" style="padding:20px;margin-bottom:24px;">
+            <h2 style="margin:0 0 14px 0;"><?php echo esc_html__('Generation Settings', WABE_TEXTDOMAIN); ?></h2>
+
+            <table class="form-table" role="presentation">
+                <tr>
+                    <th scope="row"><?php echo esc_html__('Article Length Band', WABE_TEXTDOMAIN); ?></th>
+                    <td>
+                        <input type="text"
+                            value="<?php echo esc_attr(number_format_i18n($length_profile['band']) . ' (' . number_format_i18n($length_profile['min']) . ' - ' . number_format_i18n($length_profile['max']) . ')'); ?>"
+                            class="regular-text" disabled>
+                        <p class="description">
+                            <?php echo esc_html__('This is fixed automatically by the current plan.', WABE_TEXTDOMAIN); ?>
+                        </p>
+                    </td>
+                </tr>
+
+                <tr>
+                    <th scope="row"><?php echo esc_html__('Detail Level', WABE_TEXTDOMAIN); ?></th>
+                    <td>
+                        <select name="detail_level">
+                            <option value="low" <?php selected($detail_level, 'low'); ?>>
+                                <?php echo esc_html__('Low', WABE_TEXTDOMAIN); ?></option>
+                            <option value="medium" <?php selected($detail_level, 'medium'); ?>>
+                                <?php echo esc_html__('Medium', WABE_TEXTDOMAIN); ?></option>
+                            <option value="high" <?php selected($detail_level, 'high'); ?>>
+                                <?php echo esc_html__('High', WABE_TEXTDOMAIN); ?></option>
+                        </select>
+                    </td>
+                </tr>
+
+                <tr>
+                    <th scope="row"><?php echo esc_html__('Generation Quality', WABE_TEXTDOMAIN); ?></th>
+                    <td>
+                        <select name="generation_quality">
+                            <option value="fast" <?php selected($generation_quality, 'fast'); ?>>
+                                <?php echo esc_html__('Fast', WABE_TEXTDOMAIN); ?></option>
+                            <option value="high" <?php selected($generation_quality, 'high'); ?>>
+                                <?php echo esc_html__('High Quality', WABE_TEXTDOMAIN); ?></option>
+                        </select>
+                    </td>
+                </tr>
+
+                <tr>
+                    <th scope="row"><?php echo esc_html__('Tone', WABE_TEXTDOMAIN); ?></th>
+                    <td>
+                        <select name="tone">
+                            <option value="standard" <?php selected($tone, 'standard'); ?>>
+                                <?php echo esc_html__('Standard', WABE_TEXTDOMAIN); ?></option>
+                            <option value="polite" <?php selected($tone, 'polite'); ?>>
+                                <?php echo esc_html__('Polite', WABE_TEXTDOMAIN); ?></option>
+                            <option value="casual" <?php selected($tone, 'casual'); ?>>
+                                <?php echo esc_html__('Casual', WABE_TEXTDOMAIN); ?></option>
+                        </select>
+                    </td>
+                </tr>
+
+                <tr>
+                    <th scope="row"><?php echo esc_html__('Post Status', WABE_TEXTDOMAIN); ?></th>
+                    <td>
+                        <select name="post_status">
+                            <option value="draft" <?php selected($post_status, 'draft'); ?>>
+                                <?php echo esc_html__('Draft', WABE_TEXTDOMAIN); ?></option>
+                            <option value="publish" <?php selected($post_status, 'publish'); ?>
+                                <?php disabled(!$can_publish); ?>>
+                                <?php echo esc_html__('Publish', WABE_TEXTDOMAIN); ?>
+                            </option>
+                        </select>
+                    </td>
+                </tr>
+
+                <tr>
+                    <th scope="row"><?php echo esc_html__('Weekly Posts', WABE_TEXTDOMAIN); ?></th>
+                    <td>
+                        <input type="number" name="weekly_posts" min="1"
+                            max="<?php echo esc_attr((string)$weekly_posts_max); ?>"
+                            value="<?php echo esc_attr((string)$weekly_posts); ?>" class="small-text">
+                    </td>
+                </tr>
+
+                <tr>
+                    <th scope="row"><?php echo esc_html__('Schedule Enabled', WABE_TEXTDOMAIN); ?></th>
+                    <td>
+                        <label>
+                            <input type="checkbox" name="schedule_enabled" value="1"
+                                <?php checked(!empty($opt['schedule_enabled'])); ?>>
+                            <?php echo esc_html__('Enable scheduled generation', WABE_TEXTDOMAIN); ?>
+                        </label>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="postbox" style="padding:20px;margin-bottom:24px;">
+            <h2 style="margin:0 0 14px 0;"><?php echo esc_html__('Content Settings', WABE_TEXTDOMAIN); ?></h2>
+
+            <table class="form-table" role="presentation">
+                <tr>
+                    <th scope="row"><?php echo esc_html__('Author Name', WABE_TEXTDOMAIN); ?></th>
+                    <td>
+                        <input type="text" name="author_name"
+                            value="<?php echo esc_attr((string)($opt['author_name'] ?? '')); ?>" class="regular-text">
+                    </td>
+                </tr>
+
+                <tr>
+                    <th scope="row"><?php echo esc_html__('Site Context', WABE_TEXTDOMAIN); ?></th>
+                    <td>
+                        <textarea name="site_context" rows="8"
+                            class="large-text code"><?php echo esc_textarea((string)($opt['site_context'] ?? '')); ?></textarea>
+                    </td>
+                </tr>
+
+                <tr>
+                    <th scope="row"><?php echo esc_html__('Writing Rules', WABE_TEXTDOMAIN); ?></th>
+                    <td>
+                        <textarea name="writing_rules" rows="8"
+                            class="large-text code"><?php echo esc_textarea((string)($opt['writing_rules'] ?? '')); ?></textarea>
+                    </td>
+                </tr>
+
+                <tr>
+                    <th scope="row"><?php echo esc_html__('SEO Keyword', WABE_TEXTDOMAIN); ?></th>
+                    <td>
+                        <input type="text" name="seo_keyword"
+                            value="<?php echo esc_attr((string)($opt['seo_keyword'] ?? '')); ?>" class="regular-text">
+                    </td>
+                </tr>
+
+                <tr>
+                    <th scope="row"><?php echo esc_html__('Internal Link URL', WABE_TEXTDOMAIN); ?></th>
+                    <td>
+                        <input type="url" name="internal_link_url"
+                            value="<?php echo esc_attr((string)($opt['internal_link_url'] ?? '')); ?>"
+                            class="regular-text">
+                    </td>
+                </tr>
+
+                <tr>
+                    <th scope="row"><?php echo esc_html__('External Link URL', WABE_TEXTDOMAIN); ?></th>
+                    <td>
+                        <input type="url" name="external_link_url"
+                            value="<?php echo esc_attr((string)($opt['external_link_url'] ?? '')); ?>"
+                            class="regular-text">
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="postbox" style="padding:20px;margin-bottom:24px;">
+            <h2 style="margin:0 0 14px 0;"><?php echo esc_html__('Feature Settings', WABE_TEXTDOMAIN); ?></h2>
+
+            <table class="form-table" role="presentation">
+                <tr>
+                    <th scope="row"><?php echo esc_html__('Featured Image', WABE_TEXTDOMAIN); ?></th>
+                    <td>
+                        <label>
+                            <input type="checkbox" name="enable_featured_image" value="1"
+                                <?php checked(!empty($opt['enable_featured_image']) && $can_use_images); ?>
+                                <?php disabled(!$can_use_images); ?>>
+                            <?php echo esc_html__('Enable featured image generation', WABE_TEXTDOMAIN); ?>
+                        </label>
+                    </td>
+                </tr>
+
+                <tr>
+                    <th scope="row"><?php echo esc_html__('Image Style', WABE_TEXTDOMAIN); ?></th>
+                    <td>
+                        <select name="image_style" <?php disabled(!$can_use_images); ?>>
+                            <option value="modern" <?php selected($image_style, 'modern'); ?>>Modern</option>
+                            <option value="business" <?php selected($image_style, 'business'); ?>>Business</option>
+                            <option value="blog" <?php selected($image_style, 'blog'); ?>>Blog</option>
+                            <option value="tech" <?php selected($image_style, 'tech'); ?>>Tech</option>
+                            <option value="luxury" <?php selected($image_style, 'luxury'); ?>>Luxury</option>
+                            <option value="natural" <?php selected($image_style, 'natural'); ?>>Natural</option>
+                        </select>
+                    </td>
+                </tr>
+
+                <tr>
+                    <th scope="row"><?php echo esc_html__('SEO', WABE_TEXTDOMAIN); ?></th>
+                    <td>
+                        <label>
+                            <input type="checkbox" name="enable_seo" value="1"
+                                <?php checked(!empty($opt['enable_seo']) && $can_use_seo); ?>
+                                <?php disabled(!$can_use_seo); ?>>
+                            <?php echo esc_html__('Enable SEO metadata', WABE_TEXTDOMAIN); ?>
+                        </label>
+                    </td>
+                </tr>
+
+                <tr>
+                    <th scope="row"><?php echo esc_html__('Internal Links', WABE_TEXTDOMAIN); ?></th>
+                    <td>
+                        <label>
+                            <input type="checkbox" name="enable_internal_links" value="1"
+                                <?php checked(!empty($opt['enable_internal_links']) && $can_use_internal); ?>
+                                <?php disabled(!$can_use_internal); ?>>
+                            <?php echo esc_html__('Enable internal links', WABE_TEXTDOMAIN); ?>
+                        </label>
+                    </td>
+                </tr>
+
+                <tr>
+                    <th scope="row"><?php echo esc_html__('External Links', WABE_TEXTDOMAIN); ?></th>
+                    <td>
+                        <label>
+                            <input type="checkbox" name="enable_external_links" value="1"
+                                <?php checked(!empty($opt['enable_external_links']) && $can_use_external); ?>
+                                <?php disabled(!$can_use_external); ?>>
+                            <?php echo esc_html__('Enable external links', WABE_TEXTDOMAIN); ?>
+                        </label>
+                    </td>
+                </tr>
+
+                <tr>
+                    <th scope="row"><?php echo esc_html__('Topic Prediction', WABE_TEXTDOMAIN); ?></th>
+                    <td>
+                        <label>
+                            <input type="checkbox" name="enable_topic_prediction" value="1"
+                                <?php checked(!empty($opt['enable_topic_prediction']) && $can_use_predict); ?>
+                                <?php disabled(!$can_use_predict); ?>>
+                            <?php echo esc_html__('Enable topic prediction', WABE_TEXTDOMAIN); ?>
+                        </label>
+                    </td>
+                </tr>
+
+                <tr>
+                    <th scope="row"><?php echo esc_html__('Duplicate Check', WABE_TEXTDOMAIN); ?></th>
+                    <td>
+                        <label>
+                            <input type="checkbox" name="enable_duplicate_check" value="1"
+                                <?php checked(!empty($opt['enable_duplicate_check']) && $can_use_duplicate); ?>
+                                <?php disabled(!$can_use_duplicate); ?>>
+                            <?php echo esc_html__('Enable duplicate check', WABE_TEXTDOMAIN); ?>
+                        </label>
+                    </td>
+                </tr>
+
+                <tr>
+                    <th scope="row"><?php echo esc_html__('License Key', WABE_TEXTDOMAIN); ?></th>
+                    <td>
+                        <input type="text" name="license_key"
+                            value="<?php echo esc_attr((string)($opt['license_key'] ?? '')); ?>" class="regular-text">
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <div style="margin-bottom:24px;">
+            <?php submit_button(__('Save Settings', WABE_TEXTDOMAIN), 'primary', 'submit', false); ?>
+        </div>
+    </form>
+
+    <div class="postbox" style="padding:20px;margin-bottom:24px;">
+        <h2 style="margin:0 0 14px 0;"><?php echo esc_html__('Quick Actions', WABE_TEXTDOMAIN); ?></h2>
+
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="margin:0;">
+                <input type="hidden" name="action" value="wabe_generate_now">
+                <?php wp_nonce_field('wabe_generate_now', 'wabe_generate_now_nonce'); ?>
+                <button type="submit" class="button button-primary" <?php disabled(!$is_ready); ?>>
+                    <?php echo esc_html__('Generate Now', WABE_TEXTDOMAIN); ?>
+                </button>
+            </form>
+
+            <a class="button" href="<?php echo esc_url(admin_url('admin.php?page=wabe-topics')); ?>">
+                <?php echo esc_html__('Open Topics', WABE_TEXTDOMAIN); ?>
+            </a>
+
+            <a class="button" href="<?php echo esc_url(admin_url('admin.php?page=wabe-history')); ?>">
+                <?php echo esc_html__('Open History', WABE_TEXTDOMAIN); ?>
+            </a>
+        </div>
+
+        <p class="description" style="margin-top:12px;">
+            <?php echo esc_html__('Generate Now becomes available when at least one topic exists and the API key for the selected provider is configured.', WABE_TEXTDOMAIN); ?>
+        </p>
     </div>
 </div>

@@ -79,13 +79,6 @@ class WABE_Generator_Settings
             && !empty($this->options['enable_seo']);
     }
 
-    public function is_outline_enabled()
-    {
-        return class_exists('WABE_Plan')
-            && WABE_Plan::can_use_outline_generator()
-            && !empty($this->options['enable_outline_generator']);
-    }
-
     public function is_topic_prediction_enabled()
     {
         return class_exists('WABE_Plan')
@@ -258,16 +251,9 @@ class WABE_Generator_Content_Quality
  */
 class WABE_Generator
 {
-    /** @var WABE_Generator_Settings */
     private $settings;
-
-    /** @var WABE_Generator_AI_Client */
     private $ai;
-
-    /** @var WABE_Generator_History_Repository */
     private $repo;
-
-    /** @var WABE_Generator_Content_Quality */
     private $quality;
 
     public function __construct()
@@ -278,11 +264,6 @@ class WABE_Generator
         $this->quality  = new WABE_Generator_Content_Quality();
     }
 
-    /**
-     * 1件実行
-     *
-     * @return int|false
-     */
     public function run()
     {
         $topic = $this->repo->get_next_topic();
@@ -305,14 +286,6 @@ class WABE_Generator
         return $this->generate($topic, $status, $tone);
     }
 
-    /**
-     * 1件生成
-     *
-     * @param array|string $topic
-     * @param string $status
-     * @param string $global_tone
-     * @return int|false
-     */
     public function generate($topic, $status, $global_tone = 'standard')
     {
         try {
@@ -356,13 +329,13 @@ class WABE_Generator
 
             $article_title = $this->generate_title($context);
             if ($article_title === '') {
-                $article_title = $topic_data['topic'];
+                $article_title = $this->fallback_title($context['topic'], $context);
             }
 
             $markdown = $this->generate_full_article($context, $article_title);
 
             if (trim($markdown) === '') {
-                WABE_Logger::warning('Generator: empty article body. fallback topic only.');
+                WABE_Logger::warning('Generator: empty article body. fallback topic only. topic=' . $topic_data['topic']);
                 $markdown = "## はじめに\n\n" . $topic_data['topic'];
             }
 
@@ -373,13 +346,24 @@ class WABE_Generator
             }
 
             if ($this->settings->is_external_links_enabled()) {
-                $external = $this->build_external_links_block($context, $article_title);
+                $external = $this->build_external_links_block($context);
                 if ($external !== '') {
                     $markdown .= "\n\n" . $external;
                 }
             }
 
+            if (class_exists('WABE_Logger') && method_exists('WABE_Logger', 'info')) {
+                WABE_Logger::info('Generated title: ' . $article_title);
+                WABE_Logger::info('Generated markdown length: ' . $this->get_visible_length($markdown));
+                WABE_Logger::info('Generated markdown preview: ' . mb_substr((string)$markdown, 0, 1000));
+            }
+
             $content = $this->markdown_to_blocks($markdown, $article_title);
+
+            if (class_exists('WABE_Logger') && method_exists('WABE_Logger', 'info')) {
+                WABE_Logger::info('Final block content length: ' . mb_strlen((string)$content));
+                WABE_Logger::info('Final block content preview: ' . mb_substr((string)$content, 0, 1000));
+            }
 
             $postarr = [
                 'post_type'    => 'post',
@@ -398,7 +382,7 @@ class WABE_Generator
             $post_id = (int)$post_id;
 
             if ($this->settings->is_seo_enabled()) {
-                $this->apply_basic_seo_meta($post_id, $context, $article_title);
+                $this->apply_basic_seo_meta($post_id, $context);
             }
 
             $image_attached = '0';
@@ -438,13 +422,6 @@ class WABE_Generator
         }
     }
 
-    /**
-     * 文字列/配列題材を統一
-     *
-     * @param mixed $topic
-     * @param string $global_tone
-     * @return array
-     */
     private function normalize_topic($topic, $global_tone = 'standard')
     {
         if (is_string($topic)) {
@@ -476,14 +453,8 @@ class WABE_Generator
 
     private function build_context(array $topic_data)
     {
-        $heading_count = max(1, (int)$this->settings->get('heading_count', 1));
-        if (class_exists('WABE_Plan') && method_exists('WABE_Plan', 'heading_count_max')) {
-            $heading_count = min($heading_count, (int)WABE_Plan::heading_count_max());
-        } elseif (class_exists('WABE_Plan') && method_exists('WABE_Plan', 'title_count_max')) {
-            $heading_count = min($heading_count, (int)WABE_Plan::title_count_max());
-        }
+        $plan = $this->detect_plan_slug();
 
-        $article_length = max(1000, (int)$this->settings->get('article_length', 1000));
         $detail_level = sanitize_key((string)$this->settings->get('detail_level', 'medium'));
         $generation_quality = sanitize_key((string)$this->settings->get('generation_quality', 'high'));
 
@@ -496,6 +467,7 @@ class WABE_Generator
         }
 
         return [
+            'plan' => $plan,
             'topic' => $topic_data['topic'],
             'style' => $topic_data['style'],
             'tone' => $topic_data['tone'],
@@ -507,11 +479,91 @@ class WABE_Generator
             'external_link_url' => (string)$this->settings->get('external_link_url', ''),
             'enable_internal_links' => $this->settings->is_internal_links_enabled(),
             'enable_external_links' => $this->settings->is_external_links_enabled(),
-            'heading_count' => $heading_count,
-            'article_length' => $article_length,
             'detail_level' => $detail_level,
             'generation_quality' => $generation_quality,
+            'title_profile' => $this->get_title_profile(),
+            'heading_profile' => $this->get_heading_profile(),
+            'length_profile' => $this->get_length_profile_by_plan($plan),
         ];
+    }
+
+    private function detect_plan_slug()
+    {
+        $plan = '';
+
+        // 1. 明示保存されている plan を最優先
+        $options = get_option(WABE_OPTION, []);
+        if (is_array($options) && !empty($options['plan'])) {
+            $plan = (string)$options['plan'];
+        }
+
+        // 2. WABE_Plan に安全な public static get_plan() がある場合だけ使う
+        if ($plan === '' && class_exists('WABE_Plan') && method_exists('WABE_Plan', 'get_plan')) {
+            try {
+                $plan = (string) WABE_Plan::get_plan();
+            } catch (Throwable $e) {
+                $plan = '';
+            }
+        }
+
+        $plan = sanitize_key($plan);
+
+        if (!in_array($plan, ['free', 'advanced', 'pro'], true)) {
+            $plan = 'free';
+        }
+
+        return $plan;
+    }
+
+    private function get_title_profile()
+    {
+        return [
+            'min' => 18,
+            'target_max' => 25,
+            'soft_max' => 27,
+        ];
+    }
+
+    private function get_heading_profile()
+    {
+        return [
+            'min' => 12,
+            'target_max' => 20,
+            'soft_max' => 22,
+        ];
+    }
+
+    private function get_length_profile_by_plan($plan)
+    {
+        switch ($plan) {
+            case 'pro':
+                return [
+                    'band'   => 5000,
+                    'min'    => 4500,
+                    'target' => 5000,
+                    'max'    => 5300,
+                    'label'  => '5000',
+                ];
+
+            case 'advanced':
+                return [
+                    'band'   => 3000,
+                    'min'    => 2500,
+                    'target' => 3000,
+                    'max'    => 3300,
+                    'label'  => '3000',
+                ];
+
+            case 'free':
+            default:
+                return [
+                    'band'   => 1000,
+                    'min'    => 900,
+                    'target' => 1000,
+                    'max'    => 1100,
+                    'label'  => '1000',
+                ];
+        }
     }
 
     private function decode_maybe_base64($value)
@@ -526,7 +578,7 @@ class WABE_Generator
                 try {
                     return (string)WABE_Utils::wabe_maybe_base64_decode($value);
                 } catch (Throwable $e) {
-                    // staticで呼べない実装差異に備える
+                    // noop
                 }
             }
 
@@ -569,13 +621,89 @@ class WABE_Generator
         return $result;
     }
 
+    private function get_visible_length($text)
+    {
+        $text = wp_strip_all_tags((string)$text);
+        $text = preg_replace('/\s+/u', '', $text);
+        return mb_strlen((string)$text);
+    }
+
+    private function extract_h2_headings($markdown)
+    {
+        $markdown = (string)$markdown;
+        preg_match_all('/^##\s+(.+)$/um', $markdown, $matches);
+        return (!empty($matches[1]) && is_array($matches[1])) ? $matches[1] : [];
+    }
+
+    private function is_between($length, $min, $max)
+    {
+        $length = (int)$length;
+        return $length >= (int)$min && $length <= (int)$max;
+    }
+
+    private function is_title_length_ok($title, array $context)
+    {
+        $profile = $context['title_profile'];
+        $length = $this->get_visible_length($title);
+
+        return $this->is_between($length, $profile['min'], $profile['soft_max']);
+    }
+
+    private function are_headings_length_ok($markdown, array $context)
+    {
+        $profile = $context['heading_profile'];
+        $headings = $this->extract_h2_headings($markdown);
+
+        if (empty($headings)) {
+            return false;
+        }
+
+        foreach ($headings as $heading) {
+            $length = $this->get_visible_length($heading);
+            if (!$this->is_between($length, $profile['min'], $profile['soft_max'])) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private function is_body_length_ok($markdown, array $context)
+    {
+        $profile = $context['length_profile'];
+        $length = $this->get_visible_length($markdown);
+
+        return $this->is_between($length, $profile['min'], $profile['max']);
+    }
+
+    private function fallback_title($topic, array $context)
+    {
+        $topic = trim((string)$topic);
+        if ($topic === '') {
+            return 'ブログ記事';
+        }
+
+        $profile = $context['title_profile'];
+        $length = $this->get_visible_length($topic);
+
+        if ($length < $profile['min']) {
+            $topic .= 'のポイント解説';
+        }
+
+        if ($this->get_visible_length($topic) > $profile['soft_max']) {
+            $topic = mb_substr($topic, 0, $profile['soft_max']);
+        }
+
+        return trim($topic);
+    }
+
     private function generate_title(array $context)
     {
         $prompt = $this->build_title_prompt($context);
 
         $quality = $context['generation_quality'] ?? 'high';
         $temperature = ($quality === 'fast') ? 0.5 : 0.7;
-        $max_tokens = ($quality === 'fast') ? 80 : 120;
+        $max_tokens = ($quality === 'fast') ? 90 : 140;
 
         $text = $this->ai->text($prompt, [
             'temperature'       => $temperature,
@@ -584,12 +712,33 @@ class WABE_Generator
 
         $lines = $this->parse_lines($text);
         $title = !empty($lines[0]) ? sanitize_text_field($lines[0]) : '';
-
         $title = preg_replace('/^#+\s*/u', '', (string)$title);
         $title = trim((string)$title, " \t\n\r\0\x0B\"'「」【】");
 
-        if ($title === '') {
-            $title = sanitize_text_field((string)$context['topic']);
+        if (!$this->is_title_length_ok($title, $context)) {
+            $retry_prompt = $prompt . "\n\nIMPORTANT:\n" .
+                "- The title length is invalid.\n" .
+                "- Make it natural and complete.\n" .
+                "- Keep it between {$context['title_profile']['min']} and {$context['title_profile']['soft_max']} Japanese characters.\n" .
+                "- Do not output explanations.\n";
+
+            $retry = $this->ai->text($retry_prompt, [
+                'temperature'       => 0.6,
+                'max_output_tokens' => $max_tokens,
+            ]);
+
+            $retry_lines = $this->parse_lines($retry);
+            $retry_title = !empty($retry_lines[0]) ? sanitize_text_field($retry_lines[0]) : '';
+            $retry_title = preg_replace('/^#+\s*/u', '', (string)$retry_title);
+            $retry_title = trim((string)$retry_title, " \t\n\r\0\x0B\"'「」【】");
+
+            if ($this->is_title_length_ok($retry_title, $context)) {
+                $title = $retry_title;
+            }
+        }
+
+        if ($title === '' || !$this->is_title_length_ok($title, $context)) {
+            $title = $this->fallback_title($context['topic'], $context);
         }
 
         return $title;
@@ -598,6 +747,7 @@ class WABE_Generator
     private function build_title_prompt(array $context)
     {
         $keyword = !empty($context['seo_keyword']) ? $context['seo_keyword'] : $context['topic'];
+        $profile = $context['title_profile'];
 
         return trim(
             "You are a professional editor.\n" .
@@ -608,6 +758,8 @@ class WABE_Generator
                 "- Generate exactly one natural blog title.\n" .
                 "- Keep it specific and readable.\n" .
                 "- Avoid incomplete phrases.\n" .
+                "- The title should ideally be between {$profile['min']} and {$profile['target_max']} Japanese characters.\n" .
+                "- The title must not exceed {$profile['soft_max']} Japanese characters.\n" .
                 "- Do not output headings, bullets, quotation marks, or explanations.\n" .
                 "- Output only the title.\n"
         );
@@ -626,12 +778,24 @@ class WABE_Generator
             'max_output_tokens' => $max_tokens,
         ]));
 
-        $min_length = (int)max(600, floor(((int)$context['article_length']) * 0.6));
+        $body_ok = $this->is_body_length_ok($text, $context);
+        $headings_ok = $this->are_headings_length_ok($text, $context);
 
-        if (mb_strlen(wp_strip_all_tags($text)) < $min_length) {
-            $retry_prompt = $prompt . "\n\nIMPORTANT:\n" .
-                "- The article is too short.\n" .
-                "- Expand each section with more detail.\n" .
+        if (!$body_ok || !$headings_ok) {
+            $profile = $context['length_profile'];
+            $heading = $context['heading_profile'];
+
+            $retry_prompt = $prompt . "\n\nIMPORTANT:\n";
+
+            if (!$body_ok) {
+                $retry_prompt .= "- The total article length including headings and body must be between {$profile['min']} and {$profile['max']} Japanese characters.\n";
+            }
+
+            if (!$headings_ok) {
+                $retry_prompt .= "- Every H2 heading must be between {$heading['min']} and {$heading['soft_max']} Japanese characters.\n";
+            }
+
+            $retry_prompt .=
                 "- Do not repeat the title in the body.\n" .
                 "- Ensure the summary and CTA are included.\n";
 
@@ -641,7 +805,14 @@ class WABE_Generator
             ]));
 
             if ($retry !== '') {
-                $text = $retry;
+                $retry_body_ok = $this->is_body_length_ok($retry, $context);
+                $retry_headings_ok = $this->are_headings_length_ok($retry, $context);
+
+                if ($retry_body_ok && $retry_headings_ok) {
+                    $text = $retry;
+                } elseif ($this->get_visible_length($retry) > $this->get_visible_length($text)) {
+                    $text = $retry;
+                }
             }
         }
 
@@ -668,15 +839,21 @@ class WABE_Generator
             $extra .= "Internal link candidate URL:\n" . $context['internal_link_url'] . "\n\n";
         }
 
-        $heading_count = max(1, (int)($context['heading_count'] ?? 1));
-        $detail_level = (string)($context['detail_level'] ?? 'medium');
-        $article_length = max(1000, (int)($context['article_length'] ?? 1000));
+        $length_profile = $context['length_profile'];
+        $heading_profile = $context['heading_profile'];
 
         $detail_text = 'Give a balanced level of explanation.';
-        if ($detail_level === 'low') {
+        if ($context['detail_level'] === 'low') {
             $detail_text = 'Keep explanations compact and practical.';
-        } elseif ($detail_level === 'high') {
+        } elseif ($context['detail_level'] === 'high') {
             $detail_text = 'Explain each point deeply with concrete examples and actionable advice.';
+        }
+
+        $recommended_h2_count = 3;
+        if ($context['plan'] === 'advanced') {
+            $recommended_h2_count = 4;
+        } elseif ($context['plan'] === 'pro') {
+            $recommended_h2_count = 5;
         }
 
         return trim(
@@ -687,15 +864,17 @@ class WABE_Generator
                 "Article title:\n{$article_title}\n\n" .
                 "Style:\n{$context['style']}\n\n" .
                 "Tone:\n{$context['tone']}\n\n" .
-                "Target length:\nAbout {$article_length} Japanese characters\n\n" .
-                "Heading count target:\n{$heading_count} H2 sections\n\n" .
+                "Target total article length:\nAbout {$length_profile['target']} Japanese characters\n\n" .
+                "Valid total article length range:\n{$length_profile['min']} to {$length_profile['max']} Japanese characters including headings and body\n\n" .
+                "H2 heading length rule:\nEach H2 should ideally be between {$heading_profile['min']} and {$heading_profile['target_max']} Japanese characters, and must not exceed {$heading_profile['soft_max']} Japanese characters\n\n" .
+                "Recommended H2 count:\n{$recommended_h2_count}\n\n" .
                 "Detail instruction:\n{$detail_text}\n\n" .
                 "Task:\n" .
                 "- Write the full article body only.\n" .
                 "- Do NOT output the title again in the body.\n" .
                 "- Start directly with an introduction paragraph or the first H2.\n" .
                 "- Use Markdown-style headings only for H2 and H3 (##, ###).\n" .
-                "- Include short paragraphs.\n" .
+                "- Keep paragraphs short and readable.\n" .
                 "- Use bullet lists where useful.\n" .
                 "- Include a summary section.\n" .
                 "- Include a CTA section at the end.\n" .
@@ -705,18 +884,18 @@ class WABE_Generator
 
     private function estimate_max_output_tokens(array $context)
     {
-        $target = max(1000, (int)($context['article_length'] ?? 1000));
+        $band = (int)$context['length_profile']['band'];
         $quality = (string)($context['generation_quality'] ?? 'high');
 
-        if ($target >= 5000) {
-            return ($quality === 'fast') ? 2600 : 4200;
+        if ($band >= 5000) {
+            return ($quality === 'fast') ? 3000 : 4600;
         }
 
-        if ($target >= 3000) {
-            return ($quality === 'fast') ? 1800 : 3000;
+        if ($band >= 3000) {
+            return ($quality === 'fast') ? 1900 : 3200;
         }
 
-        return ($quality === 'fast') ? 1000 : 1800;
+        return ($quality === 'fast') ? 1100 : 1800;
     }
 
     private function remove_duplicate_title_from_body($content, $article_title)
@@ -754,13 +933,13 @@ class WABE_Generator
         }
 
         $block  = "\n\n";
-        $block .= "## 関連情報\n\n";
+        $block .= "## 関連情報のご案内\n\n";
         $block .= "- あわせて読みたいページ: " . esc_url($url);
 
         return trim($content . $block);
     }
 
-    private function build_external_links_block(array $context, $article_title)
+    private function build_external_links_block(array $context)
     {
         $url = trim((string)($context['external_link_url'] ?? ''));
         if ($url === '') {
@@ -768,7 +947,7 @@ class WABE_Generator
         }
 
         $lines   = [];
-        $lines[] = '## 参考リンク';
+        $lines[] = '## 参考リンクのご紹介';
         $lines[] = '';
         $lines[] = '- 関連情報: ' . esc_url($url);
 
@@ -831,6 +1010,11 @@ class WABE_Generator
                 continue;
             }
 
+            // 単独絵文字・番号だけの行は捨てる
+            if (preg_match('/^[\p{So}\p{Sk}\d]+$/u', $line)) {
+                continue;
+            }
+
             if (preg_match('/^###\s+(.+)$/u', $line, $m)) {
                 $flush_paragraph($blocks, $paragraph_buffer);
                 $flush_list($blocks, $list_buffer);
@@ -866,7 +1050,7 @@ class WABE_Generator
         return $content;
     }
 
-    private function apply_basic_seo_meta($post_id, array $context, $article_title)
+    private function apply_basic_seo_meta($post_id, array $context)
     {
         $keyword = trim((string)($context['seo_keyword'] ?? ''));
         $description = wp_trim_words(

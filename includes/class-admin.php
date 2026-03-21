@@ -168,7 +168,6 @@ class WABE_Admin
         $plan = $this->get_plan();
 
         $weekly_posts_max = max(1, (int)($features['weekly_posts_max'] ?? 1));
-        $heading_count_max = max(1, (int)($features['heading_count_max'] ?? ($features['title_count_max'] ?? 1)));
         $can_publish = !empty($features['can_publish']);
         $can_use_images = !empty($features['can_use_images']);
         $can_use_seo = !empty($features['can_use_seo']);
@@ -176,7 +175,6 @@ class WABE_Admin
         $can_use_external = !empty($features['can_use_external_links']);
         $can_use_predict = !empty($features['can_use_topic_prediction']);
         $can_use_duplicate = !empty($features['can_use_duplicate_check']);
-        $can_use_outline = !empty($features['can_use_outline_generator']);
 
         $ai_provider = isset($_POST['ai_provider']) ? sanitize_key(wp_unslash($_POST['ai_provider'])) : 'openai';
         if (!in_array($ai_provider, ['openai', 'gemini'], true)) {
@@ -191,6 +189,16 @@ class WABE_Admin
             $tone = 'standard';
         }
 
+        $detail_level = isset($_POST['detail_level']) ? sanitize_key(wp_unslash($_POST['detail_level'])) : 'medium';
+        if (!in_array($detail_level, ['low', 'medium', 'high'], true)) {
+            $detail_level = 'medium';
+        }
+
+        $generation_quality = isset($_POST['generation_quality']) ? sanitize_key(wp_unslash($_POST['generation_quality'])) : 'high';
+        if (!in_array($generation_quality, ['fast', 'high'], true)) {
+            $generation_quality = 'high';
+        }
+
         $post_status = isset($_POST['post_status']) ? sanitize_key(wp_unslash($_POST['post_status'])) : 'draft';
         if (!in_array($post_status, ['draft', 'publish'], true)) {
             $post_status = 'draft';
@@ -202,28 +210,6 @@ class WABE_Admin
         $weekly_posts = isset($_POST['weekly_posts']) ? (int)$_POST['weekly_posts'] : 1;
         $weekly_posts = max(1, min($weekly_posts_max, $weekly_posts));
 
-        $heading_count = isset($_POST['heading_count']) ? (int)$_POST['heading_count'] : 1;
-        $heading_count = max(1, min($heading_count_max, $heading_count));
-
-        // 追加: 記事文字数
-        $allowed_article_lengths = ($plan === 'free') ? [1000] : [1000, 3000, 5000];
-        $article_length = isset($_POST['article_length']) ? (int)$_POST['article_length'] : (int)($current['article_length'] ?? 1000);
-        if (!in_array($article_length, $allowed_article_lengths, true)) {
-            $article_length = (int)$allowed_article_lengths[0];
-        }
-
-        // 追加: 詳細度
-        $detail_level = isset($_POST['detail_level']) ? sanitize_key(wp_unslash($_POST['detail_level'])) : 'medium';
-        if (!in_array($detail_level, ['low', 'medium', 'high'], true)) {
-            $detail_level = 'medium';
-        }
-
-        // 追加: 生成品質
-        $generation_quality = isset($_POST['generation_quality']) ? sanitize_key(wp_unslash($_POST['generation_quality'])) : 'high';
-        if (!in_array($generation_quality, ['fast', 'high'], true)) {
-            $generation_quality = 'high';
-        }
-
         $schedule_enabled = !empty($_POST['schedule_enabled']) ? '1' : '0';
         $enable_featured_image = (!empty($_POST['enable_featured_image']) && $can_use_images) ? '1' : '0';
         $enable_seo = (!empty($_POST['enable_seo']) && $can_use_seo) ? '1' : '0';
@@ -231,7 +217,6 @@ class WABE_Admin
         $enable_external_links = (!empty($_POST['enable_external_links']) && $can_use_external) ? '1' : '0';
         $enable_topic_prediction = (!empty($_POST['enable_topic_prediction']) && $can_use_predict) ? '1' : '0';
         $enable_duplicate_check = (!empty($_POST['enable_duplicate_check']) && $can_use_duplicate) ? '1' : '0';
-        $enable_outline_generator = (!empty($_POST['enable_outline_generator']) && $can_use_outline) ? '1' : '0';
 
         $image_style = isset($_POST['image_style']) ? sanitize_key(wp_unslash($_POST['image_style'])) : 'modern';
         if (!in_array($image_style, ['modern', 'business', 'blog', 'tech', 'luxury', 'natural'], true)) {
@@ -239,13 +224,12 @@ class WABE_Admin
         }
 
         $new = [
+            'plan' => $plan,
             'ai_provider' => $ai_provider,
             'openai_api_key' => $this->resolve_secret_field('openai_api_key', $current),
             'gemini_api_key' => $this->resolve_secret_field('gemini_api_key', $current),
             'openai_model' => $openai_model,
             'gemini_model' => $gemini_model,
-            'heading_count' => $heading_count,
-            'article_length' => $article_length,
             'detail_level' => $detail_level,
             'generation_quality' => $generation_quality,
             'tone' => $tone,
@@ -259,7 +243,6 @@ class WABE_Admin
             'enable_external_links' => $enable_external_links,
             'enable_topic_prediction' => $enable_topic_prediction,
             'enable_duplicate_check' => $enable_duplicate_check,
-            'enable_outline_generator' => $enable_outline_generator,
             'author_name' => isset($_POST['author_name']) ? sanitize_text_field(wp_unslash($_POST['author_name'])) : '',
             'site_context' => isset($_POST['site_context']) ? sanitize_textarea_field(wp_unslash($_POST['site_context'])) : '',
             'writing_rules' => isset($_POST['writing_rules']) ? sanitize_textarea_field(wp_unslash($_POST['writing_rules'])) : '',
@@ -846,5 +829,44 @@ class WABE_Admin
 
         $opt = $this->options;
         include WABE_PATH . 'admin/settings.php';
+    }
+
+    public function get_plan_length_profile($plan = '')
+    {
+        if ($plan === '') {
+            $plan = method_exists($this, 'get_plan') ? $this->get_plan() : 'free';
+        }
+
+        $plan = sanitize_key((string)$plan);
+
+        switch ($plan) {
+            case 'pro':
+                return [
+                    'band'   => 5000,
+                    'min'    => 4500,
+                    'target' => 5000,
+                    'max'    => 5300,
+                    'label'  => '5000',
+                ];
+
+            case 'advanced':
+                return [
+                    'band'   => 3000,
+                    'min'    => 2500,
+                    'target' => 3000,
+                    'max'    => 3300,
+                    'label'  => '3000',
+                ];
+
+            case 'free':
+            default:
+                return [
+                    'band'   => 1000,
+                    'min'    => 900,
+                    'target' => 1000,
+                    'max'    => 1100,
+                    'label'  => '1000',
+                ];
+        }
     }
 }
