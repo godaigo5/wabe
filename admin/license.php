@@ -91,34 +91,25 @@ if (!function_exists('wabe_license_mask_key')) {
     <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:24px;align-items:start;max-width:1400px;">
         <div>
             <div class="postbox" style="padding:20px;margin-bottom:24px;">
-                <h2 class="hndle" style="margin:0 0 16px 0;">
-                    <?php echo esc_html__('Current License Status', WABE_TEXTDOMAIN); ?></h2>
+                <h2 style="margin:0 0 16px 0;"><?php echo esc_html__('Current License Status', WABE_TEXTDOMAIN); ?></h2>
 
                 <table class="form-table" role="presentation">
                     <tbody>
                         <tr>
                             <th scope="row"><?php echo esc_html__('Current Plan', WABE_TEXTDOMAIN); ?></th>
-                            <td>
-                                <?php echo wp_kses_post(wabe_license_plan_badge($plan)); ?>
-                            </td>
+                            <td><?php echo wp_kses_post(wabe_license_plan_badge($plan)); ?></td>
                         </tr>
                         <tr>
                             <th scope="row"><?php echo esc_html__('Remote Plan', WABE_TEXTDOMAIN); ?></th>
-                            <td>
-                                <?php echo wp_kses_post(wabe_license_plan_badge($remote_plan)); ?>
-                            </td>
+                            <td><?php echo wp_kses_post(wabe_license_plan_badge($remote_plan)); ?></td>
                         </tr>
                         <tr>
                             <th scope="row"><?php echo esc_html__('License Status', WABE_TEXTDOMAIN); ?></th>
-                            <td>
-                                <?php echo wp_kses_post(wabe_license_status_badge($status)); ?>
-                            </td>
+                            <td><?php echo wp_kses_post(wabe_license_status_badge($status)); ?></td>
                         </tr>
                         <tr>
                             <th scope="row"><?php echo esc_html__('License Key', WABE_TEXTDOMAIN); ?></th>
-                            <td>
-                                <code><?php echo esc_html(wabe_license_mask_key($license_key)); ?></code>
-                            </td>
+                            <td><code><?php echo esc_html(wabe_license_mask_key($license_key)); ?></code></td>
                         </tr>
                         <tr>
                             <th scope="row"><?php echo esc_html__('Customer Email', WABE_TEXTDOMAIN); ?></th>
@@ -139,9 +130,8 @@ if (!function_exists('wabe_license_mask_key')) {
                     <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="margin:0;">
                         <input type="hidden" name="action" value="wabe_refresh_license">
                         <?php wp_nonce_field('wabe_refresh_license', 'wabe_refresh_license_nonce'); ?>
-                        <button type="submit" class="button button-primary">
-                            <?php echo esc_html__('Refresh License', WABE_TEXTDOMAIN); ?>
-                        </button>
+                        <button type="submit"
+                            class="button button-primary"><?php echo esc_html__('Refresh License', WABE_TEXTDOMAIN); ?></button>
                     </form>
 
                     <a class="button" href="<?php echo esc_url(admin_url('admin.php?page=wabe')); ?>">
@@ -151,8 +141,7 @@ if (!function_exists('wabe_license_mask_key')) {
             </div>
 
             <div class="postbox" style="padding:20px;margin-bottom:24px;">
-                <h2 class="hndle" style="margin:0 0 16px 0;">
-                    <?php echo esc_html__('Plan Comparison', WABE_TEXTDOMAIN); ?></h2>
+                <h2 style="margin:0 0 16px 0;"><?php echo esc_html__('Plan Comparison', WABE_TEXTDOMAIN); ?></h2>
 
                 <table class="widefat striped">
                     <thead>
@@ -167,8 +156,8 @@ if (!function_exists('wabe_license_mask_key')) {
                         <tr>
                             <td><?php echo esc_html__('Price', WABE_TEXTDOMAIN); ?></td>
                             <td><?php echo esc_html__('Free', WABE_TEXTDOMAIN); ?></td>
-                            <td><?php echo esc_html__('$12/mo  $79/yr  $199 lifetime', WABE_TEXTDOMAIN); ?></td>
-                            <td><?php echo esc_html__('$24/mo  $159/yr  $399 lifetime', WABE_TEXTDOMAIN); ?></td>
+                            <td>$12/mo $79/yr $199 lifetime</td>
+                            <td>$24/mo $159/yr $399 lifetime</td>
                         </tr>
                         <tr>
                             <td><?php echo esc_html__('Automatic posts per week', WABE_TEXTDOMAIN); ?></td>
@@ -237,27 +226,24 @@ if (!function_exists('wabe_license_mask_key')) {
 
         <div>
             <div class="postbox" style="padding:20px;margin-bottom:24px;">
-                <h2 class="hndle" style="margin:0 0 16px 0;">
-                    <?php echo esc_html__('How Licensing Works', WABE_TEXTDOMAIN); ?></h2>
+                <h2 style="margin:0 0 16px 0;"><?php echo esc_html__('How Licensing Works', WABE_TEXTDOMAIN); ?></h2>
 
                 <ol style="padding-left:18px;margin:0;">
                     <li style="margin-bottom:10px;">
-                        <?php echo esc_html__('The customer purchases a plan through Stripe.', WABE_TEXTDOMAIN); ?>
-                    </li>
+                        <?php echo esc_html__('The customer purchases a plan through Stripe.', WABE_TEXTDOMAIN); ?></li>
                     <li style="margin-bottom:10px;">
                         <?php echo esc_html__('Stripe Webhook issues or updates the license on your API server.', WABE_TEXTDOMAIN); ?>
                     </li>
                     <li style="margin-bottom:10px;">
                         <?php echo esc_html__('The plugin syncs with your license API and reflects the active plan.', WABE_TEXTDOMAIN); ?>
                     </li>
-                    <li>
-                        <?php echo esc_html__('Features are locked or unlocked automatically based on the returned plan and license status.', WABE_TEXTDOMAIN); ?>
+                    <li><?php echo esc_html__('Features are locked or unlocked automatically based on the returned plan and license status.', WABE_TEXTDOMAIN); ?>
                     </li>
                 </ol>
             </div>
 
             <div class="postbox" style="padding:20px;margin-bottom:24px;">
-                <h2 class="hndle" style="margin:0 0 16px 0;">
+                <h2 style="margin:0 0 16px 0;">
                     <?php echo esc_html__('What to Check When License Sync Fails', WABE_TEXTDOMAIN); ?></h2>
 
                 <ul style="padding-left:18px;margin:0;">
@@ -282,8 +268,7 @@ if (!function_exists('wabe_license_mask_key')) {
             </div>
 
             <div class="postbox" style="padding:20px;">
-                <h2 class="hndle" style="margin:0 0 16px 0;">
-                    <?php echo esc_html__('Sales Page / Upgrade', WABE_TEXTDOMAIN); ?></h2>
+                <h2 style="margin:0 0 16px 0;"><?php echo esc_html__('Sales Page / Upgrade', WABE_TEXTDOMAIN); ?></h2>
 
                 <p style="margin-top:0;">
                     <?php echo esc_html__('Upgrade links can be placed here later. For now, direct users to your sales site or customer portal.', WABE_TEXTDOMAIN); ?>

@@ -24,8 +24,8 @@ define('WABE_OPTION', 'wabe_options');
  * ライセンスAPIのURLを使う場合はここを本番URLに変更
  * 未設定でもFreeとして動作します
  */
-if (!defined('https://wabep-api.d-create.online/')) {
-    define('https://wabep-api.d-create.online/', '');
+if (!defined('WABE_LICENSE_API_URL')) {
+    define('WABE_LICENSE_API_URL', 'https://wabep-api.d-create.online/');
 }
 
 require_once WABE_PATH . 'includes/class-plugin.php';

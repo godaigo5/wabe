@@ -2,577 +2,816 @@ msgid ""
 msgstr ""
 "Project-Id-Version: WP AI Blog Engine\n"
 "POT-Creation-Date: 2026-03-21 00:00+0900\n"
-"PO-Revision-Date: 2026-03-21 00:00+0900\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: \n"
 "Language-Team: \n"
+"Language: \n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Domain: wabe\n"
+"X-Generator: ChatGPT\n"
+"X-Domain: wp-ai-blog-engine\n"
 
+#: includes/class-admin.php
 msgid "WP AI Blog Engine"
 msgstr ""
 
-msgid "Generate blog titles, headings, article bodies, and featured images directly inside WordPress. This screen is optimized for product-level operation: API setup, automation, content quality, and feature gating by plan."
-msgstr ""
-
-msgid "License Status"
-msgstr ""
-
-msgid "Topics Ready"
-msgstr ""
-
-msgid "Next Scheduled Run"
-msgstr ""
-
-msgid "Posting Ready"
-msgstr ""
-
-msgid "Yes"
-msgstr ""
-
-msgid "No"
-msgstr ""
-
-msgid "Last license check: %s"
-msgstr ""
-
-msgid "AI Provider & API"
-msgstr ""
-
-msgid "Choose your AI provider, set API keys, and select the model used for article generation."
-msgstr ""
-
-msgid "AI Provider"
-msgstr ""
-
-msgid "OpenAI Model"
-msgstr ""
-
-msgid "Gemini Model"
-msgstr ""
-
-msgid "OpenAI API Key"
-msgstr ""
-
-msgid "Gemini API Key"
-msgstr ""
-
-msgid "Leave the masked value as-is to keep the current key."
-msgstr ""
-
-msgid "Author / Brand Name"
-msgstr ""
-
-msgid "Optional context passed into generation prompts for consistent brand voice."
-msgstr ""
-
-msgid "Content Generation Settings"
-msgstr ""
-
-msgid "Control article output, title candidates, heading count, tone, and whether posts are saved as draft or published immediately."
-msgstr ""
-
-msgid "Title Candidates"
-msgstr ""
-
-msgid "Your current plan allows up to %d title candidates."
-msgstr ""
-
-msgid "Heading Count"
-msgstr ""
-
-msgid "Used for article structure generation."
-msgstr ""
-
-msgid "Writing Tone"
-msgstr ""
-
-msgid "Standard"
-msgstr ""
-
-msgid "Polite"
-msgstr ""
-
-msgid "Casual"
-msgstr ""
-
-msgid "Post Status"
-msgstr ""
-
-msgid "Draft"
-msgstr ""
-
-msgid "Publish"
-msgstr ""
-
-msgid "Locked."
-msgstr ""
-
-msgid "Locked. Upgrade to %s to use this feature."
-msgstr ""
-
-msgid "Site Context / Niche"
-msgstr ""
-
-msgid "Describe your site, audience, niche, and product focus. This improves article relevance and consistency."
-msgstr ""
-
-msgid "Writing Rules"
-msgstr ""
-
-msgid "Examples: avoid exaggerated claims, use short paragraphs, include practical examples, write in Japanese, etc."
-msgstr ""
-
-msgid "Automation"
-msgstr ""
-
-msgid "Configure automatic posting. Posting requires registered topics on the Topics screen."
-msgstr ""
-
-msgid "Enable Automatic Generation"
-msgstr ""
-
-msgid "When enabled, WordPress will try to generate posts automatically based on your weekly posting limit."
-msgstr ""
-
-msgid "Important:"
-msgstr ""
-
-msgid "Automatic posting runs when WordPress is accessed. If nobody visits your site or dashboard, scheduled posting may not run on time."
-msgstr ""
-
-msgid "Posts Per Week"
-msgstr ""
-
-msgid "Your current plan allows up to %d automatic posts per week."
-msgstr ""
-
-msgid "Topic Registration Status"
-msgstr ""
-
-msgid "Ready"
-msgstr ""
-
-msgid "No topics found"
-msgstr ""
-
-msgid "Open Topics"
-msgstr ""
-
-msgid "You can register up to 10 topics. Automatic generation works best when topics are prepared in advance."
-msgstr ""
-
-msgid "Featured Image"
-msgstr ""
-
-msgid "Generate featured images automatically using OpenAI image generation or Gemini Imagen."
-msgstr ""
-
-msgid "Enable Featured Image Generation"
-msgstr ""
-
-msgid "Automatically create and attach a featured image when a post is generated."
-msgstr ""
-
-msgid "Image Style"
-msgstr ""
-
-msgid "Modern"
-msgstr ""
-
-msgid "Business"
-msgstr ""
-
-msgid "Blog"
-msgstr ""
-
-msgid "Tech"
-msgstr ""
-
-msgid "Luxury"
-msgstr ""
-
-msgid "Natural"
-msgstr ""
-
-msgid "Controls the prompt style used during featured image generation."
-msgstr ""
-
-msgid "Image Provider Behavior"
-msgstr ""
-
-msgid "Follows the selected AI Provider above."
-msgstr ""
-
-msgid "OpenAI uses image generation APIs. Gemini uses Imagen when available."
-msgstr ""
-
-msgid "SEO / Internal Links / Advanced Automation"
-msgstr ""
-
-msgid "These are the monetizable product features. They are visually grouped to make plan differences obvious for customers and easier to manage for admins."
-msgstr ""
-
-msgid "Enable SEO Optimization"
-msgstr ""
-
-msgid "Use SEO-oriented prompt instructions and optimization flow."
-msgstr ""
-
-msgid "Enable Internal Links"
-msgstr ""
-
-msgid "Inject internal links or guidance into generated content."
-msgstr ""
-
-msgid "Enable External Links"
-msgstr ""
-
-msgid "Allow trusted outbound references or product/service links in generated posts."
-msgstr ""
-
-msgid "Enable Topic Prediction"
-msgstr ""
-
-msgid "Use prompt enhancements for more relevant topic proposals and content direction."
-msgstr ""
-
-msgid "Enable Duplicate Check"
-msgstr ""
-
-msgid "Prepare generated content to avoid repetitive output across topics and history."
-msgstr ""
-
-msgid "Enable Outline Generator"
-msgstr ""
-
-msgid "Use a more structured heading and article outline workflow before final text generation."
-msgstr ""
-
-msgid "Primary SEO Keyword"
-msgstr ""
-
-msgid "Optional keyword guidance for generated posts."
-msgstr ""
-
-msgid "Internal Link Base URL"
-msgstr ""
-
-msgid "Example: a category page, service page, or pillar page on your own site."
-msgstr ""
-
-msgid "External Link URL"
-msgstr ""
-
-msgid "Optional trusted outbound URL used when external links are enabled."
-msgstr ""
-
-msgid "Save Settings"
-msgstr ""
-
-msgid "Open License"
-msgstr ""
-
-msgid "Manage Topics"
-msgstr ""
-
-msgid "Current Plan Limits"
-msgstr ""
-
-msgid "This card makes it easy to understand what is available in the current subscription tier and what should be upsold."
-msgstr ""
-
-msgid "Weekly Posts"
-msgstr ""
-
-msgid "Number of generated title options per run"
-msgstr ""
-
-msgid "Maximum automated posts per week"
-msgstr ""
-
-msgid "Direct Publish"
-msgstr ""
-
-msgid "Featured Images"
-msgstr ""
-
-msgid "SEO"
-msgstr ""
-
-msgid "Internal Links"
-msgstr ""
-
-msgid "External Links"
-msgstr ""
-
-msgid "Duplicate Check"
-msgstr ""
-
-msgid "Quick Actions"
-msgstr ""
-
-msgid "Use these during development, QA, and demo environments."
-msgstr ""
-
-msgid "Generate Now"
-msgstr ""
-
-msgid "Open Logs"
-msgstr ""
-
-msgid "Make sure at least one topic is registered before automatic posting."
-msgstr ""
-
-msgid "Automatic posting starts when WordPress is accessed, so low-traffic sites may experience delays."
-msgstr ""
-
-msgid "If you need more stable operation, ask your server provider or developer to set up periodic server-side access for WordPress."
-msgstr ""
-
-msgid "Use Draft mode first while testing prompts and image generation quality."
-msgstr ""
-
-msgid "How Automatic Posting Works"
-msgstr ""
-
-msgid "This section explains why automatic posting may be delayed even when your settings are correct."
-msgstr ""
-
-msgid "Automatic posting runs when WordPress is accessed by a visitor or an administrator."
-msgstr ""
-
-msgid "If nobody opens the site, the scheduled posting process may not run at the expected time."
-msgstr ""
-
-msgid "This is more likely on new or low-traffic websites."
-msgstr ""
-
-msgid "For more stable operation, ask your server provider or developer to configure a server-side scheduled request for WordPress."
-msgstr ""
-
-msgid "Not scheduled"
-msgstr ""
-
-msgid "Topics"
-msgstr ""
-
-msgid "Topic"
-msgstr ""
-
-msgid "Style"
-msgstr ""
-
-msgid "Tone"
-msgstr ""
-
-msgid "Enter a blog topic"
-msgstr ""
-
-msgid "Normal"
-msgstr ""
-
-msgid "How-to"
-msgstr ""
-
-msgid "Review"
-msgstr ""
-
-msgid "News"
-msgstr ""
-
-msgid "List"
-msgstr ""
-
-msgid "Register up to 10 topics. After a post is generated successfully, the first topic is removed automatically and the list shifts up."
-msgstr ""
-
-msgid "Save Topics"
-msgstr ""
-
-msgid "Generation History"
-msgstr ""
-
-msgid "No generation history yet."
-msgstr ""
-
-msgid "Date"
-msgstr ""
-
-msgid "Post Title"
-msgstr ""
-
-msgid "Status"
-msgstr ""
-
-msgid "Post Link"
-msgstr ""
-
-msgid "Open Post"
-msgstr ""
-
-msgid "License"
-msgstr ""
-
-msgid "Current License Status"
-msgstr ""
-
-msgid "Current Plan: %s"
-msgstr ""
-
-msgid "Status: %s"
-msgstr ""
-
-msgid "Last Checked: %s"
-msgstr ""
-
-msgid "Not checked yet"
-msgstr ""
-
-msgid "License Key"
-msgstr ""
-
-msgid "Enter your license key and save it."
-msgstr ""
-
-msgid "Save License Key"
-msgstr ""
-
-msgid "Sync License"
-msgstr ""
-
-msgid "Plan Features"
-msgstr ""
-
-msgid "Feature"
-msgstr ""
-
-msgid "Value"
-msgstr ""
-
-msgid "Weekly Posts Max"
-msgstr ""
-
-msgid "Heading Count Max"
-msgstr ""
-
-msgid "Can Publish"
-msgstr ""
-
-msgid "Images"
-msgstr ""
-
-msgid "Topic Generator"
-msgstr ""
-
-msgid "Outline Generator"
-msgstr ""
-
-msgid "Logs"
-msgstr ""
-
-msgid "No logs yet."
-msgstr ""
-
-msgid "Message"
-msgstr ""
-
-msgid "inactive"
-msgstr ""
-
-msgid "free"
-msgstr ""
-
-msgid "advanced"
-msgstr ""
-
-msgid "pro"
-msgstr ""
-
-msgid "NO"
-msgstr ""
-
+#: includes/class-admin.php
 msgid "Settings"
 msgstr ""
 
-msgid "The selected provider is used for generation. You can still save both API keys."
+#: includes/class-admin.php
+msgid "Topics"
 msgstr ""
 
-msgid "Gemini is also used for Imagen-based featured image generation when selected."
+#: admin/logs.php includes/class-admin.php
+msgid "Logs"
 msgstr ""
 
-msgid "Required Setup"
+#: admin/license.php includes/class-admin.php
+msgid "License"
 msgstr ""
 
-msgid "Content Quality"
+#: includes/class-admin.php
+msgid "You do not have permission to access this page."
 msgstr ""
 
-msgid "Recurring Growth"
+#: includes/class-admin.php
+msgid "Settings saved."
 msgstr ""
 
+#: includes/class-admin.php
+msgid "Topics saved."
+msgstr ""
+
+#: includes/class-admin.php
+msgid "License key saved."
+msgstr ""
+
+#: includes/class-admin.php
+msgid "License synced successfully."
+msgstr ""
+
+#: includes/class-admin.php
+msgid "Manual generation completed."
+msgstr ""
+
+#: includes/class-admin.php
+msgid "Generation failed."
+msgstr ""
+
+#: includes/class-admin.php
+msgid "Not scheduled"
+msgstr ""
+
+#: includes/class-cron.php
+msgid "WP AI Blog Engine Dynamic Schedule"
+msgstr ""
+
+#: admin/license.php admin/settings.php
+msgid "Yes"
+msgstr ""
+
+#: admin/license.php admin/settings.php
+msgid "No"
+msgstr ""
+
+#: admin/settings.php admin/topics.php
+msgid "Standard"
+msgstr ""
+
+#: admin/settings.php admin/topics.php
+msgid "Polite"
+msgstr ""
+
+#: admin/settings.php admin/topics.php
+msgid "Casual"
+msgstr ""
+
+#: admin/settings.php
+msgid "Modern"
+msgstr ""
+
+#: admin/settings.php
+msgid "Business"
+msgstr ""
+
+#: admin/settings.php
+msgid "Blog"
+msgstr ""
+
+#: admin/settings.php
+msgid "Tech"
+msgstr ""
+
+#: admin/settings.php
+msgid "Luxury"
+msgstr ""
+
+#: admin/settings.php
+msgid "Natural"
+msgstr ""
+
+#: admin/settings.php
+msgid "Locked. Upgrade to %s to use this feature."
+msgstr ""
+
+#: admin/settings.php
+msgid "Locked."
+msgstr ""
+
+#: admin/settings.php
 msgid "Available"
 msgstr ""
 
-msgid "Locked"
+#: admin/settings.php
+msgid "WP AI Blog Engine Settings"
 msgstr ""
 
-msgid "Brand Voice / Author Identity"
+#: admin/settings.php
+msgid "AI Provider"
 msgstr ""
 
+#: admin/settings.php
+msgid "Choose which AI provider will be used for article generation."
+msgstr ""
+
+#: admin/settings.php
+msgid "OpenAI API Key"
+msgstr ""
+
+#: admin/settings.php
+msgid "If a masked value is displayed, leaving it as-is will keep the current key."
+msgstr ""
+
+#: admin/settings.php
+msgid "OpenAI Model"
+msgstr ""
+
+#: admin/settings.php
+msgid "Gemini API Key"
+msgstr ""
+
+#: admin/settings.php
+msgid "Gemini Model"
+msgstr ""
+
+#: admin/settings.php
+msgid "Generation Settings"
+msgstr ""
+
+#: admin/license.php admin/settings.php
+msgid "Heading Count"
+msgstr ""
+
+#: admin/settings.php
+msgid "Current plan allows 1 to %d headings."
+msgstr ""
+
+#: admin/settings.php admin/topics.php
+msgid "Tone"
+msgstr ""
+
+#: admin/settings.php
+msgid "Post Status"
+msgstr ""
+
+#: admin/settings.php
+msgid "Draft"
+msgstr ""
+
+#: admin/settings.php
+msgid "Publish"
+msgstr ""
+
+#: admin/settings.php
+msgid "Weekly Posts"
+msgstr ""
+
+#: admin/settings.php
+msgid "Current plan allows 1 to %d automatic posts per week."
+msgstr ""
+
+#: admin/settings.php
+msgid "Enable Auto Posting Schedule"
+msgstr ""
+
+#: admin/settings.php
+msgid "Enable automatic generation schedule"
+msgstr ""
+
+#: admin/settings.php
+msgid "WordPress Cron runs when your WordPress site is accessed. On low-traffic sites, automatic posting may be delayed. For stable operation, setting a real server cron is recommended."
+msgstr ""
+
+#: admin/settings.php
+msgid "Next Scheduled Run"
+msgstr ""
+
+#: admin/settings.php
+msgid "Ready Status"
+msgstr ""
+
+#: admin/settings.php
+msgid "Ready"
+msgstr ""
+
+#: admin/settings.php
+msgid "API key required"
+msgstr ""
+
+#: admin/settings.php
+msgid "The selected provider must have a valid API key saved before generation can run."
+msgstr ""
+
+#: admin/settings.php
+msgid "Content Settings"
+msgstr ""
+
+#: admin/settings.php
+msgid "Author Name"
+msgstr ""
+
+#: admin/settings.php
+msgid "Site Context"
+msgstr ""
+
+#: admin/settings.php
+msgid "Describe the purpose, audience, and direction of the site so the AI can generate more suitable articles."
+msgstr ""
+
+#: admin/settings.php
+msgid "Writing Rules"
+msgstr ""
+
+#: admin/settings.php
+msgid "Example: sentence length, tone policy, forbidden expressions, CTA style, formatting policy."
+msgstr ""
+
+#: admin/settings.php
+msgid "Pro / Advanced Features"
+msgstr ""
+
+#: admin/license.php admin/settings.php
+msgid "Featured image generation"
+msgstr ""
+
+#: admin/settings.php
+msgid "Automatically generate a featured image"
+msgstr ""
+
+#: admin/license.php admin/settings.php
+msgid "SEO support"
+msgstr ""
+
+#: admin/settings.php
+msgid "Enable SEO metadata support"
+msgstr ""
+
+#: admin/settings.php
+msgid "Internal Link Support"
+msgstr ""
+
+#: admin/settings.php
+msgid "Insert internal link guidance into generated content"
+msgstr ""
+
+#: admin/settings.php
+msgid "External Link Support"
+msgstr ""
+
+#: admin/settings.php
+msgid "Append an external reference link block"
+msgstr ""
+
+#: admin/settings.php
+msgid "Duplicate Check: %s"
+msgstr ""
+
+#: admin/settings.php
+msgid "Skip generation when a similar post already exists"
+msgstr ""
+
+#: admin/settings.php
+msgid "Topic Prediction"
+msgstr ""
+
+#: admin/settings.php
+msgid "Predict topic ideas based on site trends and auto-fill the queue when needed"
+msgstr ""
+
+#: admin/license.php admin/settings.php
+msgid "Outline Generator"
+msgstr ""
+
+#: admin/settings.php
+msgid "Enable outline generation helper for article structure"
+msgstr ""
+
+#: admin/license.php admin/settings.php
+msgid "License Key"
+msgstr ""
+
+#: admin/license.php admin/settings.php
+msgid "License Status"
+msgstr ""
+
+#: admin/settings.php
+msgid "Checked At"
+msgstr ""
+
+#: admin/settings.php
+msgid "Expires At"
+msgstr ""
+
+#: admin/settings.php
+msgid "Customer Email"
+msgstr ""
+
+#: admin/settings.php
+msgid "Open License Page"
+msgstr ""
+
+#: admin/settings.php
+msgid "Save Settings"
+msgstr ""
+
+#: admin/license.php admin/settings.php
+msgid "Current Plan"
+msgstr ""
+
+#: admin/settings.php
+msgid "Weekly auto posts: up to %d"
+msgstr ""
+
+#: admin/settings.php
+msgid "Heading count: up to %d"
+msgstr ""
+
+#: admin/settings.php
+msgid "Topic queue capacity: 10"
+msgstr ""
+
+#: admin/settings.php
+msgid "Publish available: %s"
+msgstr ""
+
+#: admin/settings.php
+msgid "Image generation: %s"
+msgstr ""
+
+#: admin/settings.php
+msgid "SEO support: %s"
+msgstr ""
+
+#: admin/settings.php
+msgid "Internal links: %s"
+msgstr ""
+
+#: admin/settings.php
+msgid "External links: %s"
+msgstr ""
+
+#: admin/settings.php
+msgid "Topic prediction: %s"
+msgstr ""
+
+#: admin/settings.php
+msgid "Compare plans / Upgrade to %s"
+msgstr ""
+
+#: admin/settings.php
+msgid "Quick Actions"
+msgstr ""
+
+#: admin/settings.php
+msgid "Queued topics: %d / 10"
+msgstr ""
+
+#: admin/settings.php
+msgid "Generate Now"
+msgstr ""
+
+#: admin/settings.php
+msgid "If there is at least one topic in the queue, a post will be generated immediately using the selected AI provider."
+msgstr ""
+
+#: admin/settings.php
+msgid "Open Topics Page"
+msgstr ""
+
+#: admin/license.php admin/settings.php
+msgid "Plan Comparison"
+msgstr ""
+
+#: admin/license.php admin/settings.php
+msgid "Feature"
+msgstr ""
+
+#: admin/settings.php
+msgid "Price"
+msgstr ""
+
+#: admin/settings.php
+msgid "Free"
+msgstr ""
+
+#: admin/settings.php
+msgid "Automatic posts per week"
+msgstr ""
+
+#: admin/settings.php
+msgid "Post status"
+msgstr ""
+
+#: admin/settings.php
+msgid "Draft only"
+msgstr ""
+
+#: admin/settings.php
+msgid "Draft / Publish"
+msgstr ""
+
+#: admin/settings.php
+msgid "Important Note"
+msgstr ""
+
+#: admin/settings.php
+msgid "Automatic posting depends on WordPress Cron. If your site has low traffic, scheduled execution may be delayed until someone opens the site."
+msgstr ""
+
+#: admin/settings.php
 msgid "Defines the brand voice, author persona, and writing identity used during content generation. This strongly affects tone consistency and article quality."
 msgstr ""
 
-msgid "Upgrade Opportunity"
+#: admin/settings.php
+msgid "Site Context / Niche"
 msgstr ""
 
-msgid "Use this section to make plan differences obvious and guide users toward higher-value features."
+#: admin/settings.php
+msgid "Describe your site, audience, niche, and product focus. This improves article relevance and consistency."
 msgstr ""
 
-msgid "Current plan: %s"
+#: admin/settings.php
+msgid "Examples: avoid exaggerated claims, use short paragraphs, include practical examples, write in Japanese, etc."
 msgstr ""
 
-msgid "Current weekly automation limit"
+#: admin/settings.php
+msgid "Automation"
 msgstr ""
 
-msgid "Current title candidate limit"
+#: admin/settings.php
+msgid "Configure automatic posting. Posting requires registered topics on the Topics screen."
 msgstr ""
 
-msgid "Best features for upgrading"
+#: admin/settings.php
+msgid "Recurring Growth"
 msgstr ""
 
-msgid "Users are more likely to upgrade when they clearly understand the practical benefits: direct publishing, featured images, SEO support, internal links, and stronger automation."
+#: admin/settings.php
+msgid "Enable Automatic Generation"
 msgstr ""
 
-msgid "Advanced is ideal for users who want real automated posting and featured images."
+#: admin/settings.php
+msgid "When enabled, WordPress will try to generate posts automatically based on your weekly posting limit."
 msgstr ""
 
-msgid "Pro is ideal for users who want SEO, internal links, topic prediction, and stronger content workflows."
+#: admin/settings.php
+msgid "Important:"
 msgstr ""
 
-msgid "Keep locked features visible so users can understand the value difference between plans."
+#: admin/settings.php
+msgid "Automatic posting runs when WordPress is accessed. If nobody visits your site or dashboard, scheduled posting may not run on time."
 msgstr ""
 
-msgid "Plan Guide"
+#: admin/settings.php
+msgid "You can register up to 10 topics. Automatic generation works best when topics are prepared in advance."
 msgstr ""
 
-msgid "This section helps you understand what is included in your current plan and which features are available on higher plans."
+#: admin/topics.php
+msgid "Normal"
 msgstr ""
 
-msgid "How to use this plan guide"
+#: admin/topics.php
+msgid "How-to"
 msgstr ""
 
-msgid "Use this card to quickly check which features are ready to use now and which features require a higher plan."
+#: admin/topics.php
+msgid "Review"
 msgstr ""
 
-msgid "Free is suitable for basic testing with title generation, article drafts, and simple workflow checks."
+#: admin/topics.php
+msgid "News"
 msgstr ""
 
-msgid "Advanced is suitable for users who want automatic posting, direct publishing, and featured image support."
+#: admin/topics.php
+msgid "List"
 msgstr ""
 
-msgid "Pro is suitable for users who want stronger SEO support, internal links, topic prediction, and more advanced content automation."
+#: admin/topics.php
+msgid "Topic Queue"
 msgstr ""
 
-msgid "If a feature is shown as locked, you can continue using your current settings and enable that feature after upgrading your plan."
+#: admin/topics.php
+msgid "Up to 10 topics can be registered. When a post is generated, the first topic is removed and the remaining topics are shifted up."
+msgstr ""
+
+#: admin/topics.php
+msgid "#"
+msgstr ""
+
+#: admin/topics.php
+msgid "Topic"
+msgstr ""
+
+#: admin/topics.php
+msgid "Style"
+msgstr ""
+
+#: admin/topics.php
+msgid "Save Topics"
+msgstr ""
+
+#: admin/topics.php
+msgid "Topic History"
+msgstr ""
+
+#: admin/topics.php
+msgid "No history yet."
+msgstr ""
+
+#: admin/logs.php admin/topics.php
+msgid "Date"
+msgstr ""
+
+#: admin/topics.php
+msgid "Post Title"
+msgstr ""
+
+#: admin/topics.php
+msgid "Post Link"
+msgstr ""
+
+#: admin/topics.php
+msgid "Status"
+msgstr ""
+
+#: admin/topics.php
+msgid "Open"
+msgstr ""
+
+#: admin/topics.php
+msgid "Register up to 10 topics. After a post is generated successfully, the first topic is removed automatically and the list shifts up."
+msgstr ""
+
+#: admin/topics.php
+msgid "Generation History"
+msgstr ""
+
+#: admin/topics.php
+msgid "No generation history yet."
+msgstr ""
+
+#: admin/logs.php
+msgid "No logs yet."
+msgstr ""
+
+#: admin/logs.php
+msgid "Message"
+msgstr ""
+
+#: admin/logs.php
+msgid "Info"
+msgstr ""
+
+#: admin/logs.php
+msgid "Warning"
+msgstr ""
+
+#: admin/logs.php
+msgid "Error"
+msgstr ""
+
+#: admin/logs.php
+msgid "Debug"
+msgstr ""
+
+#: admin/logs.php
+msgid "Log Overview"
+msgstr ""
+
+#: admin/logs.php
+msgid "Stored logs: %d"
+msgstr ""
+
+#: admin/logs.php
+msgid "Are you sure you want to clear all logs?"
+msgstr ""
+
+#: admin/logs.php
+msgid "Clear Logs"
+msgstr ""
+
+#: admin/logs.php
+msgid "Back to Settings"
+msgstr ""
+
+#: admin/logs.php
+msgid "Log Entries"
+msgstr ""
+
+#: admin/logs.php
+msgid "No logs found."
+msgstr ""
+
+#: admin/logs.php
+msgid "Time"
+msgstr ""
+
+#: admin/logs.php
+msgid "Level"
+msgstr ""
+
+#: admin/license.php
+msgid "Active"
+msgstr ""
+
+#: admin/license.php
+msgid "Valid"
+msgstr ""
+
+#: admin/license.php
+msgid "Inactive"
+msgstr ""
+
+#: admin/license.php
+msgid "Expired"
+msgstr ""
+
+#: admin/license.php
+msgid "Invalid"
+msgstr ""
+
+#: admin/license.php
+msgid "Current License Status"
+msgstr ""
+
+#: admin/license.php
+msgid "Current Plan:"
+msgstr ""
+
+#: admin/license.php
+msgid "Status:"
+msgstr ""
+
+#: admin/license.php
+msgid "Last Checked:"
+msgstr ""
+
+#: admin/license.php
+msgid "Enter your license key and save it."
+msgstr ""
+
+#: admin/license.php
+msgid "Save License Key"
+msgstr ""
+
+#: admin/license.php
+msgid "Sync License"
+msgstr ""
+
+#: admin/license.php
+msgid "Plan Features"
+msgstr ""
+
+#: admin/license.php
+msgid "Value"
+msgstr ""
+
+#: admin/license.php
+msgid "Weekly Posts Max"
+msgstr ""
+
+#: admin/license.php
+msgid "Heading Count Max"
+msgstr ""
+
+#: admin/license.php
+msgid "Can Publish"
+msgstr ""
+
+#: admin/license.php
+msgid "SEO"
+msgstr ""
+
+#: admin/license.php
+msgid "Images"
+msgstr ""
+
+#: admin/license.php
+msgid "Topic Generator"
+msgstr ""
+
+#: admin/license.php
+msgid "Internal Links"
+msgstr ""
+
+#: admin/license.php
+msgid "Remote Plan"
+msgstr ""
+
+#: admin/license.php
+msgid "Refresh License"
+msgstr ""
+
+#: admin/license.php
+msgid "How Licensing Works"
+msgstr ""
+
+#: admin/license.php
+msgid "The customer purchases a plan through Stripe."
+msgstr ""
+
+#: admin/license.php
+msgid "Stripe Webhook issues or updates the license on your API server."
+msgstr ""
+
+#: admin/license.php
+msgid "The plugin syncs with your license API and reflects the active plan."
+msgstr ""
+
+#: admin/license.php
+msgid "Features are locked or unlocked automatically based on the returned plan and license status."
+msgstr ""
+
+#: admin/license.php
+msgid "What to Check When License Sync Fails"
+msgstr ""
+
+#: admin/license.php
+msgid "Confirm that the saved license key is correct."
+msgstr ""
+
+#: admin/license.php
+msgid "Check whether your API server is reachable from WordPress."
+msgstr ""
+
+#: admin/license.php
+msgid "Check the Stripe Webhook processing result on the API side."
+msgstr ""
+
+#: admin/license.php
+msgid "Review the plugin logs for detailed sync errors."
+msgstr ""
+
+#: admin/license.php
+msgid "Open Logs"
+msgstr ""
+
+#: admin/license.php
+msgid "Sales Page / Upgrade"
+msgstr ""
+
+#: admin/license.php
+msgid "Upgrade links can be placed here later. For now, direct users to your sales site or customer portal."
+msgstr ""
+
+#: admin/license.php
+msgid "Open Sales Site"
+msgstr ""
+
+#: includes/class-cron.php
+msgid "Schedule is disabled."
+msgstr ""
+
+#: includes/class-cron.php
+msgid "No topics registered."
+msgstr ""
+
+#: includes/class-cron.php
+msgid "Skipped due to active execution lock."
+msgstr ""
+
+#: includes/class-cron.php
+msgid "Generation completed successfully."
+msgstr ""
+
+#: includes/class-cron.php
+msgid "Generation skipped or failed."
+msgstr ""
+
+#: includes/class-cron.php
+msgid "Cron exception occurred."
+msgstr ""
+
+#: includes/class-cron.php
+msgid "WABE_Generator class not found."
+msgstr ""
+
+#: wp-ai-blog-engine.php
+msgid "AI-powered blog generation plugin for WordPress with OpenAI / Gemini support and license-based plan control."
+msgstr ""
+
+#: wp-ai-blog-engine.php
+msgid "AI-powered blog generation plugin for WordPress with OpenAI / Gemini support and license-based plan control."
 msgstr ""

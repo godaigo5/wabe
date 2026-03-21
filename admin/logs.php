@@ -25,28 +25,13 @@ if (!function_exists('wabe_log_level_badge')) {
         $level = strtolower((string)$level);
 
         $styles = [
-            'info' => [
-                'bg'    => '#dbeafe',
-                'color' => '#1d4ed8',
-            ],
-            'warning' => [
-                'bg'    => '#fef3c7',
-                'color' => '#92400e',
-            ],
-            'error' => [
-                'bg'    => '#fee2e2',
-                'color' => '#b91c1c',
-            ],
-            'debug' => [
-                'bg'    => '#e5e7eb',
-                'color' => '#374151',
-            ],
+            'info' => ['bg' => '#dbeafe', 'color' => '#1d4ed8'],
+            'warning' => ['bg' => '#fef3c7', 'color' => '#92400e'],
+            'error' => ['bg' => '#fee2e2', 'color' => '#b91c1c'],
+            'debug' => ['bg' => '#e5e7eb', 'color' => '#374151'],
         ];
 
-        $style = $styles[$level] ?? [
-            'bg'    => '#e5e7eb',
-            'color' => '#374151',
-        ];
+        $style = $styles[$level] ?? ['bg' => '#e5e7eb', 'color' => '#374151'];
 
         return sprintf(
             '<span style="display:inline-block;padding:4px 10px;border-radius:999px;background:%s;color:%s;font-size:12px;font-weight:600;">%s</span>',
@@ -67,17 +52,10 @@ if (!function_exists('wabe_log_level_badge')) {
     <?php endif; ?>
 
     <div class="postbox" style="padding:20px;max-width:1200px;margin-bottom:24px;">
-        <h2 class="hndle" style="margin:0 0 14px 0;"><?php echo esc_html__('Log Overview', WABE_TEXTDOMAIN); ?></h2>
+        <h2 style="margin:0 0 14px 0;"><?php echo esc_html__('Log Overview', WABE_TEXTDOMAIN); ?></h2>
 
         <p style="margin:0 0 16px 0;">
-            <?php
-            echo esc_html(
-                sprintf(
-                    __('Stored logs: %d', WABE_TEXTDOMAIN),
-                    count($logs)
-                )
-            );
-            ?>
+            <?php echo esc_html__('Stored logs', WABE_TEXTDOMAIN); ?>: <?php echo esc_html((string)count($logs)); ?>
         </p>
 
         <div style="display:flex;gap:12px;flex-wrap:wrap;">
@@ -98,7 +76,7 @@ if (!function_exists('wabe_log_level_badge')) {
     </div>
 
     <div class="postbox" style="padding:20px;max-width:1200px;">
-        <h2 class="hndle" style="margin:0 0 14px 0;"><?php echo esc_html__('Log Entries', WABE_TEXTDOMAIN); ?></h2>
+        <h2 style="margin:0 0 14px 0;"><?php echo esc_html__('Log Entries', WABE_TEXTDOMAIN); ?></h2>
 
         <?php if (empty($logs)) : ?>
             <p><?php echo esc_html__('No logs found.', WABE_TEXTDOMAIN); ?></p>

@@ -47,13 +47,7 @@ $tone_options = wabe_topics_tone_options();
 
     <div class="wabe-admin-card" style="max-width: 1100px;">
         <h2><?php echo esc_html__('Topic Queue', WABE_TEXTDOMAIN); ?></h2>
-        <p>
-            <?php
-            echo esc_html__(
-                'Up to 10 topics can be registered. When a post is generated, the first topic is removed and the remaining topics are shifted up.',
-                WABE_TEXTDOMAIN
-            );
-            ?>
+        <p><?php echo esc_html__('Up to 10 topics can be registered. When a post is generated, the first topic is removed and the remaining topics are shifted up.', WABE_TEXTDOMAIN); ?>
         </p>
 
         <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
@@ -113,9 +107,8 @@ $tone_options = wabe_topics_tone_options();
             </table>
 
             <p style="margin-top: 16px;">
-                <button type="submit" class="button button-primary">
-                    <?php echo esc_html__('Save Topics', WABE_TEXTDOMAIN); ?>
-                </button>
+                <button type="submit"
+                    class="button button-primary"><?php echo esc_html__('Save Topics', WABE_TEXTDOMAIN); ?></button>
             </p>
         </form>
     </div>
@@ -152,14 +145,13 @@ $tone_options = wabe_topics_tone_options();
                         $view_url   = $post_url !== '' ? $post_url : ($post_id > 0 ? get_permalink($post_id) : '');
                         ?>
                         <tr>
-                            <td><?php echo esc_html($created_at); ?></td>
+                            <td><?php echo esc_html($created_at !== '' ? $created_at : '—'); ?></td>
                             <td><?php echo esc_html($topic); ?></td>
                             <td><?php echo esc_html($title); ?></td>
                             <td>
                                 <?php if ($view_url !== '') : ?>
-                                    <a href="<?php echo esc_url($view_url); ?>" target="_blank" rel="noopener noreferrer">
-                                        <?php echo esc_html__('Open', WABE_TEXTDOMAIN); ?>
-                                    </a>
+                                    <a href="<?php echo esc_url($view_url); ?>" target="_blank"
+                                        rel="noopener noreferrer"><?php echo esc_html__('Open', WABE_TEXTDOMAIN); ?></a>
                                 <?php else : ?>
                                     —
                                 <?php endif; ?>
