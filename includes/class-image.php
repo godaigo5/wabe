@@ -211,7 +211,6 @@ class WABE_Image
         }
 
         if (empty($this->options['enable_inline_unsplash'])) {
-            // optionが未保存でも既定ONにしたいなら false を消して true 扱いにしてもOK
             return true;
         }
 
@@ -228,10 +227,8 @@ class WABE_Image
         switch ($plan) {
             case 'pro':
                 return 5;
-
             case 'advanced':
                 return 3;
-
             case 'free':
             default:
                 return 1;
@@ -300,7 +297,6 @@ class WABE_Image
             return '';
         }
 
-        // 長すぎると精度が落ちやすいので切る
         if (function_exists('mb_strlen') && mb_strlen($query) > 80) {
             $query = mb_substr($query, 0, 80);
         } elseif (strlen($query) > 80) {
@@ -320,9 +316,9 @@ class WABE_Image
         }
 
         $url = add_query_arg([
-            'query'       => $query,
-            'per_page'    => 10,
-            'orientation' => 'landscape',
+            'query'          => $query,
+            'per_page'       => 10,
+            'orientation'    => 'landscape',
             'content_filter' => 'high',
         ], 'https://api.unsplash.com/search/photos');
 
@@ -376,7 +372,7 @@ class WABE_Image
     {
         $image_url   = esc_url_raw((string) ($photo['urls']['regular'] ?? ''));
         $photo_page  = esc_url_raw((string) ($photo['links']['html'] ?? ''));
-        $download_by = esc_url_raw((string) ($photo['user']['links']['html'] ?? ''));
+        $author_page = esc_url_raw((string) ($photo['user']['links']['html'] ?? ''));
         $author_name = sanitize_text_field((string) ($photo['user']['name'] ?? 'Unsplash'));
         $alt         = trim((string) ($photo['alt_description'] ?? $heading_text));
 
@@ -384,17 +380,28 @@ class WABE_Image
             return '';
         }
 
-        $alt_attr = esc_attr($alt);
-        $caption  = sprintf(
-            'Photo by <a href="%s?utm_source=wp_ai_blog_engine&utm_medium=referral" target="_blank" rel="nofollow sponsored noopener">%s</a> on <a href="https://unsplash.com/?utm_source=wp_ai_blog_engine&utm_medium=referral" target="_blank" rel="nofollow sponsored noopener">Unsplash</a>',
-            esc_url($download_by !== '' ? $download_by : $photo_page),
-            esc_html($author_name)
+        $author_href = $author_page !== '' ? $author_page : $photo_page;
+        $author_href = add_query_arg([
+            'utm_source' => 'wp_ai_blog_engine',
+            'utm_medium' => 'referral',
+        ], $author_href);
+
+        $unsplash_href = add_query_arg([
+            'utm_source' => 'wp_ai_blog_engine',
+            'utm_medium' => 'referral',
+        ], 'https://unsplash.com/');
+
+        $caption = sprintf(
+            'Photo by <a href="%s" target="_blank" rel="nofollow sponsored noopener">%s</a> on <a href="%s" target="_blank" rel="nofollow sponsored noopener">Unsplash</a>',
+            esc_url($author_href),
+            esc_html($author_name),
+            esc_url($unsplash_href)
         );
 
         return
             "\n<!-- wp:image {\"sizeSlug\":\"large\",\"linkDestination\":\"none\",\"className\":\"wabe-inline-unsplash-image\"} -->\n" .
             '<figure class="wp-block-image size-large wabe-inline-unsplash-image">' .
-            '<img src="' . esc_url($image_url) . '" alt="' . $alt_attr . '" loading="lazy" referrerpolicy="no-referrer-when-downgrade" />' .
+            '<img src="' . esc_url($image_url) . '" alt="' . esc_attr($alt) . '" loading="lazy" referrerpolicy="no-referrer-when-downgrade" />' .
             '<figcaption>' . $caption . '</figcaption>' .
             "</figure>\n" .
             "<!-- /wp:image -->\n";
@@ -669,8 +676,8 @@ class WABE_Image
                 return false;
             }
 
-            $image_code  = (int) wp_remote_retrieve_response_code($image_response);
-            $image_body  = wp_remote_retrieve_body($image_response);
+            $image_code   = (int) wp_remote_retrieve_response_code($image_response);
+            $image_body   = wp_remote_retrieve_body($image_response);
             $content_type = wp_remote_retrieve_header($image_response, 'content-type');
 
             if ($image_code < 200 || $image_code >= 300 || empty($image_body)) {
@@ -748,9 +755,9 @@ class WABE_Image
 
         $metadata = wp_generate_attachment_metadata($attachment_id, $upload['file']);
 
-        if (is_wp_error($metadata)) {
-            /** @var WP_Error $metadata */
-            $this->log_error('Image metadata generation failed: ' . $metadata->get_error_message());
+        if ($metadata instanceof WP_Error) {
+            $error_message = $metadata->get_error_message();
+            $this->log_error('Image metadata generation failed: ' . $error_message);
             return false;
         }
 
@@ -858,26 +865,26 @@ class WABE_Image
         }
 
         $map = [
-            'ブログ'     => 'blog',
-            '自動生成'   => 'automation',
-            'メリット'   => 'benefits',
-            'ポイント'   => 'key points',
-            '解説'       => 'guide',
-            '集客'       => 'lead generation',
-            '中小企業'   => 'small business',
+            'ブログ'       => 'blog',
+            '自動生成'     => 'automation',
+            'メリット'     => 'benefits',
+            'ポイント'     => 'key points',
+            '解説'         => 'guide',
+            '集客'         => 'lead generation',
+            '中小企業'     => 'small business',
             'ホームページ' => 'website',
-            'SEO'        => 'SEO',
-            '記事'       => 'article',
-            '画像'       => 'image',
-            '作成'       => 'creation',
-            '効率化'     => 'efficiency',
-            '比較'       => 'comparison',
-            '方法'       => 'how to',
-            '活用'       => 'usage',
-            '導入'       => 'implementation',
-            '初心者'     => 'beginner',
-            'おすすめ'   => 'recommended',
-            '機能'       => 'features',
+            'SEO'          => 'SEO',
+            '記事'         => 'article',
+            '画像'         => 'image',
+            '作成'         => 'creation',
+            '効率化'       => 'efficiency',
+            '比較'         => 'comparison',
+            '方法'         => 'how to',
+            '活用'         => 'usage',
+            '導入'         => 'implementation',
+            '初心者'       => 'beginner',
+            'おすすめ'     => 'recommended',
+            '機能'         => 'features',
         ];
 
         $translated = $title;
