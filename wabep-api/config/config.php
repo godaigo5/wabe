@@ -14,7 +14,7 @@ return [
 
     'api' => [
         'plugin_slug'          => 'wp-ai-blog-engine',
-        'secret'               => getenv('WABEP_API_SECRET') ?: 'change-this-secret-immediately',
+        'secret'               => getenv('WABEP_API_SECRET') ?: 'dcreate-wabeapi-license-key',
         'allow_test_keys'      => true,
         'test_keys'            => [
             'TEST-FREE-123'     => 'free',

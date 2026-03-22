@@ -18,6 +18,7 @@ class WABE_Admin
 
         add_action('admin_post_wabe_save_settings', [$this, 'handle_save_settings']);
         add_action('admin_post_wabe_save_topics', [$this, 'handle_save_topics']);
+        add_action('admin_post_wabe_save_license_key', [$this, 'handle_save_license_key']);
         add_action('admin_post_wabe_generate_now', [$this, 'handle_generate_now']);
         add_action('admin_post_wabe_generate_predicted_topics', [$this, 'handle_generate_predicted_topics']);
         add_action('admin_post_wabe_clear_logs', [$this, 'handle_clear_logs']);
@@ -169,6 +170,7 @@ class WABE_Admin
         if (class_exists('WABE_Logger') && method_exists('WABE_Logger', 'info')) {
             WABE_Logger::info('DEBUG: NEW handle_save_settings reached');
         }
+
         $this->guard();
         check_admin_referer('wabe_save_settings', 'wabe_settings_nonce');
 
@@ -180,7 +182,7 @@ class WABE_Admin
         $features = $this->get_plan_features();
         $plan = $this->get_plan();
 
-        $weekly_posts_max = max(1, (int)($features['weekly_posts_max'] ?? 1));
+        $weekly_posts_max = max(1, (int) ($features['weekly_posts_max'] ?? 1));
         $can_publish = !empty($features['can_publish']);
         $can_use_images = !empty($features['can_use_images']);
         $can_use_seo = !empty($features['can_use_seo']);
@@ -188,6 +190,7 @@ class WABE_Admin
         $can_use_external = !empty($features['can_use_external_links']);
         $can_use_predict = !empty($features['can_use_topic_prediction']);
         $can_use_duplicate = !empty($features['can_use_duplicate_check']);
+        $can_use_outline = !empty($features['can_use_outline_generator']);
 
         $ai_provider = isset($_POST['ai_provider']) ? sanitize_key(wp_unslash($_POST['ai_provider'])) : 'openai';
         if (!in_array($ai_provider, ['openai', 'gemini'], true)) {
@@ -220,7 +223,7 @@ class WABE_Admin
             $post_status = 'draft';
         }
 
-        $weekly_posts = isset($_POST['weekly_posts']) ? (int)$_POST['weekly_posts'] : 1;
+        $weekly_posts = isset($_POST['weekly_posts']) ? (int) $_POST['weekly_posts'] : 1;
         $weekly_posts = max(1, min($weekly_posts_max, $weekly_posts));
 
         $schedule_enabled = !empty($_POST['schedule_enabled']) ? '1' : '0';
@@ -230,6 +233,7 @@ class WABE_Admin
         $enable_external_links = (!empty($_POST['enable_external_links']) && $can_use_external) ? '1' : '0';
         $enable_topic_prediction = (!empty($_POST['enable_topic_prediction']) && $can_use_predict) ? '1' : '0';
         $enable_duplicate_check = (!empty($_POST['enable_duplicate_check']) && $can_use_duplicate) ? '1' : '0';
+        $enable_outline_generator = (!empty($_POST['enable_outline_generator']) && $can_use_outline) ? '1' : '0';
 
         $image_style = isset($_POST['image_style']) ? sanitize_key(wp_unslash($_POST['image_style'])) : 'modern';
         if (!in_array($image_style, ['modern', 'business', 'blog', 'tech', 'luxury', 'natural'], true)) {
@@ -240,32 +244,32 @@ class WABE_Admin
         $gemini_api_key = $this->resolve_secret_field('gemini_api_key', $current);
 
         $new = [
-            'plan' => $plan,
-            'ai_provider' => $ai_provider,
-            'openai_api_key' => $openai_api_key,
-            'gemini_api_key' => $gemini_api_key,
-            'openai_model' => $openai_model,
-            'gemini_model' => $gemini_model,
-            'detail_level' => $detail_level,
-            'generation_quality' => $generation_quality,
-            'tone' => $tone,
-            'post_status' => $post_status,
-            'weekly_posts' => $weekly_posts,
-            'schedule_enabled' => $schedule_enabled,
-            'enable_featured_image' => $enable_featured_image,
-            'image_style' => $image_style,
-            'enable_seo' => $enable_seo,
-            'enable_internal_links' => $enable_internal_links,
-            'enable_external_links' => $enable_external_links,
+            'plan'                    => $plan,
+            'ai_provider'             => $ai_provider,
+            'openai_api_key'          => $openai_api_key,
+            'gemini_api_key'          => $gemini_api_key,
+            'openai_model'            => $openai_model,
+            'gemini_model'            => $gemini_model,
+            'detail_level'            => $detail_level,
+            'generation_quality'      => $generation_quality,
+            'tone'                    => $tone,
+            'post_status'             => $post_status,
+            'weekly_posts'            => $weekly_posts,
+            'schedule_enabled'        => $schedule_enabled,
+            'enable_featured_image'   => $enable_featured_image,
+            'image_style'             => $image_style,
+            'enable_seo'              => $enable_seo,
+            'enable_internal_links'   => $enable_internal_links,
+            'enable_external_links'   => $enable_external_links,
             'enable_topic_prediction' => $enable_topic_prediction,
-            'enable_duplicate_check' => $enable_duplicate_check,
-            'author_name' => isset($_POST['author_name']) ? sanitize_text_field(wp_unslash($_POST['author_name'])) : '',
-            'site_context' => isset($_POST['site_context']) ? sanitize_textarea_field(wp_unslash($_POST['site_context'])) : '',
-            'writing_rules' => isset($_POST['writing_rules']) ? sanitize_textarea_field(wp_unslash($_POST['writing_rules'])) : '',
-            'seo_keyword' => isset($_POST['seo_keyword']) ? sanitize_text_field(wp_unslash($_POST['seo_keyword'])) : '',
-            'internal_link_url' => isset($_POST['internal_link_url']) ? esc_url_raw(wp_unslash($_POST['internal_link_url'])) : '',
-            'external_link_url' => isset($_POST['external_link_url']) ? esc_url_raw(wp_unslash($_POST['external_link_url'])) : '',
-            'license_key' => isset($_POST['license_key']) ? sanitize_text_field(wp_unslash($_POST['license_key'])) : ($current['license_key'] ?? ''),
+            'enable_duplicate_check'  => $enable_duplicate_check,
+            'enable_outline_generator' => $enable_outline_generator,
+            'author_name'             => isset($_POST['author_name']) ? sanitize_text_field(wp_unslash($_POST['author_name'])) : '',
+            'site_context'            => isset($_POST['site_context']) ? sanitize_textarea_field(wp_unslash($_POST['site_context'])) : '',
+            'writing_rules'           => isset($_POST['writing_rules']) ? sanitize_textarea_field(wp_unslash($_POST['writing_rules'])) : '',
+            'seo_keyword'             => isset($_POST['seo_keyword']) ? sanitize_text_field(wp_unslash($_POST['seo_keyword'])) : '',
+            'internal_link_url'       => isset($_POST['internal_link_url']) ? esc_url_raw(wp_unslash($_POST['internal_link_url'])) : '',
+            'external_link_url'       => isset($_POST['external_link_url']) ? esc_url_raw(wp_unslash($_POST['external_link_url'])) : '',
         ];
 
         $merged = array_merge($current, $new);
@@ -274,8 +278,8 @@ class WABE_Admin
         if (class_exists('WABE_Logger') && method_exists('WABE_Logger', 'info')) {
             WABE_Logger::info('Settings saved.');
             WABE_Logger::info('Saved ai_provider: ' . $ai_provider);
-            WABE_Logger::info('Saved openai_api_key length: ' . strlen((string)$openai_api_key));
-            WABE_Logger::info('Saved gemini_api_key length: ' . strlen((string)$gemini_api_key));
+            WABE_Logger::info('Saved openai_api_key length: ' . strlen((string) $openai_api_key));
+            WABE_Logger::info('Saved gemini_api_key length: ' . strlen((string) $gemini_api_key));
         }
 
         $this->reschedule_cron($weekly_posts, $schedule_enabled === '1');
@@ -283,6 +287,37 @@ class WABE_Admin
         $this->redirect_with_message(
             admin_url('admin.php?page=wabe'),
             __('Settings saved.', WABE_TEXTDOMAIN)
+        );
+    }
+    /**
+     * ライセンスキー保存
+     * @return void
+     */
+    public function handle_save_license_key()
+    {
+        $this->guard();
+        check_admin_referer('wabe_save_license_key', 'wabe_license_nonce');
+
+        $current = get_option(WABE_OPTION, []);
+        if (!is_array($current)) {
+            $current = [];
+        }
+
+        $license_key = isset($_POST['license_key'])
+            ? sanitize_text_field(wp_unslash($_POST['license_key']))
+            : '';
+
+        $current['license_key'] = $license_key;
+
+        update_option(WABE_OPTION, $current);
+
+        if (class_exists('WABE_License') && method_exists('WABE_License', 'clear_cache')) {
+            WABE_License::clear_cache();
+        }
+
+        $this->redirect_with_message(
+            admin_url('admin.php?page=wabe-license'),
+            __('License key saved.', WABE_TEXTDOMAIN)
         );
     }
 

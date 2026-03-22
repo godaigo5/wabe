@@ -15,10 +15,9 @@ require_once __DIR__ . '/src/StripeWebhookService.php';
 $config = require __DIR__ . '/config/config.php';
 
 $pdo = Database::pdo();
-
 $licenseService = new LicenseService(
     $pdo,
-    is_array($config['api'] ?? null) ? $config['api'] : []
+    isset($config['api']) && is_array($config['api']) ? $config['api'] : array()
 );
 
 $stripeWebhookService = new StripeWebhookService(
