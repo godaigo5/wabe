@@ -307,17 +307,17 @@ class WABE_Generator
                     WABE_Logger::warning('Generator: duplicate topic skipped - ' . $topic_data['topic']);
 
                     $this->repo->add_history([
-                        'topic' => $topic_data['topic'],
-                        'title' => '',
-                        'post_id' => 0,
-                        'post_url' => '',
-                        'style' => $topic_data['style'],
-                        'tone' => $topic_data['tone'],
-                        'status' => 'skipped_duplicate',
-                        'provider' => $this->ai->provider(),
-                        'model' => $this->ai->model(),
+                        'topic'          => $topic_data['topic'],
+                        'title'          => '',
+                        'post_id'        => 0,
+                        'post_url'       => '',
+                        'style'          => $topic_data['style'],
+                        'tone'           => $topic_data['tone'],
+                        'status'         => 'skipped_duplicate',
+                        'provider'       => $this->ai->provider(),
+                        'model'          => $this->ai->model(),
                         'image_attached' => '0',
-                        'message' => 'Duplicate topic skipped.',
+                        'message'        => 'Duplicate topic skipped.',
                     ]);
 
                     $this->repo->remove_first_topic();
@@ -355,14 +355,29 @@ class WABE_Generator
             if (class_exists('WABE_Logger') && method_exists('WABE_Logger', 'info')) {
                 WABE_Logger::info('Generated title: ' . $article_title);
                 WABE_Logger::info('Generated markdown length: ' . $this->get_visible_length($markdown));
-                WABE_Logger::info('Generated markdown preview: ' . mb_substr((string)$markdown, 0, 1000));
+                WABE_Logger::info('Generated markdown preview: ' . mb_substr((string) $markdown, 0, 1000));
             }
 
             $content = $this->markdown_to_blocks($markdown, $article_title);
 
+            /**
+             * 記事途中画像（Unsplash）を挿入
+             * - Free: 1枚
+             * - Advanced: 3枚
+             * - Pro: 5枚
+             */
+            if (class_exists('WABE_Image')) {
+                $image = new WABE_Image();
+                $content = $image->inject_unsplash_images_into_content($content, [
+                    'topic' => $topic_data['topic'],
+                    'title' => $article_title,
+                    'plan'  => $context['plan'] ?? 'free',
+                ]);
+            }
+
             if (class_exists('WABE_Logger') && method_exists('WABE_Logger', 'info')) {
-                WABE_Logger::info('Final block content length: ' . mb_strlen((string)$content));
-                WABE_Logger::info('Final block content preview: ' . mb_substr((string)$content, 0, 1000));
+                WABE_Logger::info('Final block content length: ' . mb_strlen((string) $content));
+                WABE_Logger::info('Final block content preview: ' . mb_substr((string) $content, 0, 1000));
             }
 
             $postarr = [
@@ -379,7 +394,7 @@ class WABE_Generator
                 return false;
             }
 
-            $post_id = (int)$post_id;
+            $post_id = (int) $post_id;
 
             if ($this->settings->is_seo_enabled()) {
                 $this->apply_basic_seo_meta($post_id, $context);
@@ -398,17 +413,17 @@ class WABE_Generator
             }
 
             $this->repo->add_history([
-                'topic' => $topic_data['topic'],
-                'title' => $article_title,
-                'post_id' => $post_id,
-                'post_url' => $post_url,
-                'style' => $topic_data['style'],
-                'tone' => $topic_data['tone'],
-                'status' => $status,
-                'provider' => $this->ai->provider(),
-                'model' => $this->ai->model(),
+                'topic'          => $topic_data['topic'],
+                'title'          => $article_title,
+                'post_id'        => $post_id,
+                'post_url'       => $post_url,
+                'style'          => $topic_data['style'],
+                'tone'           => $topic_data['tone'],
+                'status'         => $status,
+                'provider'       => $this->ai->provider(),
+                'model'          => $this->ai->model(),
                 'image_attached' => $image_attached,
-                'message' => 'Post generated successfully.',
+                'message'        => 'Post generated successfully.',
             ]);
 
             $this->repo->remove_first_topic();

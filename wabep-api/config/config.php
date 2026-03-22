@@ -2,71 +2,98 @@
 
 declare(strict_types=1);
 
+/**
+ * Public template config for WABEP API.
+ *
+ * Priority:
+ * 1) Environment variables
+ * 2) config.local.php (if exists)
+ * 3) Safe defaults / empty values
+ */
+
+$local = [];
+$localFile = __DIR__ . '/config.local.php';
+
+if (is_file($localFile)) {
+    $loaded = require $localFile;
+    if (is_array($loaded)) {
+        $local = $loaded;
+    }
+}
+
 return [
     'db' => [
-        'host'    => getenv('WABEP_DB_HOST') ?: 'mysql328.phy.lolipop.lan',
-        'port'    => (int)(getenv('WABEP_DB_PORT') ?: 3306),
-        'name'    => getenv('WABEP_DB_NAME') ?: 'LAA1305650-wabepapi',
-        'user'    => getenv('WABEP_DB_USER') ?: 'LAA1305650',
-        'pass'    => getenv('WABEP_DB_PASS') ?: '8JGZMUKfyNcp1a0Y',
-        'charset' => getenv('WABEP_DB_CHARSET') ?: 'utf8mb4',
+        'host' => getenv('WABEP_DB_HOST')
+            ?: ($local['db']['host'] ?? ''),
+        'port' => (int)(getenv('WABEP_DB_PORT')
+            ?: ($local['db']['port'] ?? 3306)),
+        'name' => getenv('WABEP_DB_NAME')
+            ?: ($local['db']['name'] ?? ''),
+        'user' => getenv('WABEP_DB_USER')
+            ?: ($local['db']['user'] ?? ''),
+        'pass' => getenv('WABEP_DB_PASS')
+            ?: ($local['db']['pass'] ?? ''),
+        'charset' => getenv('WABEP_DB_CHARSET')
+            ?: ($local['db']['charset'] ?? 'utf8mb4'),
     ],
 
     'api' => [
-        'plugin_slug'          => 'wp-ai-blog-engine',
-        'secret'               => getenv('WABEP_API_SECRET') ?: 'dcreate-wabeapi-license-key',
-        'allow_test_keys'      => true,
-        'test_keys'            => [
-            'TEST-FREE-123'     => 'free',
+        'plugin_slug' => getenv('WABEP_PLUGIN_SLUG')
+            ?: ($local['api']['plugin_slug'] ?? 'wp-ai-blog-engine'),
+
+        'secret' => getenv('WABEP_API_SECRET')
+            ?: ($local['api']['secret'] ?? ''),
+
+        'allow_test_keys' => isset($local['api']['allow_test_keys'])
+            ? (bool)$local['api']['allow_test_keys']
+            : true,
+
+        'test_keys' => $local['api']['test_keys'] ?? [
+            'TEST-FREE-123' => 'free',
             'TEST-ADVANCED-123' => 'advanced',
-            'TEST-PRO-123'      => 'pro',
+            'TEST-PRO-123' => 'pro',
         ],
-        'allowed_plans'        => ['free', 'advanced', 'pro'],
-        'domain_limit_default' => 1,
+
+        'allowed_plans' => $local['api']['allowed_plans'] ?? ['free', 'advanced', 'pro'],
+        'domain_limit_default' => (int)($local['api']['domain_limit_default'] ?? 1),
     ],
 
     'stripe' => [
-        'secret_key'     => getenv('WABEP_STRIPE_SECRET_KEY') ?: '',
-        'webhook_secret' => getenv('WABEP_STRIPE_WEBHOOK_SECRET') ?: '',
-        'currency'       => 'usd',
+        'secret_key' => getenv('WABEP_STRIPE_SECRET_KEY')
+            ?: ($local['stripe']['secret_key'] ?? ''),
 
-        /*
-         | 価格設計（USD）
-         |
-         | Advanced:
-         |   Monthly  = $12
-         |   Yearly   = $79
-         |   Lifetime = $199
-         |
-         | Pro:
-         |   Monthly  = $24
-         |   Yearly   = $159
-         |   Lifetime = $399
-         */
-        'prices' => [
-            'price_1TClRwQOghVIYdnPrzvrJ8Aa' => [
-                'plan'    => 'advanced',
+        'webhook_secret' => getenv('WABEP_STRIPE_WEBHOOK_SECRET')
+            ?: ($local['stripe']['webhook_secret'] ?? ''),
+
+        'currency' => getenv('WABEP_STRIPE_CURRENCY')
+            ?: ($local['stripe']['currency'] ?? 'usd'),
+
+        'prices' => $local['stripe']['prices'] ?? [
+            // Advanced
+            'price_xxxxxxxxx_advanced_monthly' => [
+                'plan' => 'advanced',
                 'billing' => 'monthly',
             ],
-            'price_1TClRJQOghVIYdnP5RxwLydi' => [
-                'plan'    => 'advanced',
+            'price_xxxxxxxxx_advanced_yearly' => [
+                'plan' => 'advanced',
                 'billing' => 'yearly',
             ],
-            'price_1TClekQOghVIYdnPCCQU3PKq' => [
-                'plan'    => 'advanced',
+            'price_xxxxxxxxx_advanced_lifetime' => [
+                'plan' => 'advanced',
                 'billing' => 'lifetime',
             ],
 
-            'price_1TClSrQOghVIYdnPUInUClyt' => [
-                'plan'    => 'pro',
+            // Pro
+            'price_xxxxxxxxx_pro_monthly' => [
+                'plan' => 'pro',
                 'billing' => 'monthly',
             ],
-            'price_1TClSOQOghVIYdnPbiJssYuG' => [
-                'plan'    => 'pro',
+            'price_xxxxxxxxx_pro_yearly' => [
+                'plan' => 'pro',
                 'billing' => 'yearly',
             ],
-            'price_1TCleAQOghVIYdnPAuPU26lp' => [
-                'plan'    => 'pro',
+            'price_xxxxxxxxx_pro_lifetime' => [
+                'plan' => 'pro',
                 'billing' => 'lifetime',
             ],
         ],

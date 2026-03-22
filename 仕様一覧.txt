@@ -33,52 +33,131 @@ Advansedで出来る事を含む
 ログ管理機能（削除可能
 ライセンス画面で今のライセンス情報とFree・Advansed・Proの比較
 
-WordPressプラグイン「WP AI Blog Engine」の開発をしています。
+Payment Linkリンク
+Advansed 月
+https://buy.stripe.com/test_9B69AVaca6zw6kT9PCgA800
+Advansed 年
+https://buy.stripe.com/test_fZucN72JIga638Hge0gA801
+Advansed 買い切り
+https://buy.stripe.com/test_00waEZ2JI8HE24Dge0gA802
+Pro 月
+https://buy.stripe.com/test_6oUfZj1FE1fcfVt7HugA803
+Pro 年
+https://buy.stripe.com/test_fZucN72JIga638Hge0gA801
+Pro 買い切り
+https://buy.stripe.com/test_cNiaEZcki7DAdNld1OgA805
 
-▼目的
-AIでブログ記事（タイトル・見出し・本文・画像）を自動生成し、販売できるプロダクトを作る 
 
-▼構成 
-・OpenAI / Gemini 両対応 
-・画像生成（OpenAI / Gemini Imagen） 
-・Free / Advanced / Pro のプラン制御 
-・Stripe決済 + ライセンスAPI ・自動投稿（WP Cron） 
-・題材管理 / ログ / 履歴 / SEO / 内部リンク等 ▼サーバー構成 
-・PHP API（wabep-api） ・Stripe Webhookでライセンス発行 
-・DB: - licenses - license_activations - stripe_orders 
 
-▼現在の状態 
-・Webhook → ライセンス発行 → DB保存は完成済み 
-・WordPressプラグインもほぼ完成 → 現在デバック中
-・管理画面UI改善済み
-・多言語化（POT / PO）不十分
-・プラグイン → LP → 会員登録 → 会員ページ → ライセンス選択 → Stripe決済 → ライセンス発行 → プラグイン管理画面 未完
 
-▼GitHub
-・メインファイル
+【プロジェクト概要】
+
+WordPressプラグイン「WP AI Blog Engine」を開発中。
+
+目的：
+AIでブログ記事（タイトル・見出し・本文・画像）を自動生成し、
+販売可能なプロダクトとして展開する。
+
+---
+
+【GitHub】
+
+■ メイン
 https://github.com/godaigo5/wabe/blob/main/wp-ai-blog-engine.php
-・処理ファイル（includes
+
+■ includes
 https://github.com/godaigo5/wabe/tree/main/includes
-・画面ファイル（admin
+
+■ admin
 https://github.com/godaigo5/wabe/tree/main/admin
-・APIファイル
+
+■ API
 https://github.com/godaigo5/wabe/tree/main/wabep-api
-・LP&HPファイル
+
+■ テーマ（LP/HP）
 https://github.com/godaigo5/wabe/tree/main/wp-ai-blog-engineHP/wabe-wp-theme
 
+※既存構造を前提に実装してください（新規設計は極力避ける）
+※必要に応じて該当ファイルを参照して回答してください
 
-▼LP&HP 
-http://wabe.d-create.online/
+---
 
-▼重要ルール 
-・必ず「実装ベース」で回答 
-・差分ではなく「コピペで使える完全コード」で出す 
-・プロダクトとして売れる前提で提案 
-・設計
-・UX
-・収益化も考慮する 
+【現在の構成】
 
-▼今回やりたいこと
-現在Ai生成テストをしてるのですが、AdvansedとProの機能を試したい
-できるならStripe決済のテストも行いたい。
-理想はStripe決済→ライセンス発行→Advansed＆Proのテスト
+・OpenAI / Gemini 両対応
+・画像生成（OpenAI / Gemini）
+・Unsplashによる記事途中画像挿入（見出し後）
+・自動投稿（WP Cron）※全プラン対応
+・Stripe決済 + ライセンスAPI
+・題材管理 / ログ / 履歴 / SEO / 内部リンク
+
+---
+
+【プラン設計】
+
+■ Free
+・週1投稿
+・公開OK
+・自動投稿あり
+・見出し3固定
+・トーン固定
+・アイキャッチあり
+・本文画像1枚（Unsplash）
+
+■ Advanced（メイン収益）
+・週7投稿
+・見出し拡張
+・トーン変更可
+・画像複数
+・SEO機能
+
+■ Pro（後から追加予定）
+・投稿無制限
+・自動投稿あり
+・アフィリエイト機能（CTA / 広告表記 / リンク管理）
+・比較記事 / ランキング記事生成
+
+---
+
+【現在の開発状況】
+
+・Webhook → ライセンス発行 → DB保存 完成
+・プラグイン本体ほぼ完成（デバッグ中）
+・管理画面UI改善済み
+・多言語化は未完成
+・LP / 会員導線は未完成
+
+---
+
+【今後の優先順位】
+
+① 記事途中画像（Unsplash）実装
+② Advancedプラン完成
+③ Google通知（sitemap）
+④ LP改善（見せ方強化）
+⑤ Pro機能（アフィリエイト・比較記事）
+
+---
+
+【重要な方針】
+
+・Freeでも「使える」状態にする（公開OK・自動投稿OK）
+・差は「量（投稿数）」と「質（機能）」で出す
+・Proは「収益特化機能」にする
+・段階的に機能追加して販売する（最初から全部やらない）
+
+---
+
+【回答スタイル】
+
+・実装ベースで回答
+・差分ではなくコピペ可能な完全コードで提示
+・プロダクトとして売れる前提で提案
+・設計 / UX / 収益化も考慮
+
+---
+
+この前提を理解した上で回答してください。
+
+▼今やりたいこと
+記事途中画像（Unsplash）実装

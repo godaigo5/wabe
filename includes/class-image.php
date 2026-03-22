@@ -3,20 +3,12 @@ if (!defined('ABSPATH')) exit;
 
 class WABE_Image
 {
-    /** @var array */
-    private $options = [];
-
-    /** @var string */
-    private $openai_api_key = '';
-
-    /** @var string */
-    private $gemini_api_key = '';
-
-    /** @var string */
-    private $pollinations_api_key = '';
-
-    /** @var string */
-    private $image_style = 'modern';
+    private $options;
+    private $openai_api_key;
+    private $gemini_api_key;
+    private $pollinations_api_key;
+    private $unsplash_access_key;
+    private $image_style;
 
     public function __construct()
     {
@@ -25,16 +17,17 @@ class WABE_Image
             $this->options = [];
         }
 
-        $this->openai_api_key = trim((string) ($this->options['openai_api_key'] ?? ''));
-        $this->gemini_api_key = trim((string) ($this->options['gemini_api_key'] ?? ''));
+        $this->openai_api_key       = trim((string) ($this->options['openai_api_key'] ?? ''));
+        $this->gemini_api_key       = trim((string) ($this->options['gemini_api_key'] ?? ''));
         $this->pollinations_api_key = trim((string) ($this->options['pollinations_api_key'] ?? ''));
-        $this->image_style = sanitize_key($this->options['image_style'] ?? 'modern');
+        $this->unsplash_access_key  = trim((string) ($this->options['unsplash_access_key'] ?? ''));
+        $this->image_style          = sanitize_key($this->options['image_style'] ?? 'modern');
     }
 
     /**
      * 記事タイトルから画像生成してアイキャッチ設定
      *
-     * @param int    $post_id
+     * @param int $post_id
      * @param string $title
      * @return int|false
      */
@@ -65,15 +58,15 @@ class WABE_Image
             $this->log_info('Image provider success: openai');
         } else {
             $this->log_warning('Image: OpenAI failed, fallback to Gemini');
-            $image = $this->generate_with_gemini($prompt);
 
+            $image = $this->generate_with_gemini($prompt);
             if ($image) {
                 $this->log_info('Image provider success: gemini');
             } else {
                 $this->log_warning('Image: Gemini failed, fallback to Pollinations');
+
                 $pollinations_prompt = $this->build_prompt_for_pollinations($title);
                 $image = $this->generate_with_pollinations($pollinations_prompt);
-
                 if ($image) {
                     $this->log_info('Image provider success: pollinations');
                 }
@@ -103,6 +96,90 @@ class WABE_Image
     }
 
     /**
+     * 記事途中画像をUnsplashから取得して本文へ挿入
+     *
+     * @param string $content
+     * @param array  $args [topic, title, plan]
+     * @return string
+     */
+    public function inject_unsplash_images_into_content($content, array $args = [])
+    {
+        $content = (string) $content;
+
+        if ($content === '') {
+            return $content;
+        }
+
+        if (!$this->can_use_unsplash_in_article()) {
+            $this->log_info('Unsplash: skipped (disabled or key missing)');
+            return $content;
+        }
+
+        $plan  = sanitize_key((string) ($args['plan'] ?? 'free'));
+        $topic = trim((string) ($args['topic'] ?? ''));
+        $title = trim((string) ($args['title'] ?? ''));
+
+        $limit = $this->get_in_article_image_limit_by_plan($plan);
+        if ($limit < 1) {
+            return $content;
+        }
+
+        $headings = $this->extract_headings_from_content($content);
+        if (empty($headings)) {
+            $this->log_info('Unsplash: no headings found');
+            return $content;
+        }
+
+        $insertions = [];
+        $used_photo_ids = [];
+        $used_queries = [];
+
+        foreach ($headings as $heading) {
+            if (count($insertions) >= $limit) {
+                break;
+            }
+
+            $query = $this->build_unsplash_query($heading['text'], $topic, $title);
+            if ($query === '' || isset($used_queries[$query])) {
+                continue;
+            }
+            $used_queries[$query] = true;
+
+            $photo = $this->search_unsplash_photo($query, array_keys($used_photo_ids));
+            if (!$photo) {
+                continue;
+            }
+
+            $photo_id = (string) ($photo['id'] ?? '');
+            if ($photo_id !== '') {
+                $used_photo_ids[$photo_id] = true;
+            }
+
+            $block = $this->build_unsplash_image_block($photo, $heading['text']);
+            if ($block === '') {
+                continue;
+            }
+
+            $insertions[] = [
+                'heading_index' => (int) $heading['index'],
+                'block'         => $block,
+            ];
+
+            $this->ping_unsplash_download($photo);
+        }
+
+        if (empty($insertions)) {
+            $this->log_info('Unsplash: no image blocks created');
+            return $content;
+        }
+
+        $content = $this->insert_blocks_after_headings($content, $insertions);
+        $this->log_info('Unsplash: inserted ' . count($insertions) . ' in-article image(s)');
+
+        return $content;
+    }
+
+    /**
      * 画像機能が有効か
      */
     private function is_enabled()
@@ -122,6 +199,277 @@ class WABE_Image
         }
 
         return false;
+    }
+
+    /**
+     * 記事途中のUnsplash画像が使えるか
+     */
+    private function can_use_unsplash_in_article()
+    {
+        if ($this->unsplash_access_key === '') {
+            return false;
+        }
+
+        if (empty($this->options['enable_inline_unsplash'])) {
+            // optionが未保存でも既定ONにしたいなら false を消して true 扱いにしてもOK
+            return true;
+        }
+
+        return true;
+    }
+
+    /**
+     * プランごとの本文画像上限
+     */
+    private function get_in_article_image_limit_by_plan($plan)
+    {
+        $plan = sanitize_key((string) $plan);
+
+        switch ($plan) {
+            case 'pro':
+                return 5;
+
+            case 'advanced':
+                return 3;
+
+            case 'free':
+            default:
+                return 1;
+        }
+    }
+
+    /**
+     * 本文からh2/h3を抽出
+     */
+    private function extract_headings_from_content($content)
+    {
+        $content = (string) $content;
+        $results = [];
+
+        if (!preg_match_all('/<h([23])\b[^>]*>(.*?)<\/h\1>/isu', $content, $matches, PREG_OFFSET_CAPTURE)) {
+            return $results;
+        }
+
+        $count = count($matches[0]);
+        for ($i = 0; $i < $count; $i++) {
+            $raw_html = (string) $matches[0][$i][0];
+            $inner    = (string) $matches[2][$i][0];
+            $text     = trim(wp_strip_all_tags($inner));
+
+            if ($text === '') {
+                continue;
+            }
+
+            $results[] = [
+                'index' => count($results),
+                'html'  => $raw_html,
+                'text'  => $text,
+                'tag'   => 'h' . (string) $matches[1][$i][0],
+            ];
+        }
+
+        return $results;
+    }
+
+    /**
+     * Unsplash検索クエリ生成
+     */
+    private function build_unsplash_query($heading, $topic, $title)
+    {
+        $heading = trim((string) $heading);
+        $topic   = trim((string) $topic);
+        $title   = trim((string) $title);
+
+        $parts = [];
+
+        if ($heading !== '') {
+            $parts[] = $heading;
+        }
+        if ($topic !== '') {
+            $parts[] = $topic;
+        } elseif ($title !== '') {
+            $parts[] = $title;
+        }
+
+        $query = implode(' ', array_filter($parts));
+        $query = wp_strip_all_tags($query);
+        $query = preg_replace('/\s+/u', ' ', $query);
+        $query = trim((string) $query);
+
+        if ($query === '') {
+            return '';
+        }
+
+        // 長すぎると精度が落ちやすいので切る
+        if (function_exists('mb_strlen') && mb_strlen($query) > 80) {
+            $query = mb_substr($query, 0, 80);
+        } elseif (strlen($query) > 80) {
+            $query = substr($query, 0, 80);
+        }
+
+        return $query;
+    }
+
+    /**
+     * Unsplashから1枚取得
+     */
+    private function search_unsplash_photo($query, array $exclude_ids = [])
+    {
+        if ($this->unsplash_access_key === '' || $query === '') {
+            return false;
+        }
+
+        $url = add_query_arg([
+            'query'       => $query,
+            'per_page'    => 10,
+            'orientation' => 'landscape',
+            'content_filter' => 'high',
+        ], 'https://api.unsplash.com/search/photos');
+
+        $response = wp_remote_get($url, [
+            'timeout' => 30,
+            'headers' => [
+                'Authorization' => 'Client-ID ' . $this->unsplash_access_key,
+                'Accept-Version' => 'v1',
+            ],
+        ]);
+
+        if (is_wp_error($response)) {
+            $this->log_error('Unsplash WP_Error: ' . $response->get_error_message());
+            return false;
+        }
+
+        $code = (int) wp_remote_retrieve_response_code($response);
+        $raw  = wp_remote_retrieve_body($response);
+        $json = json_decode($raw, true);
+
+        if ($code < 200 || $code >= 300) {
+            $this->log_error('Unsplash API error [' . $code . ']: ' . $this->extract_error_message($json, $raw));
+            return false;
+        }
+
+        if (empty($json['results']) || !is_array($json['results'])) {
+            $this->log_warning('Unsplash: no results for query=' . $query);
+            return false;
+        }
+
+        foreach ($json['results'] as $photo) {
+            $photo_id = (string) ($photo['id'] ?? '');
+            if ($photo_id !== '' && in_array($photo_id, $exclude_ids, true)) {
+                continue;
+            }
+
+            if (empty($photo['urls']['regular']) || empty($photo['links']['html'])) {
+                continue;
+            }
+
+            return $photo;
+        }
+
+        return false;
+    }
+
+    /**
+     * Unsplash画像ブロック生成
+     */
+    private function build_unsplash_image_block(array $photo, $heading_text = '')
+    {
+        $image_url   = esc_url_raw((string) ($photo['urls']['regular'] ?? ''));
+        $photo_page  = esc_url_raw((string) ($photo['links']['html'] ?? ''));
+        $download_by = esc_url_raw((string) ($photo['user']['links']['html'] ?? ''));
+        $author_name = sanitize_text_field((string) ($photo['user']['name'] ?? 'Unsplash'));
+        $alt         = trim((string) ($photo['alt_description'] ?? $heading_text));
+
+        if ($image_url === '' || $photo_page === '') {
+            return '';
+        }
+
+        $alt_attr = esc_attr($alt);
+        $caption  = sprintf(
+            'Photo by <a href="%s?utm_source=wp_ai_blog_engine&utm_medium=referral" target="_blank" rel="nofollow sponsored noopener">%s</a> on <a href="https://unsplash.com/?utm_source=wp_ai_blog_engine&utm_medium=referral" target="_blank" rel="nofollow sponsored noopener">Unsplash</a>',
+            esc_url($download_by !== '' ? $download_by : $photo_page),
+            esc_html($author_name)
+        );
+
+        return
+            "\n<!-- wp:image {\"sizeSlug\":\"large\",\"linkDestination\":\"none\",\"className\":\"wabe-inline-unsplash-image\"} -->\n" .
+            '<figure class="wp-block-image size-large wabe-inline-unsplash-image">' .
+            '<img src="' . esc_url($image_url) . '" alt="' . $alt_attr . '" loading="lazy" referrerpolicy="no-referrer-when-downgrade" />' .
+            '<figcaption>' . $caption . '</figcaption>' .
+            "</figure>\n" .
+            "<!-- /wp:image -->\n";
+    }
+
+    /**
+     * 見出し直後に画像ブロックを差し込む
+     */
+    private function insert_blocks_after_headings($content, array $insertions)
+    {
+        if (empty($insertions)) {
+            return $content;
+        }
+
+        $map = [];
+        foreach ($insertions as $row) {
+            $idx = (int) ($row['heading_index'] ?? -1);
+            $blk = (string) ($row['block'] ?? '');
+            if ($idx < 0 || $blk === '') {
+                continue;
+            }
+            $map[$idx] = $blk;
+        }
+
+        if (empty($map)) {
+            return $content;
+        }
+
+        $current_index = -1;
+
+        $content = preg_replace_callback(
+            '/(<h([23])\b[^>]*>.*?<\/h\2>)/isu',
+            function ($m) use (&$current_index, $map) {
+                $current_index++;
+                $heading_html = (string) $m[1];
+
+                if (!isset($map[$current_index])) {
+                    return $heading_html;
+                }
+
+                return $heading_html . "\n" . $map[$current_index];
+            },
+            $content
+        );
+
+        return (string) $content;
+    }
+
+    /**
+     * Unsplash download endpoint を通知
+     */
+    private function ping_unsplash_download(array $photo)
+    {
+        $download_location = (string) ($photo['links']['download_location'] ?? '');
+        if ($download_location === '' || $this->unsplash_access_key === '') {
+            return;
+        }
+
+        $url = add_query_arg([
+            'client_id' => $this->unsplash_access_key,
+        ], $download_location);
+
+        $response = wp_remote_get($url, [
+            'timeout' => 15,
+            'headers' => [
+                'Accept-Version' => 'v1',
+            ],
+        ]);
+
+        if (is_wp_error($response)) {
+            $this->log_warning('Unsplash download ping failed: ' . $response->get_error_message());
+            return;
+        }
+
+        $this->log_info('Unsplash download ping success');
     }
 
     /**
@@ -251,7 +599,6 @@ class WABE_Image
 
     /**
      * Pollinations.AI 画像生成
-     * OpenAI互換API
      */
     private function generate_with_pollinations($prompt)
     {
@@ -297,7 +644,6 @@ class WABE_Image
 
         if (!empty($json['data'][0]['b64_json'])) {
             $bytes = base64_decode((string) $json['data'][0]['b64_json'], true);
-
             if ($bytes === false) {
                 $this->log_error('Pollinations API error: b64_json decode failed');
                 return false;
@@ -323,8 +669,8 @@ class WABE_Image
                 return false;
             }
 
-            $image_code = (int) wp_remote_retrieve_response_code($image_response);
-            $image_body = wp_remote_retrieve_body($image_response);
+            $image_code  = (int) wp_remote_retrieve_response_code($image_response);
+            $image_body  = wp_remote_retrieve_body($image_response);
             $content_type = wp_remote_retrieve_header($image_response, 'content-type');
 
             if ($image_code < 200 || $image_code >= 300 || empty($image_body)) {
@@ -344,6 +690,7 @@ class WABE_Image
 
         $this->log_error('Pollinations API error: neither b64_json nor url found in response');
         $this->log_error('Pollinations raw response: ' . $raw);
+
         return false;
     }
 
@@ -392,6 +739,7 @@ class WABE_Image
         ];
 
         $attachment_id = wp_insert_attachment($attachment, $upload['file'], $post_id);
+
         if (is_wp_error($attachment_id) || !$attachment_id) {
             $message = is_wp_error($attachment_id) ? $attachment_id->get_error_message() : 'unknown';
             $this->log_error('Image attachment insert failed: ' . $message);
@@ -400,15 +748,14 @@ class WABE_Image
 
         $metadata = wp_generate_attachment_metadata($attachment_id, $upload['file']);
 
-        if (!$metadata) {
-            $this->log_error('Image metadata generation failed: empty metadata');
+        if (is_wp_error($metadata)) {
+            /** @var WP_Error $metadata */
+            $this->log_error('Image metadata generation failed: ' . $metadata->get_error_message());
             return false;
         }
 
-        if (is_wp_error($metadata)) {
-            /** @var WP_Error $metadata_error */
-            $metadata_error = $metadata;
-            $this->log_error('Image metadata generation failed: ' . $metadata_error->get_error_message());
+        if (empty($metadata) || !is_array($metadata)) {
+            $this->log_error('Image metadata generation failed: empty metadata');
             return false;
         }
 
@@ -443,6 +790,7 @@ class WABE_Image
         }
 
         $site_context = trim(wp_strip_all_tags($site_context));
+
         if (function_exists('mb_strlen') && mb_strlen($site_context) > 300) {
             $site_context = mb_substr($site_context, 0, 300);
         } elseif (strlen($site_context) > 300) {
@@ -467,7 +815,6 @@ class WABE_Image
 
     /**
      * Pollinations向けプロンプト
-     * タイトルを英語化 + キーワード補強
      */
     private function build_prompt_for_pollinations($title)
     {
@@ -480,11 +827,9 @@ class WABE_Image
         $style_keywords = $this->get_pollinations_style_keywords();
 
         $parts = [];
-
         if ($title_en !== '') {
             $parts[] = $title_en;
         }
-
         if ($keyword !== '') {
             $parts[] = $keyword;
         }
@@ -503,8 +848,7 @@ class WABE_Image
     }
 
     /**
-     * タイトルを英語化
-     * OpenAI/Geminiなしでも動くように、まずはシンプル変換 + 主要語置換
+     * タイトルを簡易英語化
      */
     private function translate_title_to_english($title)
     {
@@ -514,26 +858,26 @@ class WABE_Image
         }
 
         $map = [
-            'ブログ' => 'blog',
-            '自動生成' => 'automation',
-            'メリット' => 'benefits',
-            'ポイント' => 'key points',
-            '解説' => 'guide',
-            '集客' => 'lead generation',
-            '中小企業' => 'small business',
+            'ブログ'     => 'blog',
+            '自動生成'   => 'automation',
+            'メリット'   => 'benefits',
+            'ポイント'   => 'key points',
+            '解説'       => 'guide',
+            '集客'       => 'lead generation',
+            '中小企業'   => 'small business',
             'ホームページ' => 'website',
-            'SEO' => 'SEO',
-            '記事' => 'article',
-            '画像' => 'image',
-            '作成' => 'creation',
-            '効率化' => 'efficiency',
-            '比較' => 'comparison',
-            '方法' => 'how to',
-            '活用' => 'usage',
-            '導入' => 'implementation',
-            '初心者' => 'beginner',
-            'おすすめ' => 'recommended',
-            '機能' => 'features',
+            'SEO'        => 'SEO',
+            '記事'       => 'article',
+            '画像'       => 'image',
+            '作成'       => 'creation',
+            '効率化'     => 'efficiency',
+            '比較'       => 'comparison',
+            '方法'       => 'how to',
+            '活用'       => 'usage',
+            '導入'       => 'implementation',
+            '初心者'     => 'beginner',
+            'おすすめ'   => 'recommended',
+            '機能'       => 'features',
         ];
 
         $translated = $title;
@@ -541,10 +885,8 @@ class WABE_Image
             $translated = str_replace($ja, $en, $translated);
         }
 
-        $translated = preg_replace('/[　\s]+/u', ' ', $translated);
-        $translated = trim((string) $translated);
-
-        return $translated;
+        $translated = preg_replace('/[ \s]+/u', ' ', $translated);
+        return trim((string) $translated);
     }
 
     /**
@@ -595,6 +937,9 @@ class WABE_Image
             }
             if (!empty($json['message'])) {
                 return (string) $json['message'];
+            }
+            if (!empty($json['errors'][0])) {
+                return is_string($json['errors'][0]) ? $json['errors'][0] : wp_json_encode($json['errors'][0]);
             }
         }
 
