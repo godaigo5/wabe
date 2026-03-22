@@ -130,23 +130,32 @@ class WABE_Image
             return $content;
         }
 
+        // h2優先で候補を組み立てる
+        $candidate_headings = $this->select_unsplash_target_headings($headings, $limit);
+        if (empty($candidate_headings)) {
+            $this->log_info('Unsplash: no candidate headings selected');
+            return $content;
+        }
+
         $insertions = [];
         $used_photo_ids = [];
         $used_queries = [];
 
-        foreach ($headings as $heading) {
+        foreach ($candidate_headings as $heading) {
             if (count($insertions) >= $limit) {
                 break;
             }
 
             $query = $this->build_unsplash_query($heading['text'], $topic, $title);
             if ($query === '' || isset($used_queries[$query])) {
+                $this->log_info('Unsplash: skipped query duplicate/empty - ' . $query);
                 continue;
             }
             $used_queries[$query] = true;
 
             $photo = $this->search_unsplash_photo($query, array_keys($used_photo_ids));
             if (!$photo) {
+                $this->log_info('Unsplash: no photo found for query - ' . $query);
                 continue;
             }
 
@@ -157,6 +166,7 @@ class WABE_Image
 
             $block = $this->build_unsplash_image_block($photo, $heading['text']);
             if ($block === '') {
+                $this->log_info('Unsplash: block build failed - heading=' . $heading['text']);
                 continue;
             }
 
@@ -164,6 +174,12 @@ class WABE_Image
                 'heading_index' => (int) $heading['index'],
                 'block'         => $block,
             ];
+
+            $this->log_info(
+                'Unsplash: selected heading tag=' . $heading['tag'] .
+                    ' index=' . (int) $heading['index'] .
+                    ' text=' . $heading['text']
+            );
 
             $this->ping_unsplash_download($photo);
         }
@@ -266,6 +282,69 @@ class WABE_Image
         }
 
         return $results;
+    }
+
+    /**
+     * h2優先で本文画像を入れる見出し候補を選ぶ
+     *
+     * ルール:
+     * - まず h2 を優先
+     * - h2 だけで足りなければ h3 を追加
+     * - 記事内の並び順は崩さない
+     *
+     * @param array $headings
+     * @param int   $limit
+     * @return array
+     */
+    private function select_unsplash_target_headings(array $headings, $limit)
+    {
+        $limit = max(1, (int) $limit);
+
+        $h2 = [];
+        $h3 = [];
+
+        foreach ($headings as $heading) {
+            $tag = strtolower((string) ($heading['tag'] ?? ''));
+            if ($tag === 'h2') {
+                $h2[] = $heading;
+            } elseif ($tag === 'h3') {
+                $h3[] = $heading;
+            }
+        }
+
+        $selected = [];
+
+        // まず h2 を優先採用
+        foreach ($h2 as $heading) {
+            if (count($selected) >= $limit) {
+                break;
+            }
+            $selected[] = $heading;
+        }
+
+        // 足りなければ h3 を追加
+        if (count($selected) < $limit) {
+            foreach ($h3 as $heading) {
+                if (count($selected) >= $limit) {
+                    break;
+                }
+                $selected[] = $heading;
+            }
+        }
+
+        // 実際の本文順に戻す
+        usort($selected, function ($a, $b) {
+            $aIndex = (int) ($a['index'] ?? 0);
+            $bIndex = (int) ($b['index'] ?? 0);
+
+            if ($aIndex === $bIndex) {
+                return 0;
+            }
+
+            return ($aIndex < $bIndex) ? -1 : 1;
+        });
+
+        return $selected;
     }
 
     /**
