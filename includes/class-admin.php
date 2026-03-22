@@ -13,7 +13,6 @@ class WABE_Admin
             $this->options = [];
         }
 
-        add_action('admin_menu', [$this, 'menu']);
         add_action('admin_post_wabe_save_settings', [$this, 'handle_save_settings']);
         add_action('admin_post_wabe_save_topics', [$this, 'handle_save_topics']);
         add_action('admin_post_wabe_save_license_key', [$this, 'handle_save_license_key']);
@@ -35,15 +34,6 @@ class WABE_Admin
             [$this, 'settings_page'],
             'dashicons-welcome-write-blog',
             58
-        );
-
-        add_submenu_page(
-            'wabe',
-            __('Settings', WABE_TEXTDOMAIN),
-            __('Settings', WABE_TEXTDOMAIN),
-            'manage_options',
-            'wabe',
-            [$this, 'settings_page']
         );
 
         add_submenu_page(
