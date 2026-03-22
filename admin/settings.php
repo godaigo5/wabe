@@ -118,6 +118,12 @@ if (!function_exists('wabe_settings_lock_text')) {
         </div>
     <?php endif; ?>
 
+    <?php if (!empty($_GET['generated'])) : ?>
+        <div class="notice notice-success is-dismissible">
+            <p><?php echo esc_html__('One post was generated.', WABE_TEXTDOMAIN); ?></p>
+        </div>
+    <?php endif; ?>
+
     <div style="margin:20px 0;padding:18px 20px;border:1px solid #e5e7eb;border-radius:14px;background:#fff;">
         <div style="display:flex;justify-content:space-between;gap:16px;align-items:center;flex-wrap:wrap;">
             <div>
@@ -133,12 +139,14 @@ if (!function_exists('wabe_settings_lock_text')) {
                         <strong><?php echo esc_html($license_status); ?></strong>
                     </span>
                 </div>
+
                 <?php if ($license_customer_email !== '') : ?>
                     <div style="margin-top:8px;color:#64748b;font-size:13px;">
                         <?php echo esc_html__('Customer email:', WABE_TEXTDOMAIN); ?>
                         <?php echo esc_html($license_customer_email); ?>
                     </div>
                 <?php endif; ?>
+
                 <?php if ($license_checked_at !== '') : ?>
                     <div style="margin-top:4px;color:#64748b;font-size:13px;">
                         <?php echo esc_html__('Last checked:', WABE_TEXTDOMAIN); ?>
@@ -609,4 +617,37 @@ if (!function_exists('wabe_settings_lock_text')) {
             </button>
         </p>
     </form>
+
+    <div style="margin-top:20px;background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:20px;">
+        <h2 style="margin-top:0;"><?php echo esc_html__('Manual Generate', WABE_TEXTDOMAIN); ?></h2>
+
+        <p style="margin-bottom:12px;color:#475569;">
+            <?php echo esc_html__('Generate one post immediately from the first queued topic.', WABE_TEXTDOMAIN); ?>
+        </p>
+
+        <p style="font-size:13px;color:#64748b;margin:0 0 12px 0;">
+            <?php echo esc_html__('Queued topics:', WABE_TEXTDOMAIN); ?>
+            <strong><?php echo (int) $topics_count; ?></strong>
+        </p>
+
+        <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="margin:0;">
+            <?php wp_nonce_field('wabe_generate_now'); ?>
+            <input type="hidden" name="action" value="wabe_generate_now">
+
+            <button type="submit" class="button button-primary button-large"
+                <?php disabled(!$is_ready || $topics_count < 1); ?>>
+                <?php echo esc_html__('Generate Now', WABE_TEXTDOMAIN); ?>
+            </button>
+        </form>
+
+        <?php if (!$is_ready) : ?>
+            <p class="description" style="margin-top:10px;">
+                <?php echo esc_html__('Set your API key first before generating a post.', WABE_TEXTDOMAIN); ?>
+            </p>
+        <?php elseif ($topics_count < 1) : ?>
+            <p class="description" style="margin-top:10px;">
+                <?php echo esc_html__('Add at least one topic to the queue before generating.', WABE_TEXTDOMAIN); ?>
+            </p>
+        <?php endif; ?>
+    </div>
 </div>
