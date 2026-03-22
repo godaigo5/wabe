@@ -45,16 +45,16 @@ class WABE_Plan
 
 		return [
 			self::PLAN_FREE => array_merge($base, [
-				'weekly_posts_max'          => 1,
-				'title_count_max'           => 1,
-				'heading_count_max'         => 1,
-				'can_publish'               => false,
-				'can_use_seo'               => false,
-				'can_use_images'            => false,
-				'can_use_internal_links'    => false,
-				'can_use_external_links'    => false,
-				'can_use_topic_prediction'  => false,
-				'can_use_duplicate_check'   => false,
+				'weekly_posts_max' => 1,
+				'title_count_max' => 1,
+				'heading_count_max' => 1,
+				'can_publish' => true,
+				'can_use_seo' => false,
+				'can_use_images' => true,
+				'can_use_internal_links' => false,
+				'can_use_external_links' => false,
+				'can_use_topic_prediction' => false,
+				'can_use_duplicate_check' => false,
 				'can_use_outline_generator' => false,
 			]),
 			self::PLAN_ADVANCED => array_merge($base, [

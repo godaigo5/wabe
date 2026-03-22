@@ -292,7 +292,9 @@ class WABE_Generator
             $topic_data = $this->normalize_topic($topic, $global_tone);
 
             if ($topic_data['topic'] === '') {
-                WABE_Logger::warning('Generator: topic text empty.');
+                if (class_exists('WABE_Logger') && method_exists('WABE_Logger', 'warning')) {
+                    WABE_Logger::warning('Generator: topic text empty.');
+                }
                 return false;
             }
 
@@ -304,7 +306,9 @@ class WABE_Generator
 
             if ($this->settings->is_duplicate_check_enabled()) {
                 if ($this->quality->is_similar_post_exists($topic_data['topic'])) {
-                    WABE_Logger::warning('Generator: duplicate topic skipped - ' . $topic_data['topic']);
+                    if (class_exists('WABE_Logger') && method_exists('WABE_Logger', 'warning')) {
+                        WABE_Logger::warning('Generator: duplicate topic skipped - ' . $topic_data['topic']);
+                    }
 
                     $this->repo->add_history([
                         'topic'          => $topic_data['topic'],
@@ -335,7 +339,9 @@ class WABE_Generator
             $markdown = $this->generate_full_article($context, $article_title);
 
             if (trim($markdown) === '') {
-                WABE_Logger::warning('Generator: empty article body. fallback topic only. topic=' . $topic_data['topic']);
+                if (class_exists('WABE_Logger') && method_exists('WABE_Logger', 'warning')) {
+                    WABE_Logger::warning('Generator: empty article body. fallback topic only. topic=' . $topic_data['topic']);
+                }
                 $markdown = "## はじめに\n\n" . $topic_data['topic'];
             }
 
@@ -360,12 +366,7 @@ class WABE_Generator
 
             $content = $this->markdown_to_blocks($markdown, $article_title);
 
-            /**
-             * 記事途中画像（Unsplash）を挿入
-             * - Free: 1枚
-             * - Advanced: 3枚
-             * - Pro: 5枚
-             */
+            // 記事途中画像（Unsplash）
             if (class_exists('WABE_Image')) {
                 $image = new WABE_Image();
                 $content = $image->inject_unsplash_images_into_content($content, [
@@ -390,7 +391,9 @@ class WABE_Generator
             $post_id = wp_insert_post(wp_slash($postarr), true);
 
             if (is_wp_error($post_id)) {
-                WABE_Logger::error('Generator: wp_insert_post failed - ' . $post_id->get_error_message());
+                if (class_exists('WABE_Logger') && method_exists('WABE_Logger', 'error')) {
+                    WABE_Logger::error('Generator: wp_insert_post failed - ' . $post_id->get_error_message());
+                }
                 return false;
             }
 
@@ -401,10 +404,16 @@ class WABE_Generator
             }
 
             $image_attached = '0';
+
+            // アイキャッチ生成
             if ($this->settings->is_featured_image_enabled() && class_exists('WABE_Image')) {
                 $image = new WABE_Image();
-                $set = $image->generate_and_attach($post_id, $topic_data['topic']);
-                $image_attached = $set ? '1' : '0';
+                $attachment_id = $image->generate_and_attach($post_id, $topic_data['topic']);
+                $image_attached = $attachment_id ? '1' : '0';
+
+                if (class_exists('WABE_Logger') && method_exists('WABE_Logger', 'info')) {
+                    WABE_Logger::info('Featured image result: ' . $image_attached . ' / post_id=' . $post_id);
+                }
             }
 
             $post_url = get_permalink($post_id);
@@ -428,11 +437,15 @@ class WABE_Generator
 
             $this->repo->remove_first_topic();
 
-            WABE_Logger::info('Generator: post generated successfully - post_id=' . $post_id);
+            if (class_exists('WABE_Logger') && method_exists('WABE_Logger', 'info')) {
+                WABE_Logger::info('Generator: post generated successfully - post_id=' . $post_id);
+            }
 
             return $post_id;
         } catch (Throwable $e) {
-            WABE_Logger::error('Generator exception: ' . $e->getMessage());
+            if (class_exists('WABE_Logger') && method_exists('WABE_Logger', 'error')) {
+                WABE_Logger::error('Generator exception: ' . $e->getMessage());
+            }
             return false;
         }
     }
