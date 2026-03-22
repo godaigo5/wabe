@@ -265,7 +265,8 @@ class WABE_Admin
             }
         }
 
-        update_option('wabe_topics', array_values($topics));
+        $this->options['topics'] = array_values($topics);
+        update_option(WABE_OPTION, $this->options);
 
         if (class_exists('WABE_Logger') && method_exists('WABE_Logger', 'info')) {
             WABE_Logger::info('Topics saved. Count=' . count($topics));

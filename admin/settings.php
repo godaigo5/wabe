@@ -75,8 +75,8 @@ if ($post_status === 'publish' && !$can_publish) {
     $post_status = 'draft';
 }
 
-$topics = get_option('wabe_topics', []);
-$topics_count = is_array($topics) ? count($topics) : 0;
+$topics = is_array($opt['topics'] ?? null) ? $opt['topics'] : [];
+$topics_count = count($topics);
 
 $is_ready = method_exists($this, 'is_ready_to_post') ? (bool) $this->is_ready_to_post() : true;
 $next_run_display = !empty($this->next_post_date) ? (string) $this->next_post_date : __('Not scheduled', WABE_TEXTDOMAIN);
