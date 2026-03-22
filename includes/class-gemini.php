@@ -19,14 +19,21 @@ class WABE_Gemini
         }
 
         $args = wp_parse_args($args, [
-            'model'             => 'gemini-2.5-flash',
-            'temperature'       => 0.7,
+            'model' => 'gemini-2.5-flash',
+            'temperature' => 0.7,
             'max_output_tokens' => 2200,
         ]);
 
         $model = sanitize_text_field((string)$args['model']);
         if ($model === '') {
             $model = 'gemini-2.5-flash';
+        }
+
+        $temperature = isset($args['temperature']) ? (float)$args['temperature'] : 0.7;
+        $max_output_tokens = isset($args['max_output_tokens']) ? (int)$args['max_output_tokens'] : 2200;
+
+        if ($max_output_tokens < 1) {
+            $max_output_tokens = 2200;
         }
 
         $url = 'https://generativelanguage.googleapis.com/v1beta/models/' . rawurlencode($model) . ':generateContent';
@@ -42,15 +49,22 @@ class WABE_Gemini
                 ],
             ],
             'generationConfig' => [
-                'temperature'     => (float)$args['temperature'],
-                'maxOutputTokens' => (int)$args['max_output_tokens'],
+                'temperature' => $temperature,
+                'maxOutputTokens' => $max_output_tokens,
             ],
         ];
+
+        // Gemini 2.5 系は thinking を使うと出力本文が短く切れやすいため、本文生成では無効化
+        if (strpos($model, 'gemini-2.5') === 0) {
+            $payload['generationConfig']['thinkingConfig'] = [
+                'thinkingBudget' => 0,
+            ];
+        }
 
         $response = wp_remote_post($url, [
             'timeout' => 90,
             'headers' => [
-                'Content-Type'   => 'application/json',
+                'Content-Type' => 'application/json',
                 'x-goog-api-key' => $this->key,
             ],
             'body' => wp_json_encode($payload),
@@ -62,11 +76,17 @@ class WABE_Gemini
         }
 
         $status_code = (int) wp_remote_retrieve_response_code($response);
-        $raw_body    = wp_remote_retrieve_body($response);
-        $body        = json_decode($raw_body, true);
+        $raw_body = wp_remote_retrieve_body($response);
+
         if (class_exists('WABE_Logger') && method_exists('WABE_Logger', 'info')) {
-            WABE_Logger::info('Gemini raw response preview: ' . mb_substr($raw_body, 0, 2000));
+            WABE_Logger::info('Gemini request model: ' . $model);
+            WABE_Logger::info('Gemini request temperature: ' . (string)$temperature);
+            WABE_Logger::info('Gemini request maxOutputTokens: ' . (string)$max_output_tokens);
+            WABE_Logger::info('Gemini raw response preview: ' . mb_substr((string)$raw_body, 0, 2000));
         }
+
+        $body = json_decode($raw_body, true);
+
         if ($status_code < 200 || $status_code >= 300) {
             $error_message = '';
 
@@ -91,6 +111,10 @@ class WABE_Gemini
 
         if ($text === '') {
             WABE_Logger::warning('Gemini: empty text response');
+        } else {
+            if (class_exists('WABE_Logger') && method_exists('WABE_Logger', 'info')) {
+                WABE_Logger::info('Gemini extracted text length: ' . mb_strlen($text));
+            }
         }
 
         return $text;
@@ -113,6 +137,7 @@ class WABE_Gemini
                 }
 
                 $joined = trim(implode("\n", $texts));
+
                 if ($joined !== '') {
                     return $joined;
                 }

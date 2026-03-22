@@ -171,8 +171,13 @@ if (!in_array($image_style, ['modern', 'business', 'blog', 'tech', 'luxury', 'na
                     <th scope="row"><?php echo esc_html__('OpenAI API Key', WABE_TEXTDOMAIN); ?></th>
                     <td>
                         <input type="text" name="openai_api_key"
-                            value="<?php echo !empty($opt['openai_api_key']) ? '********' : ''; ?>" class="regular-text"
-                            autocomplete="off">
+                            value="<?php echo esc_attr(!empty($opt['openai_api_key']) ? $this->mask_secret_value($opt['openai_api_key']) : ''); ?>"
+                            class="regular-text" autocomplete="off">
+                        <p class="description">
+                            <?php echo esc_html__('Get your OpenAI API key from ', WABE_TEXTDOMAIN); ?><a
+                                href="https://platform.openai.com/api-keys"
+                                target="_blank">https://platform.openai.com/api-keys</a>
+                        </p>
                     </td>
                 </tr>
 
@@ -188,8 +193,13 @@ if (!in_array($image_style, ['modern', 'business', 'blog', 'tech', 'luxury', 'na
                     <th scope="row"><?php echo esc_html__('Gemini API Key', WABE_TEXTDOMAIN); ?></th>
                     <td>
                         <input type="text" name="gemini_api_key"
-                            value="<?php echo !empty($opt['gemini_api_key']) ? '********' : ''; ?>" class="regular-text"
-                            autocomplete="off">
+                            value="<?php echo esc_attr(!empty($opt['gemini_api_key']) ? $this->mask_secret_value($opt['gemini_api_key']) : ''); ?>"
+                            class="regular-text" autocomplete="off">
+                        <p class="description">
+                            <?php echo esc_html__('Get your Gemini API key from ', WABE_TEXTDOMAIN); ?><a
+                                href="https://aistudio.google.com/app/u/2/api-keys"
+                                target="_blank">https://aistudio.google.com/app/u/2/api-keys</a>
+                        </p>
                     </td>
                 </tr>
 
@@ -311,7 +321,7 @@ if (!in_array($image_style, ['modern', 'business', 'blog', 'tech', 'luxury', 'na
                     <th scope="row"><?php echo esc_html__('Site Context', WABE_TEXTDOMAIN); ?></th>
                     <td>
                         <textarea name="site_context" rows="8"
-                            class="large-text code"><?php echo esc_textarea((string)($opt['site_context'] ?? '')); ?></textarea>
+                            class="large-text code"><?php echo esc_textarea(WABE_Utils::wabe_maybe_base64_decode($opt['site_context'])); ?></textarea>
                     </td>
                 </tr>
 
@@ -319,7 +329,7 @@ if (!in_array($image_style, ['modern', 'business', 'blog', 'tech', 'luxury', 'na
                     <th scope="row"><?php echo esc_html__('Writing Rules', WABE_TEXTDOMAIN); ?></th>
                     <td>
                         <textarea name="writing_rules" rows="8"
-                            class="large-text code"><?php echo esc_textarea((string)($opt['writing_rules'] ?? '')); ?></textarea>
+                            class="large-text code"><?php echo esc_textarea(WABE_Utils::wabe_maybe_base64_decode($opt['writing_rules'])); ?></textarea>
                     </td>
                 </tr>
 
@@ -455,6 +465,32 @@ if (!in_array($image_style, ['modern', 'business', 'blog', 'tech', 'luxury', 'na
             <?php submit_button(__('Save Settings', WABE_TEXTDOMAIN), 'primary', 'submit', false); ?>
         </div>
     </form>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            function encodeBase64Unicode(str) {
+                try {
+                    return btoa(unescape(encodeURIComponent(str)));
+                } catch (e) {
+                    return str;
+                }
+            }
+            // 保存時にエンコード
+            const form = document.querySelector('form');
+            if (form) {
+                form.addEventListener('submit', function() {
+                    const context = document.querySelector('textarea[name="site_context"]');
+                    const rules = document.querySelector('textarea[name="writing_rules"]');
+
+                    if (context) {
+                        context.value = encodeBase64Unicode(context.value);
+                    }
+                    if (rules) {
+                        rules.value = encodeBase64Unicode(rules.value);
+                    }
+                });
+            }
+        });
+    </script>
 
     <div class="postbox" style="padding:20px;margin-bottom:24px;">
         <h2 style="margin:0 0 14px 0;"><?php echo esc_html__('Quick Actions', WABE_TEXTDOMAIN); ?></h2>

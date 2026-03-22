@@ -51,8 +51,8 @@ AIでブログ記事（タイトル・見出し・本文・画像）を自動生
 ・Webhook → ライセンス発行 → DB保存は完成済み 
 ・WordPressプラグインもほぼ完成 → 現在デバック中
 ・管理画面UI改善済み
-・多言語化（POT / PO）も完成
-・WP管理画面 → LP → Stripe → ライセンス登録への動線 未完
+・多言語化（POT / PO）不十分
+・プラグイン → LP → 会員登録 → 会員ページ → ライセンス選択 → Stripe決済 → ライセンス発行 → プラグイン管理画面 未完
 
 ▼GitHub
 ・メインファイル
@@ -62,7 +62,8 @@ https://github.com/godaigo5/wabe/tree/main/includes
 ・画面ファイル（admin
 https://github.com/godaigo5/wabe/tree/main/admin
 
-▼HP
+
+▼LP&HP 
 http://wabe.d-create.online/
 
 ▼重要ルール 

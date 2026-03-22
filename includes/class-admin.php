@@ -98,8 +98,18 @@ class WABE_Admin
     public function settings_page()
     {
         $this->guard();
-        $this->reload_options();
-        $this->next_post_date = $this->get_next_post_date();
+
+        $opt = get_option(WABE_OPTION, []);
+        if (!is_array($opt)) {
+            $opt = [];
+        }
+
+        if (class_exists('WABE_Logger') && method_exists('WABE_Logger', 'info')) {
+            WABE_Logger::info('DEBUG: settings_page reached');
+            WABE_Logger::info('DEBUG: option keys = ' . implode(',', array_keys($opt)));
+            WABE_Logger::info('DEBUG: gemini_api_key length = ' . strlen((string)($opt['gemini_api_key'] ?? '')));
+        }
+
         include WABE_PATH . 'admin/settings.php';
     }
 
@@ -694,9 +704,6 @@ class WABE_Admin
     private function resolve_secret_field($field_name, array $current)
     {
         if (!isset($_POST[$field_name])) {
-            if (class_exists('WABE_Logger') && method_exists('WABE_Logger', 'info')) {
-                WABE_Logger::info('Secret field missing in POST: ' . $field_name);
-            }
             return $current[$field_name] ?? '';
         }
 
@@ -708,16 +715,20 @@ class WABE_Admin
 
         $raw = trim((string)$raw);
 
-        if (class_exists('WABE_Logger') && method_exists('WABE_Logger', 'info')) {
-            WABE_Logger::info('Secret field received: ' . $field_name . ' / length=' . strlen($raw));
-        }
-
         if ($raw === '') {
             return '';
         }
 
+        $current_value = (string)($current[$field_name] ?? '');
+
+        // 完全マスクのときは既存値を維持
         if ($raw === '********' || preg_match('/^\*+$/', $raw)) {
-            return $current[$field_name] ?? '';
+            return $current_value;
+        }
+
+        // 部分マスク表示がそのまま送信された場合も既存値を維持
+        if ($current_value !== '' && $raw === $this->mask_secret_value($current_value)) {
+            return $current_value;
         }
 
         return sanitize_text_field($raw);
@@ -846,7 +857,17 @@ class WABE_Admin
     public function render_settings_page()
     {
         $this->guard();
-        $this->reload_options();
+
+        $this->options = get_option(WABE_OPTION, []);
+        if (!is_array($this->options)) {
+            $this->options = [];
+        }
+
+        if (class_exists('WABE_Logger') && method_exists('WABE_Logger', 'info')) {
+            WABE_Logger::info('DEBUG: render_settings_page reached');
+            WABE_Logger::info('DEBUG: render option keys = ' . implode(',', array_keys($this->options)));
+            WABE_Logger::info('DEBUG: render gemini_api_key length = ' . strlen((string)($this->options['gemini_api_key'] ?? '')));
+        }
 
         $opt = $this->options;
         include WABE_PATH . 'admin/settings.php';
@@ -889,5 +910,24 @@ class WABE_Admin
                     'label'  => '1000',
                 ];
         }
+    }
+    private function mask_secret_value($value, $prefix = 8, $suffix = 6)
+    {
+        $value = (string)$value;
+
+        if ($value === '') {
+            return '';
+        }
+
+        $length = function_exists('mb_strlen') ? mb_strlen($value) : strlen($value);
+
+        if ($length <= ($prefix + $suffix)) {
+            return str_repeat('*', max(8, $length));
+        }
+
+        $start = function_exists('mb_substr') ? mb_substr($value, 0, $prefix) : substr($value, 0, $prefix);
+        $end   = function_exists('mb_substr') ? mb_substr($value, -$suffix) : substr($value, -$suffix);
+
+        return $start . str_repeat('*', max(8, $length - $prefix - $suffix)) . $end;
     }
 }
