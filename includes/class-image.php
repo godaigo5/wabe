@@ -1,583 +1,630 @@
 <?php
-
 if (!defined('ABSPATH')) exit;
 
 class WABE_Image
 {
-    private $openai_key = '';
-    private $gemini_key = '';
-    private $provider   = 'openai';
-    private $style      = 'modern';
+    /** @var array */
+    private $options = [];
+
+    /** @var string */
+    private $openai_api_key = '';
+
+    /** @var string */
+    private $gemini_api_key = '';
+
+    /** @var string */
+    private $pollinations_api_key = '';
+
+    /** @var string */
+    private $image_style = 'modern';
 
     public function __construct()
     {
-        $o = get_option(WABE_OPTION, []);
+        $this->options = get_option(WABE_OPTION, []);
+        if (!is_array($this->options)) {
+            $this->options = [];
+        }
 
-        $this->openai_key = trim((string)($o['openai_api_key'] ?? ''));
-        $this->gemini_key = trim((string)($o['gemini_api_key'] ?? ''));
-        $this->provider   = sanitize_key($o['ai_provider'] ?? 'openai');
-        $this->style      = sanitize_key($o['image_style'] ?? 'modern');
+        $this->openai_api_key = trim((string) ($this->options['openai_api_key'] ?? ''));
+        $this->gemini_api_key = trim((string) ($this->options['gemini_api_key'] ?? ''));
+        $this->pollinations_api_key = trim((string) ($this->options['pollinations_api_key'] ?? ''));
+        $this->image_style = sanitize_key($this->options['image_style'] ?? 'modern');
     }
 
     /**
-     * 画像生成して attachment 情報を返す
+     * 記事タイトルから画像生成してアイキャッチ設定
      *
-     * @param string $topic
-     * @return array{
-     *   success:bool,
-     *   attachment_id:int,
-     *   url:string,
-     *   provider:string,
-     *   error:string
-     * }
+     * @param int    $post_id
+     * @param string $title
+     * @return int|false
      */
-    public function generate($topic)
+    public function generate_and_attach($post_id, $title)
     {
-        $topic = sanitize_text_field((string)$topic);
+        $post_id = (int) $post_id;
+        $title   = trim((string) $title);
 
-        if ($topic === '') {
-            WABE_Logger::warning('Image: topic empty');
-            return $this->result(false, 0, '', '', 'Topic is empty.');
+        if ($post_id < 1 || $title === '') {
+            $this->log_error('Image: invalid arguments for generate_and_attach');
+            return false;
         }
 
         if (!$this->is_enabled()) {
-            WABE_Logger::info('Image: disabled by settings or plan');
-            return $this->result(false, 0, '', '', 'Image generation is disabled.');
-        }
-
-        $provider = $this->provider === 'gemini' ? 'gemini' : 'openai';
-
-        if ($provider === 'gemini') {
-            $result = $this->generate_with_gemini($topic);
-            if (!empty($result['success'])) {
-                return $result;
-            }
-
-            WABE_Logger::warning('Image: Gemini generation failed, fallback to OpenAI');
-            $fallback = $this->generate_with_openai($topic);
-            if (!empty($fallback['success'])) {
-                return $fallback;
-            }
-
-            return $this->result(
-                false,
-                0,
-                '',
-                '',
-                $fallback['error'] ?: ($result['error'] ?: 'Failed to generate image with Gemini and OpenAI.')
-            );
-        }
-
-        return $this->generate_with_openai($topic);
-    }
-
-    /**
-     * 後方互換用:
-     * 既存コードが URL 文字列を期待している場合のために用意
-     *
-     * @param string $topic
-     * @return string
-     */
-    public function generate_url($topic)
-    {
-        $result = $this->generate($topic);
-        return (string)($result['url'] ?? '');
-    }
-
-    /**
-     * アイキャッチ設定
-     * attachment_id / URL / generate() の戻り値配列 のいずれでも受け付ける
-     *
-     * @param int              $post_id
-     * @param mixed            $image
-     * @return bool
-     */
-    public function set_featured_image($post_id, $image)
-    {
-        $post_id = (int)$post_id;
-        if ($post_id <= 0) {
-            WABE_Logger::warning('Image: invalid post_id');
+            $this->log_warning('Image: disabled by settings or plan');
             return false;
         }
 
-        $attachment_id = 0;
-
-        // generate() の戻り値配列
-        if (is_array($image)) {
-            $attachment_id = (int)($image['attachment_id'] ?? 0);
-
-            if ($attachment_id <= 0 && !empty($image['url']) && is_string($image['url'])) {
-                $attachment_id = $this->resolve_attachment_id_from_url($image['url']);
-            }
-        }
-        // attachment_id
-        elseif (is_numeric($image)) {
-            $attachment_id = (int)$image;
-        }
-        // URL
-        elseif (is_string($image) && $image !== '') {
-            $attachment_id = $this->resolve_attachment_id_from_url($image);
-
-            // URLから既存attachmentが見つからない場合はsideload
-            if ($attachment_id <= 0) {
-                $attachment_id = $this->sideload_image_from_url($image, $post_id, get_the_title($post_id));
-            }
-        }
-
-        if ($attachment_id <= 0) {
-            WABE_Logger::warning('Image: attachment_id could not be resolved');
-            return false;
-        }
-
-        $mime = get_post_mime_type($attachment_id);
-        if (!is_string($mime) || strpos($mime, 'image/') !== 0) {
-            WABE_Logger::warning('Image: attachment is not an image');
-            return false;
-        }
-
-        $set = set_post_thumbnail($post_id, $attachment_id);
-
-        if (!$set) {
-            // 既に同じサムネイルが設定済みのとき false の場合がある
-            $current_thumb = (int)get_post_thumbnail_id($post_id);
-            if ($current_thumb === $attachment_id) {
-                WABE_Logger::info('Image: featured image already set - post_id=' . $post_id . ' attachment_id=' . $attachment_id);
-                return true;
-            }
-
-            WABE_Logger::warning('Image: set_post_thumbnail returned false - post_id=' . $post_id . ' attachment_id=' . $attachment_id);
-            return false;
-        }
-
-        WABE_Logger::info('Image: featured image set - post_id=' . $post_id . ' attachment_id=' . $attachment_id);
-        return true;
-    }
-
-    /**
-     * 記事生成→アイキャッチ設定まで一括
-     *
-     * @param int    $post_id
-     * @param string $topic
-     * @return bool
-     */
-    public function generate_and_attach($post_id, $topic)
-    {
-        $result = $this->generate($topic);
-
-        if (empty($result['success'])) {
-            WABE_Logger::warning('Image: generate_and_attach failed - ' . (string)($result['error'] ?? 'Unknown error'));
-            return false;
-        }
-
-        return $this->set_featured_image($post_id, $result);
-    }
-
-    private function is_enabled()
-    {
-        if (!class_exists('WABE_Plan') || !WABE_Plan::can_use_images()) {
-            return false;
-        }
-
-        $o = get_option(WABE_OPTION, []);
-        return !empty($o['enable_featured_image']) && (string)$o['enable_featured_image'] === '1';
-    }
-
-    private function generate_with_openai($topic)
-    {
-        if ($this->openai_key === '') {
-            WABE_Logger::warning('Image: OpenAI API key missing');
-            return $this->result(false, 0, '', 'openai', 'OpenAI API key is missing.');
-        }
-
-        $prompt = $this->build_prompt($topic);
-
-        $response = wp_remote_post(
-            'https://api.openai.com/v1/images/generations',
-            [
-                'timeout' => 120,
-                'headers' => [
-                    'Authorization' => 'Bearer ' . $this->openai_key,
-                    'Content-Type'  => 'application/json',
-                ],
-                'body' => wp_json_encode([
-                    'model'  => 'gpt-image-1',
-                    'prompt' => $prompt,
-                    'size'   => '1024x1024',
-                ]),
-            ]
-        );
-
-        if (is_wp_error($response)) {
-            $message = $response->get_error_message();
-            WABE_Logger::error('Image OpenAI HTTP error: ' . $message);
-            return $this->result(false, 0, '', 'openai', $message);
-        }
-
-        $status_code = (int)wp_remote_retrieve_response_code($response);
-        $raw_body    = wp_remote_retrieve_body($response);
-        $body        = json_decode($raw_body, true);
-
-        if ($status_code < 200 || $status_code >= 300) {
-            $message = '';
-            if (is_array($body)) {
-                $message = (string)($body['error']['message'] ?? $body['error']['code'] ?? '');
-            }
-            if ($message === '') {
-                $message = 'OpenAI image generation API error.';
-            }
-
-            WABE_Logger::error('Image OpenAI API error [' . $status_code . ']: ' . $message);
-            return $this->result(false, 0, '', 'openai', $message);
-        }
-
-        if (empty($body['data'][0]['b64_json']) || !is_string($body['data'][0]['b64_json'])) {
-            WABE_Logger::warning('Image OpenAI: no image data returned');
-            return $this->result(false, 0, '', 'openai', 'OpenAI returned no image data.');
-        }
-
-        return $this->save_base64_image($body['data'][0]['b64_json'], $topic, 'openai');
-    }
-
-    private function generate_with_gemini($topic)
-    {
-        if ($this->gemini_key === '') {
-            WABE_Logger::warning('Image: Gemini API key missing');
-            return $this->result(false, 0, '', 'gemini', 'Gemini API key is missing.');
-        }
-
-        $prompt = $this->build_prompt($topic);
-
-        $response = wp_remote_post(
-            'https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict',
-            [
-                'timeout' => 120,
-                'headers' => [
-                    'Content-Type'  => 'application/json',
-                    'x-goog-api-key' => $this->gemini_key,
-                ],
-                'body' => wp_json_encode([
-                    'instances' => [
-                        [
-                            'prompt' => $prompt,
-                        ],
-                    ],
-                    'parameters' => [
-                        'sampleCount' => 1,
-                    ],
-                ]),
-            ]
-        );
-
-        if (is_wp_error($response)) {
-            $message = $response->get_error_message();
-            WABE_Logger::error('Image Gemini HTTP error: ' . $message);
-            return $this->result(false, 0, '', 'gemini', $message);
-        }
-
-        $status_code = (int)wp_remote_retrieve_response_code($response);
-        $raw_body    = wp_remote_retrieve_body($response);
-        $body        = json_decode($raw_body, true);
-
-        if ($status_code < 200 || $status_code >= 300) {
-            $message = '';
-            if (is_array($body)) {
-                $message = (string)($body['error']['message'] ?? $body['error']['status'] ?? '');
-            }
-            if ($message === '') {
-                $message = 'Gemini image generation API error.';
-            }
-
-            WABE_Logger::error('Image Gemini API error [' . $status_code . ']: ' . $message);
-            return $this->result(false, 0, '', 'gemini', $message);
-        }
-
-        $base64 = $this->extract_gemini_base64($body);
-
-        if ($base64 === '') {
-            WABE_Logger::warning('Image Gemini: no image data returned');
-            return $this->result(false, 0, '', 'gemini', 'Gemini returned no image data.');
-        }
-
-        return $this->save_base64_image($base64, $topic, 'gemini');
-    }
-
-    private function extract_gemini_base64($body)
-    {
-        if (!is_array($body)) {
-            return '';
-        }
-
-        $candidates = [
-            $body['predictions'][0]['bytesBase64Encoded'] ?? '',
-            $body['predictions'][0]['image']['bytesBase64Encoded'] ?? '',
-            $body['images'][0]['image']['base64EncodedImage'] ?? '',
-            $body['generatedImages'][0]['bytesBase64Encoded'] ?? '',
-            $body['generated_images'][0]['bytesBase64Encoded'] ?? '',
-        ];
-
-        foreach ($candidates as $candidate) {
-            if (is_string($candidate) && $candidate !== '') {
-                return $candidate;
-            }
-        }
-
-        return '';
-    }
-
-    private function build_prompt($topic)
-    {
-        $style_text = $this->get_style_prompt();
-
-        return trim(
-            "Create a high-quality featured image for a WordPress blog post.\n" .
-                "Topic: {$topic}\n" .
-                "Visual direction:\n" .
-                "- {$style_text}\n" .
-                "- clean composition\n" .
-                "- professional\n" .
-                "- eye-catching\n" .
-                "- suitable as a featured image\n" .
-                "- no text overlay\n" .
-                "- no letters\n" .
-                "- no watermarks\n" .
-                "- no logos\n" .
-                "Output:\n" .
-                "- square image\n" .
-                "- visually clear subject\n" .
-                "- modern blog-friendly thumbnail"
-        );
-    }
-
-    private function get_style_prompt()
-    {
-        $styles = [
-            'modern'   => 'modern, minimal, clean, soft lighting',
-            'business' => 'professional business style, polished, trustworthy',
-            'blog'     => 'friendly blog style, warm, approachable, lifestyle-oriented',
-            'tech'     => 'technology themed, futuristic, sleek, digital atmosphere',
-            'luxury'   => 'premium, elegant, refined, high-end visual tone',
-            'natural'  => 'natural, organic, fresh, soft and authentic atmosphere',
-        ];
-
-        return $styles[$this->style] ?? $styles['modern'];
-    }
-
-    private function save_base64_image($base64, $topic, $provider = '')
-    {
-        $upload_dir = wp_upload_dir();
-
-        if (!empty($upload_dir['error'])) {
-            WABE_Logger::error('Image upload dir error: ' . $upload_dir['error']);
-            return $this->result(false, 0, '', $provider, $upload_dir['error']);
-        }
-
-        $binary = base64_decode($base64, true);
-        if ($binary === false) {
-            WABE_Logger::error('Image base64 decode failed');
-            return $this->result(false, 0, '', $provider, 'Failed to decode base64 image.');
-        }
-
-        $mime = $this->detect_image_mime_from_binary($binary);
-        if ($mime === '') {
-            WABE_Logger::error('Image mime type detection failed');
-            return $this->result(false, 0, '', $provider, 'Unsupported or invalid image binary.');
-        }
-
-        $extension = $this->mime_to_extension($mime);
-        if ($extension === '') {
-            WABE_Logger::error('Image extension resolve failed for mime: ' . $mime);
-            return $this->result(false, 0, '', $provider, 'Unsupported image mime type.');
-        }
-
-        $safe_topic = sanitize_title($topic);
-        if ($safe_topic === '') {
-            $safe_topic = 'image';
-        }
-
-        $filename = wp_unique_filename(
-            $upload_dir['path'],
-            'wabe-' . $safe_topic . '-' . gmdate('Ymd-His') . '.' . $extension
-        );
-
-        $file_path = trailingslashit($upload_dir['path']) . $filename;
-
-        $written = file_put_contents($file_path, $binary);
-        if ($written === false) {
-            WABE_Logger::error('Image file write failed');
-            return $this->result(false, 0, '', $provider, 'Failed to write image file.');
-        }
-
-        $attachment = [
-            'post_mime_type' => $mime,
-            'post_title'     => sanitize_text_field($topic),
-            'post_content'   => '',
-            'post_status'    => 'inherit',
-        ];
-
-        $attach_id = wp_insert_attachment($attachment, $file_path);
-        if (is_wp_error($attach_id)) {
-            @unlink($file_path);
-            WABE_Logger::error('Image attachment insert failed: ' . $attach_id->get_error_message());
-            return $this->result(false, 0, '', $provider, $attach_id->get_error_message());
-        }
-
-        require_once ABSPATH . 'wp-admin/includes/image.php';
-
-        $attach_data = wp_generate_attachment_metadata($attach_id, $file_path);
-
-        if ($attach_data === false || empty($attach_data) || !is_array($attach_data)) {
-            wp_delete_attachment($attach_id, true);
-            @unlink($file_path);
-
-            $error_message = 'Failed to generate attachment metadata.';
-            WABE_Logger::error('Image metadata generation failed: ' . $error_message);
-
-            return $this->result(false, 0, '', $provider, $error_message);
-        }
-
-        wp_update_attachment_metadata($attach_id, $attach_data);
-
-        if ($provider !== '') {
-            update_post_meta($attach_id, '_wabe_image_provider', sanitize_key($provider));
-        }
-        update_post_meta($attach_id, '_wabe_image_topic', sanitize_text_field($topic));
-        update_post_meta($attach_id, '_wabe_generated_at', current_time('mysql'));
-
-        $image_url = wp_get_attachment_url($attach_id);
-        if (!$image_url) {
-            WABE_Logger::error('Image attachment URL not found');
-            return $this->result(false, 0, '', $provider, 'Attachment URL not found.');
-        }
-
-        WABE_Logger::info('Image generated: attachment_id=' . $attach_id . ' url=' . $image_url . ' provider=' . $provider);
-
-        return $this->result(true, (int)$attach_id, (string)$image_url, $provider, '');
-    }
-
-    private function detect_image_mime_from_binary($binary)
-    {
-        if (!is_string($binary) || $binary === '') {
-            return '';
-        }
-
-        if (function_exists('finfo_open')) {
-            $finfo = finfo_open(FILEINFO_MIME_TYPE);
-            if ($finfo) {
-                $mime = finfo_buffer($finfo, $binary);
-                finfo_close($finfo);
-
-                if (is_string($mime) && in_array($mime, ['image/png', 'image/jpeg', 'image/webp', 'image/gif'], true)) {
-                    return $mime;
+        $this->log_info('Image class called');
+        $this->log_info('OpenAI key exists: ' . (!empty($this->openai_api_key) ? '1' : '0'));
+        $this->log_info('Gemini key exists: ' . (!empty($this->gemini_api_key) ? '1' : '0'));
+        $this->log_info('Pollinations key exists: ' . (!empty($this->pollinations_api_key) ? '1' : '0'));
+
+        $prompt = $this->build_prompt($title);
+
+        $image = $this->generate_with_openai($prompt);
+        if ($image) {
+            $this->log_info('Image provider success: openai');
+        } else {
+            $this->log_warning('Image: OpenAI failed, fallback to Gemini');
+            $image = $this->generate_with_gemini($prompt);
+
+            if ($image) {
+                $this->log_info('Image provider success: gemini');
+            } else {
+                $this->log_warning('Image: Gemini failed, fallback to Pollinations');
+                $pollinations_prompt = $this->build_prompt_for_pollinations($title);
+                $image = $this->generate_with_pollinations($pollinations_prompt);
+
+                if ($image) {
+                    $this->log_info('Image provider success: pollinations');
                 }
             }
         }
 
-        // シグネチャ判定の簡易フォールバック
-        $head12 = substr($binary, 0, 12);
-
-        if (strncmp($binary, "\x89PNG\x0D\x0A\x1A\x0A", 8) === 0) {
-            return 'image/png';
+        if (!$image || empty($image['bytes']) || empty($image['mime'])) {
+            $this->log_error('Image: all providers failed');
+            $this->log_warning('Image: generate_and_attach failed - no image binary returned.');
+            return false;
         }
 
-        if (strncmp($binary, "\xFF\xD8\xFF", 3) === 0) {
-            return 'image/jpeg';
+        $attachment_id = $this->save_generated_image($post_id, $title, $image['bytes'], $image['mime']);
+        if (!$attachment_id) {
+            $this->log_warning('Image: generate_and_attach failed - save_generated_image returned false.');
+            return false;
         }
 
-        if (substr($head12, 0, 4) === 'RIFF' && substr($head12, 8, 4) === 'WEBP') {
-            return 'image/webp';
+        $set_thumbnail = set_post_thumbnail($post_id, $attachment_id);
+        if (!$set_thumbnail) {
+            $this->log_warning('Image: set_post_thumbnail returned false - post_id=' . $post_id . ' attachment_id=' . $attachment_id);
+        } else {
+            $this->log_info('Image: featured image set - post_id=' . $post_id . ' attachment_id=' . $attachment_id);
         }
 
-        if (strncmp($binary, "GIF87a", 6) === 0 || strncmp($binary, "GIF89a", 6) === 0) {
-            return 'image/gif';
+        return $attachment_id;
+    }
+
+    /**
+     * 画像機能が有効か
+     */
+    private function is_enabled()
+    {
+        if (empty($this->options['enable_featured_image'])) {
+            return false;
+        }
+
+        if (class_exists('WABE_License') && method_exists('WABE_License', 'get_feature')) {
+            return !empty(WABE_License::get_feature('can_use_images', false));
+        }
+
+        if (class_exists('WABE_Plan') && method_exists('WABE_Plan', 'normalize_plan') && method_exists('WABE_Plan', 'plan_matrix')) {
+            $plan = WABE_Plan::normalize_plan($this->options['plan'] ?? 'free');
+            $matrix = WABE_Plan::plan_matrix();
+            return !empty($matrix[$plan]['can_use_images']);
+        }
+
+        return false;
+    }
+
+    /**
+     * OpenAI 画像生成
+     */
+    private function generate_with_openai($prompt)
+    {
+        if ($this->openai_api_key === '') {
+            $this->log_warning('Image: OpenAI API key missing');
+            return false;
+        }
+
+        $body = [
+            'model'         => 'gpt-image-1',
+            'prompt'        => $prompt,
+            'size'          => '1536x1024',
+            'quality'       => 'medium',
+            'output_format' => 'png',
+        ];
+
+        $response = wp_remote_post('https://api.openai.com/v1/images/generations', [
+            'timeout' => 120,
+            'headers' => [
+                'Authorization' => 'Bearer ' . $this->openai_api_key,
+                'Content-Type'  => 'application/json',
+            ],
+            'body' => wp_json_encode($body, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+        ]);
+
+        if (is_wp_error($response)) {
+            $this->log_error('Image OpenAI WP_Error: ' . $response->get_error_message());
+            return false;
+        }
+
+        $code = (int) wp_remote_retrieve_response_code($response);
+        $raw  = wp_remote_retrieve_body($response);
+        $json = json_decode($raw, true);
+
+        if ($code < 200 || $code >= 300) {
+            $this->log_error('Image OpenAI API error [' . $code . ']: ' . $this->extract_error_message($json, $raw));
+            return false;
+        }
+
+        if (empty($json['data'][0]['b64_json'])) {
+            $this->log_error('Image OpenAI API error: b64_json not found in response.');
+            return false;
+        }
+
+        $bytes = base64_decode((string) $json['data'][0]['b64_json'], true);
+        if ($bytes === false) {
+            $this->log_error('Image OpenAI API error: base64 decode failed.');
+            return false;
+        }
+
+        $this->log_info('Image generated by OpenAI successfully');
+
+        return [
+            'bytes' => $bytes,
+            'mime'  => 'image/png',
+        ];
+    }
+
+    /**
+     * Gemini Imagen 画像生成
+     */
+    private function generate_with_gemini($prompt)
+    {
+        if ($this->gemini_api_key === '') {
+            $this->log_warning('Image: Gemini API key missing');
+            return false;
+        }
+
+        $url = 'https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict';
+
+        $body = [
+            'instances' => [
+                [
+                    'prompt' => $prompt,
+                ],
+            ],
+            'parameters' => [
+                'sampleCount' => 1,
+            ],
+        ];
+
+        $response = wp_remote_post($url, [
+            'timeout' => 120,
+            'headers' => [
+                'x-goog-api-key' => $this->gemini_api_key,
+                'Content-Type'   => 'application/json',
+            ],
+            'body' => wp_json_encode($body, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+        ]);
+
+        if (is_wp_error($response)) {
+            $this->log_error('Image Gemini WP_Error: ' . $response->get_error_message());
+            return false;
+        }
+
+        $code = (int) wp_remote_retrieve_response_code($response);
+        $raw  = wp_remote_retrieve_body($response);
+        $json = json_decode($raw, true);
+
+        if ($code < 200 || $code >= 300) {
+            $this->log_error('Image Gemini API error [' . $code . ']: ' . $raw);
+            return false;
+        }
+
+        if (empty($json['predictions'][0]['bytesBase64Encoded'])) {
+            $this->log_error('Image Gemini API error: image data not found');
+            return false;
+        }
+
+        $bytes = base64_decode((string) $json['predictions'][0]['bytesBase64Encoded'], true);
+        if ($bytes === false) {
+            $this->log_error('Image Gemini API error: base64 decode failed');
+            return false;
+        }
+
+        $this->log_info('Image generated by Gemini (Imagen) successfully');
+
+        return [
+            'bytes' => $bytes,
+            'mime'  => 'image/png',
+        ];
+    }
+
+    /**
+     * Pollinations.AI 画像生成
+     * OpenAI互換API
+     */
+    private function generate_with_pollinations($prompt)
+    {
+        if ($this->pollinations_api_key === '') {
+            $this->log_warning('Pollinations API key missing');
+            return false;
+        }
+
+        $model = trim((string) ($this->options['pollinations_image_model'] ?? 'flux'));
+        if ($model === '') {
+            $model = 'flux';
+        }
+
+        $body = [
+            'model'           => $model,
+            'prompt'          => $prompt,
+            'size'            => '1024x1024',
+            'response_format' => 'b64_json',
+        ];
+
+        $response = wp_remote_post('https://gen.pollinations.ai/v1/images/generations', [
+            'timeout' => 120,
+            'headers' => [
+                'Authorization' => 'Bearer ' . $this->pollinations_api_key,
+                'Content-Type'  => 'application/json',
+            ],
+            'body' => wp_json_encode($body, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+        ]);
+
+        if (is_wp_error($response)) {
+            $this->log_error('Pollinations WP_Error: ' . $response->get_error_message());
+            return false;
+        }
+
+        $code = (int) wp_remote_retrieve_response_code($response);
+        $raw  = wp_remote_retrieve_body($response);
+        $json = json_decode($raw, true);
+
+        if ($code < 200 || $code >= 300) {
+            $this->log_error('Pollinations API error [' . $code . ']: ' . $raw);
+            return false;
+        }
+
+        if (!empty($json['data'][0]['b64_json'])) {
+            $bytes = base64_decode((string) $json['data'][0]['b64_json'], true);
+
+            if ($bytes === false) {
+                $this->log_error('Pollinations API error: b64_json decode failed');
+                return false;
+            }
+
+            $this->log_info('Image generated by Pollinations successfully. model=' . $model);
+
+            return [
+                'bytes' => $bytes,
+                'mime'  => 'image/png',
+            ];
+        }
+
+        if (!empty($json['data'][0]['url'])) {
+            $image_url = (string) $json['data'][0]['url'];
+
+            $image_response = wp_remote_get($image_url, [
+                'timeout' => 120,
+            ]);
+
+            if (is_wp_error($image_response)) {
+                $this->log_error('Pollinations image download error: ' . $image_response->get_error_message());
+                return false;
+            }
+
+            $image_code = (int) wp_remote_retrieve_response_code($image_response);
+            $image_body = wp_remote_retrieve_body($image_response);
+            $content_type = wp_remote_retrieve_header($image_response, 'content-type');
+
+            if ($image_code < 200 || $image_code >= 300 || empty($image_body)) {
+                $this->log_error('Pollinations image download failed [' . $image_code . ']');
+                return false;
+            }
+
+            $mime = is_string($content_type) && $content_type !== '' ? $content_type : 'image/png';
+
+            $this->log_info('Image generated by Pollinations successfully via URL. model=' . $model);
+
+            return [
+                'bytes' => $image_body,
+                'mime'  => $mime,
+            ];
+        }
+
+        $this->log_error('Pollinations API error: neither b64_json nor url found in response');
+        $this->log_error('Pollinations raw response: ' . $raw);
+        return false;
+    }
+
+    /**
+     * 画像保存してattachment生成
+     */
+    private function save_generated_image($post_id, $title, $bytes, $mime)
+    {
+        if (!function_exists('wp_upload_bits')) {
+            require_once ABSPATH . 'wp-admin/includes/file.php';
+        }
+        if (!function_exists('wp_generate_attachment_metadata')) {
+            require_once ABSPATH . 'wp-admin/includes/image.php';
+        }
+        if (!function_exists('wp_insert_attachment')) {
+            require_once ABSPATH . 'wp-admin/includes/media.php';
+        }
+
+        $ext = $this->mime_to_extension($mime);
+        if ($ext === '') {
+            $this->log_error('Image save failed: unsupported mime type ' . $mime);
+            return false;
+        }
+
+        $slug = sanitize_title($title);
+        if ($slug === '') {
+            $slug = 'featured-image';
+        }
+
+        $filename = $slug . '-' . time() . '.' . $ext;
+        $upload = wp_upload_bits($filename, null, $bytes);
+
+        if (!empty($upload['error'])) {
+            $this->log_error('Image file write failed: ' . $upload['error']);
+            return false;
+        }
+
+        $this->log_info('Image file path: ' . $upload['file']);
+        $this->log_info('File exists: ' . (file_exists($upload['file']) ? '1' : '0'));
+
+        $attachment = [
+            'post_mime_type' => $mime,
+            'post_title'     => sanitize_text_field($title),
+            'post_content'   => '',
+            'post_status'    => 'inherit',
+        ];
+
+        $attachment_id = wp_insert_attachment($attachment, $upload['file'], $post_id);
+        if (is_wp_error($attachment_id) || !$attachment_id) {
+            $message = is_wp_error($attachment_id) ? $attachment_id->get_error_message() : 'unknown';
+            $this->log_error('Image attachment insert failed: ' . $message);
+            return false;
+        }
+
+        $metadata = wp_generate_attachment_metadata($attachment_id, $upload['file']);
+
+        if (!$metadata) {
+            $this->log_error('Image metadata generation failed: empty metadata');
+            return false;
+        }
+
+        if (is_wp_error($metadata)) {
+            /** @var WP_Error $metadata_error */
+            $metadata_error = $metadata;
+            $this->log_error('Image metadata generation failed: ' . $metadata_error->get_error_message());
+            return false;
+        }
+
+        wp_update_attachment_metadata($attachment_id, $metadata);
+
+        $this->log_info('Image generated: attachment_id=' . $attachment_id);
+
+        return (int) $attachment_id;
+    }
+
+    /**
+     * OpenAI/Gemini向けプロンプト
+     */
+    private function build_prompt($title)
+    {
+        $style_map = [
+            'modern'   => 'modern, clean, professional, high-quality website hero image',
+            'business' => 'business, trustworthy, professional, polished marketing visual',
+            'blog'     => 'editorial blog cover, attractive, readable visual composition',
+            'tech'     => 'technology-focused, sleek, futuristic, startup-style visual',
+            'luxury'   => 'premium, elegant, refined, luxury brand style',
+            'natural'  => 'soft natural lighting, warm, approachable, organic atmosphere',
+        ];
+
+        $style_text = $style_map[$this->image_style] ?? $style_map['modern'];
+
+        $site_context = '';
+        if (class_exists('WABE_Utils') && method_exists('WABE_Utils', 'wabe_maybe_base64_decode')) {
+            $site_context = (string) WABE_Utils::wabe_maybe_base64_decode($this->options['site_context'] ?? '');
+        } else {
+            $site_context = (string) ($this->options['site_context'] ?? '');
+        }
+
+        $site_context = trim(wp_strip_all_tags($site_context));
+        if (function_exists('mb_strlen') && mb_strlen($site_context) > 300) {
+            $site_context = mb_substr($site_context, 0, 300);
+        } elseif (strlen($site_context) > 300) {
+            $site_context = substr($site_context, 0, 300);
+        }
+
+        $prompt = 'Create a featured image for a WordPress blog post.'
+            . ' Post title: ' . $title . '.'
+            . ' Generate an image that visually matches the title topic as specifically as possible.'
+            . ' Prefer a concrete scene related to the topic over a generic business stock image.'
+            . ' Style: ' . $style_text . '.'
+            . ' Landscape composition suitable for a blog featured image.'
+            . ' No text, no letters, no logos, no watermark.'
+            . ' High quality, visually appealing, realistic or semi-realistic depending on subject.';
+
+        if ($site_context !== '') {
+            $prompt .= ' Website/business context: ' . $site_context . '.';
+        }
+
+        return $prompt;
+    }
+
+    /**
+     * Pollinations向けプロンプト
+     * タイトルを英語化 + キーワード補強
+     */
+    private function build_prompt_for_pollinations($title)
+    {
+        $title = trim((string) wp_strip_all_tags($title));
+        $title_en = $this->translate_title_to_english($title);
+
+        $keyword = trim((string) ($this->options['seo_keyword'] ?? ''));
+        $keyword = wp_strip_all_tags($keyword);
+
+        $style_keywords = $this->get_pollinations_style_keywords();
+
+        $parts = [];
+
+        if ($title_en !== '') {
+            $parts[] = $title_en;
+        }
+
+        if ($keyword !== '') {
+            $parts[] = $keyword;
+        }
+
+        $parts[] = 'specific visual scene matching the article title';
+        $parts[] = 'not a generic business stock image';
+        $parts[] = 'clean composition';
+        $parts[] = $style_keywords;
+        $parts[] = 'high quality';
+        $parts[] = 'landscape';
+        $parts[] = 'no text';
+        $parts[] = 'no logo';
+        $parts[] = 'no watermark';
+
+        return implode(', ', array_filter($parts));
+    }
+
+    /**
+     * タイトルを英語化
+     * OpenAI/Geminiなしでも動くように、まずはシンプル変換 + 主要語置換
+     */
+    private function translate_title_to_english($title)
+    {
+        $title = trim((string) $title);
+        if ($title === '') {
+            return '';
+        }
+
+        $map = [
+            'ブログ' => 'blog',
+            '自動生成' => 'automation',
+            'メリット' => 'benefits',
+            'ポイント' => 'key points',
+            '解説' => 'guide',
+            '集客' => 'lead generation',
+            '中小企業' => 'small business',
+            'ホームページ' => 'website',
+            'SEO' => 'SEO',
+            '記事' => 'article',
+            '画像' => 'image',
+            '作成' => 'creation',
+            '効率化' => 'efficiency',
+            '比較' => 'comparison',
+            '方法' => 'how to',
+            '活用' => 'usage',
+            '導入' => 'implementation',
+            '初心者' => 'beginner',
+            'おすすめ' => 'recommended',
+            '機能' => 'features',
+        ];
+
+        $translated = $title;
+        foreach ($map as $ja => $en) {
+            $translated = str_replace($ja, $en, $translated);
+        }
+
+        $translated = preg_replace('/[　\s]+/u', ' ', $translated);
+        $translated = trim((string) $translated);
+
+        return $translated;
+    }
+
+    /**
+     * Pollinations用スタイル
+     */
+    private function get_pollinations_style_keywords()
+    {
+        $map = [
+            'modern'   => 'modern clean professional design',
+            'business' => 'business professional trustworthy visual',
+            'blog'     => 'editorial blog cover style',
+            'tech'     => 'technology sleek futuristic style',
+            'luxury'   => 'premium elegant refined style',
+            'natural'  => 'soft natural warm atmosphere',
+        ];
+
+        return $map[$this->image_style] ?? $map['modern'];
+    }
+
+    /**
+     * MIME → 拡張子
+     */
+    private function mime_to_extension($mime)
+    {
+        $mime = strtolower((string) $mime);
+
+        if ($mime === 'image/png') {
+            return 'png';
+        }
+        if ($mime === 'image/jpeg' || $mime === 'image/jpg') {
+            return 'jpg';
+        }
+        if ($mime === 'image/webp') {
+            return 'webp';
         }
 
         return '';
     }
 
-    private function mime_to_extension($mime)
+    /**
+     * APIエラー文字列抽出
+     */
+    private function extract_error_message($json, $raw)
     {
-        $map = [
-            'image/png'  => 'png',
-            'image/jpeg' => 'jpg',
-            'image/webp' => 'webp',
-            'image/gif'  => 'gif',
-        ];
-
-        return $map[$mime] ?? '';
-    }
-
-    private function resolve_attachment_id_from_url($image_url)
-    {
-        $image_url = esc_url_raw((string)$image_url);
-        if ($image_url === '') {
-            return 0;
-        }
-
-        $attachment_id = attachment_url_to_postid($image_url);
-        if ($attachment_id > 0) {
-            return (int)$attachment_id;
-        }
-
-        // サイズ違いURLの可能性を考慮して "-150x150" 等を除去して再試行
-        $normalized = preg_replace('/-\d+x\d+(?=\.(jpg|jpeg|png|gif|webp)$)/i', '', $image_url);
-        if (is_string($normalized) && $normalized !== $image_url) {
-            $attachment_id = attachment_url_to_postid($normalized);
-            if ($attachment_id > 0) {
-                return (int)$attachment_id;
+        if (is_array($json)) {
+            if (!empty($json['error']['message'])) {
+                return (string) $json['error']['message'];
+            }
+            if (!empty($json['message'])) {
+                return (string) $json['message'];
             }
         }
 
-        return 0;
+        return trim((string) $raw);
     }
 
-    private function sideload_image_from_url($image_url, $post_id = 0, $title = '')
+    private function log_info($message)
     {
-        $image_url = esc_url_raw((string)$image_url);
-        if ($image_url === '') {
-            return 0;
+        if (class_exists('WABE_Logger') && method_exists('WABE_Logger', 'info')) {
+            WABE_Logger::info($message);
         }
-
-        require_once ABSPATH . 'wp-admin/includes/file.php';
-        require_once ABSPATH . 'wp-admin/includes/media.php';
-        require_once ABSPATH . 'wp-admin/includes/image.php';
-
-        $tmp = download_url($image_url, 120);
-
-        if (is_wp_error($tmp)) {
-            WABE_Logger::error('Image sideload download error: ' . $tmp->get_error_message());
-            return 0;
-        }
-
-        $path     = wp_parse_url($image_url, PHP_URL_PATH);
-        $basename = $path ? basename($path) : '';
-        if (!is_string($basename) || $basename === '' || strpos($basename, '.') === false) {
-            $basename = 'wabe-remote-image.jpg';
-        }
-
-        $file = [
-            'name'     => sanitize_file_name($basename),
-            'tmp_name' => $tmp,
-        ];
-
-        $attachment_id = media_handle_sideload($file, (int)$post_id, sanitize_text_field((string)$title));
-
-        if (is_wp_error($attachment_id)) {
-            @unlink($tmp);
-            WABE_Logger::error('Image sideload attach error: ' . $attachment_id->get_error_message());
-            return 0;
-        }
-
-        return (int)$attachment_id;
     }
 
-    private function result($success, $attachment_id, $url, $provider, $error)
+    private function log_warning($message)
     {
-        return [
-            'success'       => (bool)$success,
-            'attachment_id' => (int)$attachment_id,
-            'url'           => (string)$url,
-            'provider'      => (string)$provider,
-            'error'         => (string)$error,
-        ];
+        if (class_exists('WABE_Logger') && method_exists('WABE_Logger', 'warning')) {
+            WABE_Logger::warning($message);
+            return;
+        }
+
+        $this->log_info($message);
+    }
+
+    private function log_error($message)
+    {
+        if (class_exists('WABE_Logger') && method_exists('WABE_Logger', 'error')) {
+            WABE_Logger::error($message);
+            return;
+        }
+
+        $this->log_info($message);
     }
 }

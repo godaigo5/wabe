@@ -13,6 +13,7 @@ $license_customer_email = sanitize_text_field($license['customer_email'] ?? ($op
 $ai_provider = sanitize_key($opt['ai_provider'] ?? 'openai');
 $openai_model = sanitize_text_field($opt['openai_model'] ?? 'gpt-4.1');
 $gemini_model = sanitize_text_field($opt['gemini_model'] ?? 'gemini-2.5-flash');
+$pollinations_image_model = sanitize_text_field($opt['pollinations_image_model'] ?? 'flux');
 
 $tone = sanitize_key($opt['tone'] ?? 'standard');
 $detail_level = sanitize_key($opt['detail_level'] ?? 'medium');
@@ -22,11 +23,6 @@ $post_status = sanitize_key($opt['post_status'] ?? 'draft');
 $weekly_posts = max(1, (int) ($opt['weekly_posts'] ?? 1));
 $author_name = sanitize_text_field($opt['author_name'] ?? '');
 
-/**
- * Base64保存前提:
- * - option には Base64 文字列を保存
- * - 画面表示時にデコードして表示
- */
 $site_context = '';
 if (class_exists('WABE_Utils') && method_exists('WABE_Utils', 'wabe_maybe_base64_decode')) {
     $site_context = (string) WABE_Utils::wabe_maybe_base64_decode($opt['site_context'] ?? '');
@@ -57,6 +53,9 @@ $openai_masked = !empty($opt['openai_api_key']) && method_exists($this, 'mask_ap
     : '';
 $gemini_masked = !empty($opt['gemini_api_key']) && method_exists($this, 'mask_api_key')
     ? $this->mask_api_key($opt['gemini_api_key'])
+    : '';
+$pollinations_masked = !empty($opt['pollinations_api_key']) && method_exists($this, 'mask_api_key')
+    ? $this->mask_api_key($opt['pollinations_api_key'])
     : '';
 
 $features = method_exists($this, 'get_plan_features') ? $this->get_plan_features() : [];
@@ -151,9 +150,8 @@ if (!function_exists('wabe_settings_lock_text')) {
 
             <table class="form-table" role="presentation">
                 <tr>
-                    <th scope="row">
-                        <label for="ai_provider"><?php esc_html_e('AI Provider', WABE_TEXTDOMAIN); ?></label>
-                    </th>
+                    <th scope="row"><label
+                            for="ai_provider"><?php esc_html_e('AI Provider', WABE_TEXTDOMAIN); ?></label></th>
                     <td>
                         <select name="ai_provider" id="ai_provider">
                             <option value="openai" <?php selected($ai_provider, 'openai'); ?>>OpenAI</option>
@@ -163,39 +161,40 @@ if (!function_exists('wabe_settings_lock_text')) {
                 </tr>
 
                 <tr>
-                    <th scope="row">
-                        <label for="openai_api_key"><?php esc_html_e('OpenAI API Key', WABE_TEXTDOMAIN); ?></label>
-                    </th>
+                    <th scope="row"><label
+                            for="openai_api_key"><?php esc_html_e('OpenAI API Key', WABE_TEXTDOMAIN); ?></label></th>
                     <td>
                         <input type="password" class="regular-text" name="openai_api_key" id="openai_api_key" value=""
                             placeholder="<?php echo esc_attr($openai_masked !== '' ? $openai_masked : __('Enter API key', WABE_TEXTDOMAIN)); ?>">
-                        <p class="description">
-                            <?php esc_html_e('Get your OpenAI API key.', WABE_TEXTDOMAIN); ?>
-                            <a href="https://platform.openai.com/api-keys" target="_blank"
-                                rel="noopener noreferrer"><?php esc_html_e('OpenAI API Keys', WABE_TEXTDOMAIN); ?></a>
-                        </p>
                     </td>
                 </tr>
 
                 <tr>
-                    <th scope="row">
-                        <label for="gemini_api_key"><?php esc_html_e('Gemini API Key', WABE_TEXTDOMAIN); ?></label>
-                    </th>
+                    <th scope="row"><label
+                            for="gemini_api_key"><?php esc_html_e('Gemini API Key', WABE_TEXTDOMAIN); ?></label></th>
                     <td>
                         <input type="password" class="regular-text" name="gemini_api_key" id="gemini_api_key" value=""
                             placeholder="<?php echo esc_attr($gemini_masked !== '' ? $gemini_masked : __('Enter API key', WABE_TEXTDOMAIN)); ?>">
+                    </td>
+                </tr>
+
+                <tr>
+                    <th scope="row"><label
+                            for="pollinations_api_key"><?php esc_html_e('Pollinations API Key', WABE_TEXTDOMAIN); ?></label>
+                    </th>
+                    <td>
+                        <input type="password" class="regular-text" name="pollinations_api_key"
+                            id="pollinations_api_key" value=""
+                            placeholder="<?php echo esc_attr($pollinations_masked !== '' ? $pollinations_masked : __('Enter API key', WABE_TEXTDOMAIN)); ?>">
                         <p class="description">
-                            <?php esc_html_e('Get your Gemini API key.', WABE_TEXTDOMAIN); ?>
-                            <a href="https://aistudio.google.com/app/u/2/api-keys" target="_blank"
-                                rel="noopener noreferrer"><?php esc_html_e('Google AI Studio', WABE_TEXTDOMAIN); ?></a>
+                            <?php esc_html_e('Used as the final fallback for image generation.', WABE_TEXTDOMAIN); ?>
                         </p>
                     </td>
                 </tr>
 
                 <tr>
-                    <th scope="row">
-                        <label for="openai_model"><?php esc_html_e('OpenAI Model', WABE_TEXTDOMAIN); ?></label>
-                    </th>
+                    <th scope="row"><label
+                            for="openai_model"><?php esc_html_e('OpenAI Model', WABE_TEXTDOMAIN); ?></label></th>
                     <td>
                         <select name="openai_model" id="openai_model">
                             <option value="gpt-4.1-mini" <?php selected($openai_model, 'gpt-4.1-mini'); ?>>gpt-4.1-mini
@@ -208,9 +207,8 @@ if (!function_exists('wabe_settings_lock_text')) {
                 </tr>
 
                 <tr>
-                    <th scope="row">
-                        <label for="gemini_model"><?php esc_html_e('Gemini Model', WABE_TEXTDOMAIN); ?></label>
-                    </th>
+                    <th scope="row"><label
+                            for="gemini_model"><?php esc_html_e('Gemini Model', WABE_TEXTDOMAIN); ?></label></th>
                     <td>
                         <select name="gemini_model" id="gemini_model">
                             <option value="gemini-2.5-flash" <?php selected($gemini_model, 'gemini-2.5-flash'); ?>>
@@ -218,6 +216,17 @@ if (!function_exists('wabe_settings_lock_text')) {
                             <option value="gemini-2.5-pro" <?php selected($gemini_model, 'gemini-2.5-pro'); ?>>
                                 gemini-2.5-pro</option>
                         </select>
+                    </td>
+                </tr>
+
+                <tr>
+                    <th scope="row"><label
+                            for="pollinations_image_model"><?php esc_html_e('Pollinations Image Model', WABE_TEXTDOMAIN); ?></label>
+                    </th>
+                    <td>
+                        <input type="text" class="regular-text" name="pollinations_image_model"
+                            id="pollinations_image_model" value="<?php echo esc_attr($pollinations_image_model); ?>">
+                        <p class="description"><?php esc_html_e('Recommended: flux', WABE_TEXTDOMAIN); ?></p>
                     </td>
                 </tr>
             </table>
@@ -228,9 +237,7 @@ if (!function_exists('wabe_settings_lock_text')) {
 
             <table class="form-table" role="presentation">
                 <tr>
-                    <th scope="row">
-                        <label for="tone"><?php esc_html_e('Tone', WABE_TEXTDOMAIN); ?></label>
-                    </th>
+                    <th scope="row"><label for="tone"><?php esc_html_e('Tone', WABE_TEXTDOMAIN); ?></label></th>
                     <td>
                         <select name="tone" id="tone">
                             <option value="standard" <?php selected($tone, 'standard'); ?>>
@@ -244,9 +251,8 @@ if (!function_exists('wabe_settings_lock_text')) {
                 </tr>
 
                 <tr>
-                    <th scope="row">
-                        <label for="detail_level"><?php esc_html_e('Detail Level', WABE_TEXTDOMAIN); ?></label>
-                    </th>
+                    <th scope="row"><label
+                            for="detail_level"><?php esc_html_e('Detail Level', WABE_TEXTDOMAIN); ?></label></th>
                     <td>
                         <select name="detail_level" id="detail_level">
                             <option value="low" <?php selected($detail_level, 'low'); ?>>
@@ -260,8 +266,7 @@ if (!function_exists('wabe_settings_lock_text')) {
                 </tr>
 
                 <tr>
-                    <th scope="row">
-                        <label
+                    <th scope="row"><label
                             for="generation_quality"><?php esc_html_e('Generation Quality', WABE_TEXTDOMAIN); ?></label>
                     </th>
                     <td>
@@ -275,9 +280,8 @@ if (!function_exists('wabe_settings_lock_text')) {
                 </tr>
 
                 <tr>
-                    <th scope="row">
-                        <label for="author_name"><?php esc_html_e('Author Name', WABE_TEXTDOMAIN); ?></label>
-                    </th>
+                    <th scope="row"><label
+                            for="author_name"><?php esc_html_e('Author Name', WABE_TEXTDOMAIN); ?></label></th>
                     <td>
                         <input type="text" class="regular-text" name="author_name" id="author_name"
                             value="<?php echo esc_attr($author_name); ?>">
@@ -285,9 +289,8 @@ if (!function_exists('wabe_settings_lock_text')) {
                 </tr>
 
                 <tr>
-                    <th scope="row">
-                        <label for="site_context_view"><?php esc_html_e('Site Context', WABE_TEXTDOMAIN); ?></label>
-                    </th>
+                    <th scope="row"><label
+                            for="site_context_view"><?php esc_html_e('Site Context', WABE_TEXTDOMAIN); ?></label></th>
                     <td>
                         <textarea id="site_context_view" class="large-text"
                             rows="6"><?php echo esc_textarea($site_context); ?></textarea>
@@ -297,9 +300,8 @@ if (!function_exists('wabe_settings_lock_text')) {
                 </tr>
 
                 <tr>
-                    <th scope="row">
-                        <label for="writing_rules_view"><?php esc_html_e('Writing Rules', WABE_TEXTDOMAIN); ?></label>
-                    </th>
+                    <th scope="row"><label
+                            for="writing_rules_view"><?php esc_html_e('Writing Rules', WABE_TEXTDOMAIN); ?></label></th>
                     <td>
                         <textarea id="writing_rules_view" class="large-text"
                             rows="6"><?php echo esc_textarea($writing_rules); ?></textarea>
@@ -352,21 +354,17 @@ if (!function_exists('wabe_settings_lock_text')) {
                     <tr>
                         <td><?php esc_html_e('Weekly Posts', WABE_TEXTDOMAIN); ?></td>
                         <td><?php echo esc_html((string) $weekly_posts_max); ?></td>
-                        <td>
-                            <input type="number" min="1" max="<?php echo esc_attr($weekly_posts_max); ?>"
-                                name="weekly_posts" value="<?php echo esc_attr($weekly_posts); ?>">
-                        </td>
+                        <td><input type="number" min="1" max="<?php echo esc_attr($weekly_posts_max); ?>"
+                                name="weekly_posts" value="<?php echo esc_attr($weekly_posts); ?>"></td>
                     </tr>
 
                     <tr>
                         <td><?php esc_html_e('Featured Image', WABE_TEXTDOMAIN); ?></td>
                         <td><?php echo wp_kses_post(wabe_settings_feature_badge($can_use_images)); ?></td>
                         <td>
-                            <label>
-                                <input type="checkbox" name="enable_featured_image" value="1"
+                            <label><input type="checkbox" name="enable_featured_image" value="1"
                                     <?php checked($enable_featured_image); ?> <?php disabled(!$can_use_images); ?>>
-                                <?php esc_html_e('Enable', WABE_TEXTDOMAIN); ?>
-                            </label>
+                                <?php esc_html_e('Enable', WABE_TEXTDOMAIN); ?></label>
                             <?php if (!$can_use_images) : ?>
                                 <p class="description"><?php echo esc_html(wabe_settings_lock_text('Advanced')); ?></p>
                             <?php endif; ?>
@@ -397,74 +395,50 @@ if (!function_exists('wabe_settings_lock_text')) {
                     <tr>
                         <td><?php esc_html_e('SEO', WABE_TEXTDOMAIN); ?></td>
                         <td><?php echo wp_kses_post(wabe_settings_feature_badge($can_use_seo)); ?></td>
-                        <td>
-                            <label>
-                                <input type="checkbox" name="enable_seo" value="1" <?php checked($enable_seo); ?>
+                        <td><label><input type="checkbox" name="enable_seo" value="1" <?php checked($enable_seo); ?>
                                     <?php disabled(!$can_use_seo); ?>>
-                                <?php esc_html_e('Enable', WABE_TEXTDOMAIN); ?>
-                            </label>
-                        </td>
+                                <?php esc_html_e('Enable', WABE_TEXTDOMAIN); ?></label></td>
                     </tr>
 
                     <tr>
                         <td><?php esc_html_e('Internal Links', WABE_TEXTDOMAIN); ?></td>
                         <td><?php echo wp_kses_post(wabe_settings_feature_badge($can_use_internal)); ?></td>
-                        <td>
-                            <label>
-                                <input type="checkbox" name="enable_internal_links" value="1"
+                        <td><label><input type="checkbox" name="enable_internal_links" value="1"
                                     <?php checked($enable_internal_links); ?> <?php disabled(!$can_use_internal); ?>>
-                                <?php esc_html_e('Enable', WABE_TEXTDOMAIN); ?>
-                            </label>
-                        </td>
+                                <?php esc_html_e('Enable', WABE_TEXTDOMAIN); ?></label></td>
                     </tr>
 
                     <tr>
                         <td><?php esc_html_e('External Links', WABE_TEXTDOMAIN); ?></td>
                         <td><?php echo wp_kses_post(wabe_settings_feature_badge($can_use_external)); ?></td>
-                        <td>
-                            <label>
-                                <input type="checkbox" name="enable_external_links" value="1"
+                        <td><label><input type="checkbox" name="enable_external_links" value="1"
                                     <?php checked($enable_external_links); ?> <?php disabled(!$can_use_external); ?>>
-                                <?php esc_html_e('Enable', WABE_TEXTDOMAIN); ?>
-                            </label>
-                        </td>
+                                <?php esc_html_e('Enable', WABE_TEXTDOMAIN); ?></label></td>
                     </tr>
 
                     <tr>
                         <td><?php esc_html_e('Topic Prediction', WABE_TEXTDOMAIN); ?></td>
                         <td><?php echo wp_kses_post(wabe_settings_feature_badge($can_use_prediction)); ?></td>
-                        <td>
-                            <label>
-                                <input type="checkbox" name="enable_topic_prediction" value="1"
+                        <td><label><input type="checkbox" name="enable_topic_prediction" value="1"
                                     <?php checked($enable_topic_prediction); ?>
                                     <?php disabled(!$can_use_prediction); ?>>
-                                <?php esc_html_e('Enable', WABE_TEXTDOMAIN); ?>
-                            </label>
-                        </td>
+                                <?php esc_html_e('Enable', WABE_TEXTDOMAIN); ?></label></td>
                     </tr>
 
                     <tr>
                         <td><?php esc_html_e('Duplicate Check', WABE_TEXTDOMAIN); ?></td>
                         <td><?php echo wp_kses_post(wabe_settings_feature_badge($can_use_duplicate)); ?></td>
-                        <td>
-                            <label>
-                                <input type="checkbox" name="enable_duplicate_check" value="1"
+                        <td><label><input type="checkbox" name="enable_duplicate_check" value="1"
                                     <?php checked($enable_duplicate_check); ?> <?php disabled(!$can_use_duplicate); ?>>
-                                <?php esc_html_e('Enable', WABE_TEXTDOMAIN); ?>
-                            </label>
-                        </td>
+                                <?php esc_html_e('Enable', WABE_TEXTDOMAIN); ?></label></td>
                     </tr>
 
                     <tr>
                         <td><?php esc_html_e('Outline Generator', WABE_TEXTDOMAIN); ?></td>
                         <td><?php echo wp_kses_post(wabe_settings_feature_badge($can_use_outline)); ?></td>
-                        <td>
-                            <label>
-                                <input type="checkbox" name="enable_outline_generator" value="1"
+                        <td><label><input type="checkbox" name="enable_outline_generator" value="1"
                                     <?php checked($enable_outline_generator); ?> <?php disabled(!$can_use_outline); ?>>
-                                <?php esc_html_e('Enable', WABE_TEXTDOMAIN); ?>
-                            </label>
-                        </td>
+                                <?php esc_html_e('Enable', WABE_TEXTDOMAIN); ?></label></td>
                     </tr>
                 </tbody>
             </table>
@@ -495,7 +469,6 @@ if (!function_exists('wabe_settings_lock_text')) {
 
     <div class="postbox" style="padding:20px;margin-top:20px;">
         <h2 style="margin-top:0;"><?php esc_html_e('Generate Now', WABE_TEXTDOMAIN); ?></h2>
-
         <p style="margin-bottom:12px;">
             <?php esc_html_e('Generate a post immediately using your current settings and queued topics.', WABE_TEXTDOMAIN); ?>
         </p>
@@ -510,7 +483,6 @@ if (!function_exists('wabe_settings_lock_text')) {
         <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="margin-top:12px;">
             <input type="hidden" name="action" value="wabe_generate_now">
             <?php wp_nonce_field('wabe_generate_now', 'wabe_generate_now_nonce'); ?>
-
             <p>
                 <button type="submit" class="button button-primary button-large" <?php disabled(!$is_ready); ?>>
                     <?php esc_html_e('Generate Now', WABE_TEXTDOMAIN); ?>

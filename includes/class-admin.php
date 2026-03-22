@@ -168,7 +168,7 @@ class WABE_Admin
     public function handle_save_settings()
     {
         if (class_exists('WABE_Logger') && method_exists('WABE_Logger', 'info')) {
-            WABE_Logger::info('DEBUG: NEW handle_save_settings reached');
+            WABE_Logger::info('DEBUG: handle_save_settings reached');
         }
 
         $this->guard();
@@ -199,6 +199,7 @@ class WABE_Admin
 
         $openai_model = isset($_POST['openai_model']) ? sanitize_text_field(wp_unslash($_POST['openai_model'])) : 'gpt-4.1';
         $gemini_model = isset($_POST['gemini_model']) ? sanitize_text_field(wp_unslash($_POST['gemini_model'])) : 'gemini-2.5-flash';
+        $pollinations_image_model = isset($_POST['pollinations_image_model']) ? sanitize_text_field(wp_unslash($_POST['pollinations_image_model'])) : 'flux';
 
         $tone = isset($_POST['tone']) ? sanitize_key(wp_unslash($_POST['tone'])) : 'standard';
         if (!in_array($tone, ['standard', 'polite', 'casual'], true)) {
@@ -242,34 +243,37 @@ class WABE_Admin
 
         $openai_api_key = $this->resolve_secret_field('openai_api_key', $current);
         $gemini_api_key = $this->resolve_secret_field('gemini_api_key', $current);
+        $pollinations_api_key = $this->resolve_secret_field('pollinations_api_key', $current);
 
         $new = [
-            'plan'                    => $plan,
-            'ai_provider'             => $ai_provider,
-            'openai_api_key'          => $openai_api_key,
-            'gemini_api_key'          => $gemini_api_key,
-            'openai_model'            => $openai_model,
-            'gemini_model'            => $gemini_model,
-            'detail_level'            => $detail_level,
-            'generation_quality'      => $generation_quality,
-            'tone'                    => $tone,
-            'post_status'             => $post_status,
-            'weekly_posts'            => $weekly_posts,
-            'schedule_enabled'        => $schedule_enabled,
-            'enable_featured_image'   => $enable_featured_image,
-            'image_style'             => $image_style,
-            'enable_seo'              => $enable_seo,
-            'enable_internal_links'   => $enable_internal_links,
-            'enable_external_links'   => $enable_external_links,
-            'enable_topic_prediction' => $enable_topic_prediction,
-            'enable_duplicate_check'  => $enable_duplicate_check,
+            'plan'                     => $plan,
+            'ai_provider'              => $ai_provider,
+            'openai_api_key'           => $openai_api_key,
+            'gemini_api_key'           => $gemini_api_key,
+            'pollinations_api_key'     => $pollinations_api_key,
+            'openai_model'             => $openai_model,
+            'gemini_model'             => $gemini_model,
+            'pollinations_image_model' => $pollinations_image_model,
+            'detail_level'             => $detail_level,
+            'generation_quality'       => $generation_quality,
+            'tone'                     => $tone,
+            'post_status'              => $post_status,
+            'weekly_posts'             => $weekly_posts,
+            'schedule_enabled'         => $schedule_enabled,
+            'enable_featured_image'    => $enable_featured_image,
+            'image_style'              => $image_style,
+            'enable_seo'               => $enable_seo,
+            'enable_internal_links'    => $enable_internal_links,
+            'enable_external_links'    => $enable_external_links,
+            'enable_topic_prediction'  => $enable_topic_prediction,
+            'enable_duplicate_check'   => $enable_duplicate_check,
             'enable_outline_generator' => $enable_outline_generator,
-            'author_name'             => isset($_POST['author_name']) ? sanitize_text_field(wp_unslash($_POST['author_name'])) : '',
-            'site_context'            => isset($_POST['site_context']) ? sanitize_textarea_field(wp_unslash($_POST['site_context'])) : '',
-            'writing_rules'           => isset($_POST['writing_rules']) ? sanitize_textarea_field(wp_unslash($_POST['writing_rules'])) : '',
-            'seo_keyword'             => isset($_POST['seo_keyword']) ? sanitize_text_field(wp_unslash($_POST['seo_keyword'])) : '',
-            'internal_link_url'       => isset($_POST['internal_link_url']) ? esc_url_raw(wp_unslash($_POST['internal_link_url'])) : '',
-            'external_link_url'       => isset($_POST['external_link_url']) ? esc_url_raw(wp_unslash($_POST['external_link_url'])) : '',
+            'author_name'              => isset($_POST['author_name']) ? sanitize_text_field(wp_unslash($_POST['author_name'])) : '',
+            'site_context'             => isset($_POST['site_context']) ? sanitize_textarea_field(wp_unslash($_POST['site_context'])) : '',
+            'writing_rules'            => isset($_POST['writing_rules']) ? sanitize_textarea_field(wp_unslash($_POST['writing_rules'])) : '',
+            'seo_keyword'              => isset($_POST['seo_keyword']) ? sanitize_text_field(wp_unslash($_POST['seo_keyword'])) : '',
+            'internal_link_url'        => isset($_POST['internal_link_url']) ? esc_url_raw(wp_unslash($_POST['internal_link_url'])) : '',
+            'external_link_url'        => isset($_POST['external_link_url']) ? esc_url_raw(wp_unslash($_POST['external_link_url'])) : '',
         ];
 
         $merged = array_merge($current, $new);
@@ -280,9 +284,15 @@ class WABE_Admin
             WABE_Logger::info('Saved ai_provider: ' . $ai_provider);
             WABE_Logger::info('Saved openai_api_key length: ' . strlen((string) $openai_api_key));
             WABE_Logger::info('Saved gemini_api_key length: ' . strlen((string) $gemini_api_key));
+            WABE_Logger::info('Saved pollinations_api_key length: ' . strlen((string) $pollinations_api_key));
+            WABE_Logger::info('Saved enable_featured_image: ' . $enable_featured_image);
         }
 
-        $this->reschedule_cron($weekly_posts, $schedule_enabled === '1');
+        $this->options = $merged;
+
+        if (method_exists($this, 'reschedule_cron')) {
+            $this->reschedule_cron($weekly_posts, $schedule_enabled === '1');
+        }
 
         $this->redirect_with_message(
             admin_url('admin.php?page=wabe'),
@@ -748,13 +758,13 @@ class WABE_Admin
             $raw = '';
         }
 
-        $raw = trim((string)$raw);
+        $raw = trim((string) $raw);
+        $current_value = (string) ($current[$field_name] ?? '');
 
+        // 未入力なら既存値を維持
         if ($raw === '') {
-            return '';
+            return $current_value;
         }
-
-        $current_value = (string)($current[$field_name] ?? '');
 
         // 完全マスクのときは既存値を維持
         if ($raw === '********' || preg_match('/^\*+$/', $raw)) {
