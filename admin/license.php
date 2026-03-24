@@ -14,6 +14,8 @@ $expires_at = sanitize_text_field($license['expires_at'] ?? ($opt['license_expir
 $customer_email = sanitize_text_field($license['customer_email'] ?? ($opt['license_customer_email'] ?? ''));
 $remote_plan = sanitize_key($license['plan'] ?? $plan);
 
+$show_activation_notice = ($license_key !== '' && $plan === 'free');
+
 if (!function_exists('wabe_license_status_badge')) {
     function wabe_license_status_badge($status)
     {
@@ -85,6 +87,20 @@ if (!function_exists('wabe_license_mask_key')) {
     <?php if (!empty($_GET['updated'])) : ?>
         <div class="notice notice-success is-dismissible">
             <p><?php esc_html_e('License information has been updated.', WABE_TEXTDOMAIN); ?></p>
+        </div>
+    <?php endif; ?>
+
+    <?php if (!empty($_GET['refreshed'])) : ?>
+        <div class="notice notice-success is-dismissible">
+            <p><?php esc_html_e('License information has been refreshed.', WABE_TEXTDOMAIN); ?></p>
+        </div>
+    <?php endif; ?>
+
+    <?php if ($show_activation_notice) : ?>
+        <div class="notice notice-warning" style="margin-top:16px;">
+            <p style="margin:0.6em 0;">
+                <?php esc_html_e('The domain activation may not be completed yet. After registering your domain on the member page, click "Refresh License Information".', WABE_TEXTDOMAIN); ?>
+            </p>
         </div>
     <?php endif; ?>
 
@@ -176,52 +192,58 @@ if (!function_exists('wabe_license_mask_key')) {
                     <td><?php esc_html_e('Weekly posts', WABE_TEXTDOMAIN); ?></td>
                     <td>1</td>
                     <td>1 - 7</td>
-                    <td>1 - 7</td>
+                    <td>Unlimited</td>
                 </tr>
                 <tr>
                     <td><?php esc_html_e('Heading count', WABE_TEXTDOMAIN); ?></td>
-                    <td>1</td>
-                    <td>1 - 6</td>
-                    <td>1 - 6</td>
+                    <td>3</td>
+                    <td>Expanded</td>
+                    <td>Expanded</td>
                 </tr>
                 <tr>
                     <td><?php esc_html_e('Publish', WABE_TEXTDOMAIN); ?></td>
+                    <td>✓</td>
+                    <td>✓</td>
+                    <td>✓</td>
+                </tr>
+                <tr>
+                    <td><?php esc_html_e('Auto posting', WABE_TEXTDOMAIN); ?></td>
+                    <td>✓</td>
+                    <td>✓</td>
+                    <td>✓</td>
+                </tr>
+                <tr>
+                    <td><?php esc_html_e('Featured image', WABE_TEXTDOMAIN); ?></td>
+                    <td>✓</td>
+                    <td>✓</td>
+                    <td>✓</td>
+                </tr>
+                <tr>
+                    <td><?php esc_html_e('Inline images', WABE_TEXTDOMAIN); ?></td>
+                    <td>1</td>
+                    <td>Multiple</td>
+                    <td>Multiple</td>
+                </tr>
+                <tr>
+                    <td><?php esc_html_e('Tone control', WABE_TEXTDOMAIN); ?></td>
+                    <td>Fixed</td>
+                    <td>✓</td>
+                    <td>✓</td>
+                </tr>
+                <tr>
+                    <td><?php esc_html_e('SEO features', WABE_TEXTDOMAIN); ?></td>
                     <td>—</td>
                     <td>✓</td>
                     <td>✓</td>
                 </tr>
                 <tr>
-                    <td><?php esc_html_e('Image generation', WABE_TEXTDOMAIN); ?></td>
-                    <td>—</td>
-                    <td>✓</td>
-                    <td>✓</td>
-                </tr>
-                <tr>
-                    <td><?php esc_html_e('Internal links', WABE_TEXTDOMAIN); ?></td>
+                    <td><?php esc_html_e('Affiliate features', WABE_TEXTDOMAIN); ?></td>
                     <td>—</td>
                     <td>—</td>
                     <td>✓</td>
                 </tr>
                 <tr>
-                    <td><?php esc_html_e('External links', WABE_TEXTDOMAIN); ?></td>
-                    <td>—</td>
-                    <td>—</td>
-                    <td>✓</td>
-                </tr>
-                <tr>
-                    <td><?php esc_html_e('Topic prediction', WABE_TEXTDOMAIN); ?></td>
-                    <td>—</td>
-                    <td>—</td>
-                    <td>✓</td>
-                </tr>
-                <tr>
-                    <td><?php esc_html_e('Duplicate check', WABE_TEXTDOMAIN); ?></td>
-                    <td>—</td>
-                    <td>—</td>
-                    <td>✓</td>
-                </tr>
-                <tr>
-                    <td><?php esc_html_e('Outline generator', WABE_TEXTDOMAIN); ?></td>
+                    <td><?php esc_html_e('Comparison / ranking article generation', WABE_TEXTDOMAIN); ?></td>
                     <td>—</td>
                     <td>—</td>
                     <td>✓</td>
