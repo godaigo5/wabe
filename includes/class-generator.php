@@ -285,7 +285,6 @@ class WABE_Generator
 
         return $this->generate($topic, $status, $tone);
     }
-
     public function generate($topic, $status, $global_tone = 'standard')
     {
         try {
@@ -366,14 +365,22 @@ class WABE_Generator
 
             $content = $this->markdown_to_blocks($markdown, $article_title);
 
-            // 記事途中画像（Unsplash）
             if (class_exists('WABE_Image')) {
                 $image = new WABE_Image();
+                $before_inline_count = substr_count((string) $content, 'wabe-inline-unsplash-image');
+
                 $content = $image->inject_unsplash_images_into_content($content, [
-                    'topic' => $topic_data['topic'],
-                    'title' => $article_title,
-                    'plan'  => $context['plan'] ?? 'free',
+                    'topic'    => $topic_data['topic'],
+                    'title'    => $article_title,
+                    'plan'     => $context['plan'] ?? 'free',
+                    'language' => $context['language'] ?? '',
                 ]);
+
+                $after_inline_count = substr_count((string) $content, 'wabe-inline-unsplash-image');
+
+                if (class_exists('WABE_Logger') && method_exists('WABE_Logger', 'info')) {
+                    WABE_Logger::info('Generator: inline image blocks before=' . $before_inline_count . ' after=' . $after_inline_count);
+                }
             }
 
             if (class_exists('WABE_Logger') && method_exists('WABE_Logger', 'info')) {
@@ -404,16 +411,10 @@ class WABE_Generator
             }
 
             $image_attached = '0';
-
-            // アイキャッチ生成
             if ($this->settings->is_featured_image_enabled() && class_exists('WABE_Image')) {
                 $image = new WABE_Image();
-                $attachment_id = $image->generate_and_attach($post_id, $topic_data['topic']);
-                $image_attached = $attachment_id ? '1' : '0';
-
-                if (class_exists('WABE_Logger') && method_exists('WABE_Logger', 'info')) {
-                    WABE_Logger::info('Featured image result: ' . $image_attached . ' / post_id=' . $post_id);
-                }
+                $set = $image->generate_and_attach($post_id, $topic_data['topic']);
+                $image_attached = $set ? '1' : '0';
             }
 
             $post_url = get_permalink($post_id);
@@ -449,6 +450,7 @@ class WABE_Generator
             return false;
         }
     }
+
 
     private function normalize_topic($topic, $global_tone = 'standard')
     {

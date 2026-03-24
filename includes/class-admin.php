@@ -244,30 +244,37 @@ class WABE_Admin
             wp_die(esc_html__('Security check failed.', WABE_TEXTDOMAIN));
         }
 
-        $raw = isset($_POST['topics']) ? (string) wp_unslash($_POST['topics']) : '';
-        $lines = preg_split('/\r\n|\r|\n/', $raw);
+        $this->reload_options();
+
+        $posted_topics = isset($_POST['topics']) && is_array($_POST['topics'])
+            ? wp_unslash($_POST['topics'])
+            : [];
+
         $topics = [];
+        $default_tone = sanitize_key($this->options['tone'] ?? 'standard');
 
-        if (is_array($lines)) {
-            foreach ($lines as $line) {
-                $line = trim(wp_strip_all_tags($line));
-                if ($line === '') {
-                    continue;
-                }
-                $topics[] = [
-                    'topic' => $line,
-                    'tone'  => sanitize_key($this->options['tone'] ?? 'standard'),
-                    'style' => 'standard',
-                ];
+        foreach ($posted_topics as $topic_text) {
+            $topic_text = trim(wp_strip_all_tags((string) $topic_text));
+
+            if ($topic_text === '') {
+                continue;
             }
+
+            $topics[] = [
+                'topic' => $topic_text,
+                'tone'  => $default_tone,
+                'style' => 'standard',
+            ];
         }
 
-        $this->options['topics'] = array_values($topics);
+        $topics = array_slice(array_values($topics), 0, 10);
+        $this->options['topics'] = $topics;
+
+        if (!isset($this->options['history']) || !is_array($this->options['history'])) {
+            $this->options['history'] = [];
+        }
+
         update_option(WABE_OPTION, $this->options);
-
-        if (class_exists('WABE_Logger') && method_exists('WABE_Logger', 'info')) {
-            WABE_Logger::info('Topics saved. Count=' . count($topics));
-        }
 
         wp_safe_redirect(admin_url('admin.php?page=wabe-topics&updated=1'));
         exit;

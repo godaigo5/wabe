@@ -115,12 +115,18 @@ class WABE_Image
             return $content;
         }
 
-        $plan  = sanitize_key((string) ($args['plan'] ?? 'free'));
-        $topic = trim((string) ($args['topic'] ?? ''));
-        $title = trim((string) ($args['title'] ?? ''));
+        $plan     = sanitize_key((string) ($args['plan'] ?? 'free'));
+        $topic    = trim((string) ($args['topic'] ?? ''));
+        $title    = trim((string) ($args['title'] ?? ''));
+        $language = trim((string) ($args['language'] ?? ''));
 
         $limit = $this->get_in_article_image_limit_by_plan($plan);
         if ($limit < 1) {
+            return $content;
+        }
+
+        if (strpos($content, 'wabe-inline-unsplash-image') !== false) {
+            $this->log_info('Unsplash: skipped because inline image already exists');
             return $content;
         }
 
@@ -130,32 +136,48 @@ class WABE_Image
             return $content;
         }
 
-        // h2優先で候補を組み立てる
         $candidate_headings = $this->select_unsplash_target_headings($headings, $limit);
         if (empty($candidate_headings)) {
             $this->log_info('Unsplash: no candidate headings selected');
             return $content;
         }
 
-        $insertions = [];
+        $insertions     = [];
         $used_photo_ids = [];
-        $used_queries = [];
+        $used_queries   = [];
 
         foreach ($candidate_headings as $heading) {
             if (count($insertions) >= $limit) {
                 break;
             }
 
-            $query = $this->build_unsplash_query($heading['text'], $topic, $title);
-            if ($query === '' || isset($used_queries[$query])) {
-                $this->log_info('Unsplash: skipped query duplicate/empty - ' . $query);
+            $queries = $this->build_unsplash_queries($heading['text'], $topic, $title, $language);
+            if (empty($queries)) {
+                $this->log_info('Unsplash: no query candidates for heading=' . $heading['text']);
                 continue;
             }
-            $used_queries[$query] = true;
 
-            $photo = $this->search_unsplash_photo($query, array_keys($used_photo_ids));
+            $photo = false;
+            $used_query = '';
+
+            foreach ($queries as $query) {
+                $query = trim((string) $query);
+                if ($query === '' || isset($used_queries[$query])) {
+                    continue;
+                }
+
+                $used_queries[$query] = true;
+                $this->log_info('Unsplash: searching query=' . $query);
+
+                $photo = $this->search_unsplash_photo($query, array_keys($used_photo_ids));
+                if ($photo) {
+                    $used_query = $query;
+                    break;
+                }
+            }
+
             if (!$photo) {
-                $this->log_info('Unsplash: no photo found for query - ' . $query);
+                $this->log_info('Unsplash: no photo found for heading=' . $heading['text']);
                 continue;
             }
 
@@ -178,10 +200,40 @@ class WABE_Image
             $this->log_info(
                 'Unsplash: selected heading tag=' . $heading['tag'] .
                     ' index=' . (int) $heading['index'] .
-                    ' text=' . $heading['text']
+                    ' text=' . $heading['text'] .
+                    ' query=' . $used_query
             );
 
             $this->ping_unsplash_download($photo);
+        }
+
+        if (empty($insertions)) {
+            $fallback_heading = $candidate_headings[0] ?? null;
+            if (is_array($fallback_heading)) {
+                $fallback_queries = $this->build_unsplash_queries('', $topic, $title, $language);
+                foreach ($fallback_queries as $query) {
+                    if ($query === '' || isset($used_queries[$query])) {
+                        continue;
+                    }
+                    $used_queries[$query] = true;
+                    $this->log_info('Unsplash: fallback searching query=' . $query);
+                    $photo = $this->search_unsplash_photo($query, array_keys($used_photo_ids));
+                    if (!$photo) {
+                        continue;
+                    }
+                    $block = $this->build_unsplash_image_block($photo, (string) ($fallback_heading['text'] ?? ''));
+                    if ($block === '') {
+                        continue;
+                    }
+                    $insertions[] = [
+                        'heading_index' => (int) ($fallback_heading['index'] ?? 0),
+                        'block'         => $block,
+                    ];
+                    $this->ping_unsplash_download($photo);
+                    $this->log_info('Unsplash: fallback image inserted with query=' . $query);
+                    break;
+                }
+            }
         }
 
         if (empty($insertions)) {
@@ -194,6 +246,7 @@ class WABE_Image
 
         return $content;
     }
+
 
     /**
      * 画像機能が有効か
@@ -350,28 +403,74 @@ class WABE_Image
     /**
      * Unsplash検索クエリ生成
      */
+
+    private function build_unsplash_queries($heading, $topic, $title, $language = '')
+    {
+        $heading  = $this->normalize_unsplash_query_fragment($heading);
+        $topic    = $this->normalize_unsplash_query_fragment($topic);
+        $title    = $this->normalize_unsplash_query_fragment($title);
+        $language = trim((string) $language);
+
+        $queries = [];
+
+        $primary = $this->build_unsplash_query($heading, $topic, $title);
+        if ($primary !== '') {
+            $queries[] = $primary;
+        }
+
+        if ($heading !== '') {
+            $queries[] = $heading;
+        }
+
+        if ($topic !== '') {
+            $queries[] = $topic;
+        }
+
+        if ($title !== '') {
+            $queries[] = $title;
+        }
+
+        $queries = array_merge(
+            $queries,
+            $this->build_unsplash_keyword_fallbacks($heading),
+            $this->build_unsplash_keyword_fallbacks($topic),
+            $this->build_unsplash_keyword_fallbacks($title)
+        );
+
+        if (stripos($language, 'japanese') !== false || $this->contains_japanese($heading . ' ' . $topic . ' ' . $title)) {
+            $queries = array_merge($queries, $this->build_unsplash_japanese_fallbacks($heading, $topic, $title));
+        }
+
+        $queries[] = 'business office technology';
+        $queries[] = 'workspace laptop meeting';
+        $queries[] = 'digital marketing business';
+        $queries[] = 'automation workflow office';
+
+        $queries = array_values(array_unique(array_filter(array_map('trim', $queries))));
+
+        return array_slice($queries, 0, 12);
+    }
+
+
     private function build_unsplash_query($heading, $topic, $title)
     {
-        $heading = trim((string) $heading);
-        $topic   = trim((string) $topic);
-        $title   = trim((string) $title);
+        $heading = $this->normalize_unsplash_query_fragment($heading);
+        $topic   = $this->normalize_unsplash_query_fragment($topic);
+        $title   = $this->normalize_unsplash_query_fragment($title);
 
         $parts = [];
 
         if ($heading !== '') {
             $parts[] = $heading;
         }
+
         if ($topic !== '') {
             $parts[] = $topic;
         } elseif ($title !== '') {
             $parts[] = $title;
         }
 
-        $query = implode(' ', array_filter($parts));
-        $query = wp_strip_all_tags($query);
-        $query = preg_replace('/\s+/u', ' ', $query);
-        $query = trim((string) $query);
-
+        $query = trim((string) preg_replace('/\s+/u', ' ', implode(' ', array_filter($parts))));
         if ($query === '') {
             return '';
         }
@@ -385,9 +484,101 @@ class WABE_Image
         return $query;
     }
 
+
     /**
      * Unsplashから1枚取得
      */
+
+    private function normalize_unsplash_query_fragment($value)
+    {
+        $value = trim((string) $value);
+        $value = wp_strip_all_tags($value);
+        $value = preg_replace('/[\x{3000}\r\n\t]+/u', ' ', $value);
+        $value = preg_replace('/[「」『』【】()（）［］\[\]、。,:;!！?？]/u', ' ', $value);
+        $value = preg_replace('/\s+/u', ' ', (string) $value);
+
+        return trim((string) $value);
+    }
+
+    private function contains_japanese($value)
+    {
+        return (bool) preg_match('/[ぁ-んァ-ヶ一-龠]/u', (string) $value);
+    }
+
+    private function build_unsplash_keyword_fallbacks($text)
+    {
+        $text = strtolower($this->normalize_unsplash_query_fragment($text));
+        if ($text === '') {
+            return [];
+        }
+
+        $map = [
+            'ai'           => ['artificial intelligence technology', 'data technology'],
+            'blog'         => ['blog writing laptop', 'content marketing'],
+            'seo'          => ['search engine optimization', 'digital marketing analytics'],
+            'marketing'    => ['digital marketing business', 'marketing strategy office'],
+            'wordpress'    => ['website development laptop', 'blog website dashboard'],
+            'web'          => ['website development laptop', 'web design workspace'],
+            'tool'         => ['software dashboard office', 'business tools workspace'],
+            'tools'        => ['software dashboard office', 'business tools workspace'],
+            'automation'   => ['automation workflow office', 'business process automation'],
+            'nocode'       => ['no code app builder', 'software dashboard workspace'],
+            'no-code'      => ['no code app builder', 'software dashboard workspace'],
+            'business'     => ['business team office', 'meeting workspace'],
+            'productivity' => ['productivity workspace laptop', 'focused desk workspace'],
+            'office'       => ['modern office workspace', 'business meeting office'],
+            'finance'      => ['finance analytics dashboard', 'business charts laptop'],
+            'ranking'      => ['comparison chart laptop', 'product comparison workspace'],
+            'review'       => ['product review laptop', 'comparison workspace'],
+        ];
+
+        $queries = [];
+        foreach ($map as $needle => $fallbacks) {
+            if (strpos($text, $needle) !== false) {
+                $queries = array_merge($queries, $fallbacks);
+            }
+        }
+
+        return array_values(array_unique($queries));
+    }
+
+    private function build_unsplash_japanese_fallbacks($heading, $topic, $title)
+    {
+        $text = trim($heading . ' ' . $topic . ' ' . $title);
+        $queries = [];
+
+        $map = [
+            '業務自動化' => ['automation workflow office', 'business process automation'],
+            '自動化'     => ['automation workflow office', 'business process automation'],
+            'ノーコード' => ['no code app builder', 'software dashboard workspace'],
+            'ツール'     => ['software dashboard office', 'business tools workspace'],
+            '活用'       => ['business workflow office', 'productivity workspace laptop'],
+            '業務'       => ['business team office', 'meeting workspace'],
+            '仕事'       => ['business team office', 'modern office workspace'],
+            'ブログ'     => ['blog writing laptop', 'content marketing workspace'],
+            '記事'       => ['content writing laptop', 'blog website dashboard'],
+            'SEO'       => ['search engine optimization', 'digital marketing analytics'],
+            '集客'       => ['digital marketing business', 'marketing strategy office'],
+            '比較'       => ['comparison chart laptop', 'product comparison workspace'],
+            'ランキング' => ['comparison chart laptop', 'product comparison workspace'],
+            'AI'        => ['artificial intelligence technology', 'data technology'],
+            '画像'       => ['design creative workspace', 'photo editing laptop'],
+            'Web'       => ['website development laptop', 'web design workspace'],
+            'サイト'     => ['website development laptop', 'web design workspace'],
+            'WordPress' => ['website dashboard laptop', 'blog website dashboard'],
+            '効率化'     => ['productivity workspace laptop', 'focused desk workspace'],
+        ];
+
+        foreach ($map as $needle => $fallbacks) {
+            if (mb_strpos($text, $needle) !== false) {
+                $queries = array_merge($queries, $fallbacks);
+            }
+        }
+
+        return array_values(array_unique($queries));
+    }
+
+
     private function search_unsplash_photo($query, array $exclude_ids = [])
     {
         if ($this->unsplash_access_key === '' || $query === '') {
