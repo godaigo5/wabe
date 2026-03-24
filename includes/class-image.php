@@ -288,6 +288,7 @@ class WABE_Image
 
     /**
      * プランごとの本文画像上限
+     * H2限定・質重視のため枚数を絞る
      */
     private function get_in_article_image_limit_by_plan($plan)
     {
@@ -295,9 +296,8 @@ class WABE_Image
 
         switch ($plan) {
             case 'pro':
-                return 5;
             case 'advanced':
-                return 3;
+                return 2;
             case 'free':
             default:
                 return 1;
@@ -338,12 +338,12 @@ class WABE_Image
     }
 
     /**
-     * h2優先で本文画像を入れる見出し候補を選ぶ
+     * H2限定で本文画像を入れる見出し候補を選ぶ
      *
      * ルール:
-     * - まず h2 を優先
-     * - h2 だけで足りなければ h3 を追加
-     * - 記事内の並び順は崩さない
+     * - h2 のみ対象
+     * - 本文順を維持
+     * - limit 件まで
      *
      * @param array $headings
      * @param int   $limit
@@ -353,49 +353,20 @@ class WABE_Image
     {
         $limit = max(1, (int) $limit);
 
-        $h2 = [];
-        $h3 = [];
+        $selected = [];
 
         foreach ($headings as $heading) {
             $tag = strtolower((string) ($heading['tag'] ?? ''));
-            if ($tag === 'h2') {
-                $h2[] = $heading;
-            } elseif ($tag === 'h3') {
-                $h3[] = $heading;
+            if ($tag !== 'h2') {
+                continue;
             }
-        }
 
-        $selected = [];
+            $selected[] = $heading;
 
-        // まず h2 を優先採用
-        foreach ($h2 as $heading) {
             if (count($selected) >= $limit) {
                 break;
             }
-            $selected[] = $heading;
         }
-
-        // 足りなければ h3 を追加
-        if (count($selected) < $limit) {
-            foreach ($h3 as $heading) {
-                if (count($selected) >= $limit) {
-                    break;
-                }
-                $selected[] = $heading;
-            }
-        }
-
-        // 実際の本文順に戻す
-        usort($selected, function ($a, $b) {
-            $aIndex = (int) ($a['index'] ?? 0);
-            $bIndex = (int) ($b['index'] ?? 0);
-
-            if ($aIndex === $bIndex) {
-                return 0;
-            }
-
-            return ($aIndex < $bIndex) ? -1 : 1;
-        });
 
         return $selected;
     }
@@ -452,36 +423,64 @@ class WABE_Image
     }
 
 
+    /**
+     * Unsplash検索クエリ生成
+     * H2限定・質重視向け:
+     * - タイトル/題材/見出しからカテゴリを推定
+     * - Unsplashで拾いやすい英語クエリに寄せる
+     */
     private function build_unsplash_query($heading, $topic, $title)
     {
-        $heading = $this->normalize_unsplash_query_fragment($heading);
-        $topic   = $this->normalize_unsplash_query_fragment($topic);
-        $title   = $this->normalize_unsplash_query_fragment($title);
+        $heading = trim((string) $heading);
+        $topic   = trim((string) $topic);
+        $title   = trim((string) $title);
 
-        $parts = [];
+        $source = mb_strtolower(trim($heading . ' ' . $topic . ' ' . $title));
 
-        if ($heading !== '') {
-            $parts[] = $heading;
+        $map = [
+            'seo'                 => 'seo analytics website ranking',
+            '検索'                => 'seo analytics website ranking',
+            'キーワード'          => 'seo keyword research analytics',
+            'wordpress'           => 'wordpress website dashboard',
+            'ワードプレス'        => 'wordpress website dashboard',
+            'webサイト'           => 'business website design',
+            'ホームページ'        => 'business website design',
+            '中小企業'            => 'small business website meeting',
+            '企業'                => 'small business office teamwork',
+            '会社'                => 'small business office teamwork',
+            '集客'                => 'digital marketing strategy business',
+            'マーケティング'      => 'digital marketing strategy business',
+            'コンテンツ'          => 'content marketing blog strategy',
+            'ブログ'              => 'content marketing blog writing',
+            '記事'                => 'content marketing blog writing',
+            '自動化'              => 'business automation workflow',
+            'ai'                  => 'ai automation technology business',
+            '速度'                => 'website performance speed analytics',
+            '表示速度'            => 'website performance speed analytics',
+            'モバイル'            => 'responsive website mobile design',
+            'スマホ'              => 'responsive website mobile design',
+            'セキュリティ'        => 'website security ssl protection',
+            'ssl'                 => 'website security ssl protection',
+            'https'               => 'website security ssl protection',
+            '分析'                => 'data analytics dashboard business',
+            'アクセス解析'        => 'data analytics dashboard business',
+        ];
+
+        foreach ($map as $keyword => $query) {
+            if ($keyword !== '' && mb_stripos($source, $keyword) !== false) {
+                return $query;
+            }
         }
 
-        if ($topic !== '') {
-            $parts[] = $topic;
-        } elseif ($title !== '') {
-            $parts[] = $title;
+        // フォールバック
+        if ($title !== '') {
+            if (mb_stripos($source, 'business') !== false || mb_stripos($source, '企業') !== false || mb_stripos($source, '会社') !== false) {
+                return 'small business website strategy';
+            }
+            return 'business website technology';
         }
 
-        $query = trim((string) preg_replace('/\s+/u', ' ', implode(' ', array_filter($parts))));
-        if ($query === '') {
-            return '';
-        }
-
-        if (function_exists('mb_strlen') && mb_strlen($query) > 80) {
-            $query = mb_substr($query, 0, 80);
-        } elseif (strlen($query) > 80) {
-            $query = substr($query, 0, 80);
-        }
-
-        return $query;
+        return 'business technology';
     }
 
 
@@ -579,6 +578,10 @@ class WABE_Image
     }
 
 
+    /**
+     * Unsplashから1枚取得
+     * 汎用すぎる画像を避けて、より文脈に合う写真を優先する
+     */
     private function search_unsplash_photo($query, array $exclude_ids = [])
     {
         if ($this->unsplash_access_key === '' || $query === '') {
@@ -619,6 +622,9 @@ class WABE_Image
             return false;
         }
 
+        $best_photo = false;
+        $best_score = -9999;
+
         foreach ($json['results'] as $photo) {
             $photo_id = (string) ($photo['id'] ?? '');
             if ($photo_id !== '' && in_array($photo_id, $exclude_ids, true)) {
@@ -629,7 +635,76 @@ class WABE_Image
                 continue;
             }
 
-            return $photo;
+            $score = 0;
+
+            $alt = mb_strtolower((string) ($photo['alt_description'] ?? ''));
+            $desc = mb_strtolower((string) ($photo['description'] ?? ''));
+            $user_name = mb_strtolower((string) ($photo['user']['name'] ?? ''));
+            $blob = trim($alt . ' ' . $desc . ' ' . $user_name);
+
+            // 加点: 記事系・分析系・ビジネス系
+            $positive_words = [
+                'analytics',
+                'marketing',
+                'strategy',
+                'business',
+                'website',
+                'dashboard',
+                'data',
+                'search',
+                'seo',
+                'team',
+                'office',
+                'mobile',
+                'security',
+                'technology',
+                'writing',
+                'content'
+            ];
+
+            foreach ($positive_words as $word) {
+                if ($blob !== '' && mb_stripos($blob, $word) !== false) {
+                    $score += 2;
+                }
+            }
+
+            // 減点: 汎用ワークスペース画像に寄りすぎるもの
+            $negative_words = [
+                'laptop',
+                'desk',
+                'workspace',
+                'keyboard',
+                'coffee',
+                'notebook',
+                'macbook',
+                'monitor',
+                'table'
+            ];
+
+            foreach ($negative_words as $word) {
+                if ($blob !== '' && mb_stripos($blob, $word) !== false) {
+                    $score -= 3;
+                }
+            }
+
+            // 人物だけの雰囲気画像を少し減点
+            if ($blob !== '' && (
+                mb_stripos($blob, 'person') !== false ||
+                mb_stripos($blob, 'woman') !== false ||
+                mb_stripos($blob, 'man') !== false
+            )) {
+                $score -= 1;
+            }
+
+            if ($score > $best_score) {
+                $best_score = $score;
+                $best_photo = $photo;
+            }
+        }
+
+        if ($best_photo) {
+            $this->log_info('Unsplash: selected best-scored photo for query=' . $query . ' score=' . $best_score);
+            return $best_photo;
         }
 
         return false;

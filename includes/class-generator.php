@@ -549,8 +549,8 @@ class WABE_Generator
     {
         return [
             'min' => 18,
-            'target_max' => 25,
-            'soft_max' => 27,
+            'target_max' => 32,
+            'soft_max' => 40,
         ];
     }
 
@@ -708,23 +708,48 @@ class WABE_Generator
 
     private function fallback_title($topic, array $context)
     {
-        $topic = trim((string)$topic);
+        $topic = trim((string) $topic);
+
         if ($topic === '') {
             return 'ブログ記事';
         }
 
         $profile = $context['title_profile'];
-        $length = $this->get_visible_length($topic);
+        $length  = $this->get_visible_length($topic);
 
         if ($length < $profile['min']) {
             $topic .= 'のポイント解説';
         }
 
-        if ($this->get_visible_length($topic) > $profile['soft_max']) {
-            $topic = mb_substr($topic, 0, $profile['soft_max']);
+        if ($this->get_visible_length($topic) <= $profile['soft_max']) {
+            return trim($topic);
         }
 
-        return trim($topic);
+        // まず自然な区切りで短くする
+        $separators = ['｜', '|', '：', ':', '、', 'とは', 'の', 'を', 'で'];
+
+        foreach ($separators as $sep) {
+            $pos = mb_strpos($topic, $sep);
+            if ($pos !== false) {
+                $candidate = trim(mb_substr($topic, 0, $pos));
+                if ($candidate !== '' && $this->get_visible_length($candidate) >= $profile['min'] && $this->get_visible_length($candidate) <= $profile['soft_max']) {
+                    return $candidate;
+                }
+            }
+        }
+
+        // 機械切りの前に少し余裕を見て切る
+        $cut = mb_substr($topic, 0, $profile['soft_max']);
+
+        // 日本語の不自然な語尾を除去
+        $cut = preg_replace('/(チェ|リス|対策チ|セキュリティ対|チェックリ)$/u', '', $cut);
+        $cut = rtrim((string) $cut, " 　・,:：、/-");
+
+        if ($cut === '') {
+            $cut = mb_substr($topic, 0, max(1, $profile['soft_max'] - 2));
+        }
+
+        return trim($cut);
     }
 
     private function generate_title(array $context)
