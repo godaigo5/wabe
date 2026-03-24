@@ -184,11 +184,8 @@ class WABE_Admin
 
         $new['author_name'] = sanitize_text_field($posted['author_name'] ?? '');
 
-        $site_context = isset($posted['site_context']) ? (string) $posted['site_context'] : '';
-        $writing_rules = isset($posted['writing_rules']) ? (string) $posted['writing_rules'] : '';
-
-        $new['site_context'] = base64_encode(wp_kses_post($site_context));
-        $new['writing_rules'] = base64_encode(wp_kses_post($writing_rules));
+        $new['site_context'] = isset($posted['site_context']) ? (string) $posted['site_context'] : '';
+        $new['writing_rules'] = isset($posted['writing_rules']) ? (string) $posted['writing_rules'] : '';
 
         $new['weekly_posts'] = max(1, min(
             (int) ($features['weekly_posts_max'] ?? 1),
