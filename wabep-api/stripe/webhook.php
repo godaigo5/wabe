@@ -2,59 +2,53 @@
 
 declare(strict_types=1);
 
-ini_set('display_errors', '0');
-date_default_timezone_set('Asia/Tokyo');
+$config = require dirname(__DIR__) . '/config/config.php';
+
+date_default_timezone_set((string)($config['app']['timezone'] ?? 'Asia/Tokyo'));
+
+$debug = (bool)($config['app']['debug'] ?? false);
+ini_set('display_errors', $debug ? '1' : '0');
+error_reporting(E_ALL);
 
 require_once __DIR__ . '/stripe-php/init.php';
-require_once __DIR__ . '/../config/config.php';
-$config = require __DIR__ . '/../config/config.php';
 
-$stripeSecretKey = $config['stripe']['secret_key'] ?? '';
-$stripeWebhookSecret = $config['stripe']['webhook_secret'] ?? '';
+$stripeSecretKey     = (string)($config['stripe']['secret_key'] ?? '');
+$stripeWebhookSecret = (string)($config['stripe']['webhook_secret'] ?? '');
+
+$dbHost    = (string)($config['db']['host'] ?? '');
+$dbPort    = (int)($config['db']['port'] ?? 3306);
+$dbName    = (string)($config['db']['name'] ?? '');
+$dbUser    = (string)($config['db']['user'] ?? '');
+$dbPass    = (string)($config['db']['pass'] ?? '');
+$dbCharset = (string)($config['db']['charset'] ?? 'utf8mb4');
+
+$mailFromEmail = (string)($config['mail']['from_email'] ?? 'no-reply@d-create.online');
+$mailFromName  = (string)($config['mail']['from_name'] ?? 'WP AI Blog Engine');
 
 if ($stripeSecretKey === '' || $stripeWebhookSecret === '') {
     http_response_code(500);
-    exit('Stripe keys are not configured.');
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode([
+        'success' => false,
+        'message' => 'Stripe config is empty.',
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    exit;
 }
-
-/**
- * =========================
- * 設定
- * =========================
- */
-
-const DB_HOST = 'mysql328.phy.lolipop.lan';
-const DB_NAME = 'LAA1305650-wabepapi';
-const DB_USER = 'LAA1305650';
-const DB_PASS = '8JGZMUKfyNcp1a0Y';
-const DB_CHARSET = 'utf8mb4';
-
-const LICENSE_EMAIL_FROM = 'no-reply@d-create.online';
-const LICENSE_EMAIL_NAME = 'WP AI Blog Engine';
 
 \Stripe\Stripe::setApiKey($stripeSecretKey);
 
 /**
- * Stripe Price ID -> プラン名 の対応
- * 必ずあなたの本物のPrice IDに置き換えてください
+ * =========================
+ * 共通
+ * =========================
  */
-function wabe_price_plan_map(): array
+function wabe_log(string $message): void
 {
-    return [
-        'price_1TClRwQOghVIYdnPrzvrJ8Aa'  => 'advanced-monthly',
-        'price_1TClRJQOghVIYdnP5RxwLydi'   => 'advanced-yearly',
-        'price_1TClekQOghVIYdnPCCQU3PKq' => 'advanced-lifetime',
-        'price_1TClSrQOghVIYdnPUInUClyt'       => 'pro-monthly',
-        'price_1TClSOQOghVIYdnPbiJssYuG'        => 'pro-yearly',
-        'price_1TCleAQOghVIYdnPAuPU26lp'      => 'pro-lifetime',
-    ];
+    $file = __DIR__ . '/webhook.log';
+    $line = '[' . date('Y-m-d H:i:s') . '] ' . $message . PHP_EOL;
+    file_put_contents($file, $line, FILE_APPEND);
 }
 
-/**
- * =========================
- * 汎用
- * =========================
- */
 function wabe_json_response(int $status, array $data): void
 {
     http_response_code($status);
@@ -63,34 +57,64 @@ function wabe_json_response(int $status, array $data): void
     exit;
 }
 
-function wabe_log(string $message): void
-{
-    $logFile = __DIR__ . '/webhook.log';
-    $line = '[' . date('Y-m-d H:i:s') . '] ' . $message . PHP_EOL;
-    file_put_contents($logFile, $line, FILE_APPEND);
-}
-
 function wabe_db(): PDO
 {
     static $pdo = null;
+
+    global $dbHost, $dbPort, $dbName, $dbUser, $dbPass, $dbCharset;
 
     if ($pdo instanceof PDO) {
         return $pdo;
     }
 
     $dsn = sprintf(
-        'mysql:host=%s;dbname=%s;charset=%s',
-        DB_HOST,
-        DB_NAME,
-        DB_CHARSET
+        'mysql:host=%s;port=%d;dbname=%s;charset=%s',
+        $dbHost,
+        $dbPort,
+        $dbName,
+        $dbCharset
     );
 
-    $pdo = new PDO($dsn, DB_USER, DB_PASS, [
+    $pdo = new PDO($dsn, $dbUser, $dbPass, [
         PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
     ]);
 
     return $pdo;
+}
+
+function wabe_table_exists(string $table): bool
+{
+    $pdo = wabe_db();
+    $stmt = $pdo->prepare('SHOW TABLES LIKE :table');
+    $stmt->execute([
+        ':table' => $table,
+    ]);
+
+    return (bool)$stmt->fetchColumn();
+}
+
+function wabe_get_table_columns(string $table): array
+{
+    static $cache = [];
+
+    if (isset($cache[$table])) {
+        return $cache[$table];
+    }
+
+    $pdo = wabe_db();
+    $stmt = $pdo->query("SHOW COLUMNS FROM `{$table}`");
+    $rows = $stmt->fetchAll();
+
+    $columns = [];
+    foreach ($rows as $row) {
+        if (!empty($row['Field'])) {
+            $columns[] = $row['Field'];
+        }
+    }
+
+    $cache[$table] = $columns;
+    return $columns;
 }
 
 function wabe_random_string(int $length = 24): string
@@ -106,64 +130,74 @@ function wabe_random_string(int $length = 24): string
     return $out;
 }
 
-function wabe_generate_license_key(string $plan): string
+function wabe_generate_license_key(string $plan, string $billingCycle): string
 {
-    $prefixMap = [
-        'free'              => 'WABE-FREE',
-        'advanced-monthly'  => 'WABE-ADV-M',
-        'advanced-yearly'   => 'WABE-ADV-Y',
-        'advanced-lifetime' => 'WABE-ADV-L',
-        'pro-monthly'       => 'WABE-PRO-M',
-        'pro-yearly'        => 'WABE-PRO-Y',
-        'pro-lifetime'      => 'WABE-PRO-L',
-    ];
+    if ($plan === 'advanced') {
+        $prefix = 'WABE-ADV';
+    } elseif ($plan === 'pro') {
+        $prefix = 'WABE-PRO';
+    } else {
+        $prefix = 'WABE-FREE';
+    }
 
-    $prefix = $prefixMap[$plan] ?? 'WABE-LIC';
-    return $prefix . '-' . substr(wabe_random_string(20), 0, 4) . '-' . substr(wabe_random_string(20), 0, 4) . '-' . substr(wabe_random_string(20), 0, 4);
+    if ($billingCycle === 'monthly') {
+        $cycle = 'M';
+    } elseif ($billingCycle === 'yearly') {
+        $cycle = 'Y';
+    } elseif ($billingCycle === 'lifetime') {
+        $cycle = 'L';
+    } else {
+        $cycle = 'F';
+    }
+
+    return $prefix . '-' . $cycle . '-' .
+        substr(wabe_random_string(12), 0, 4) . '-' .
+        substr(wabe_random_string(12), 0, 4) . '-' .
+        substr(wabe_random_string(12), 0, 4);
 }
 
-function wabe_plan_type(string $plan): string
-{
-    if (str_contains($plan, 'monthly')) {
-        return 'monthly';
-    }
-    if (str_contains($plan, 'yearly')) {
-        return 'yearly';
-    }
-    if (str_contains($plan, 'lifetime')) {
-        return 'lifetime';
-    }
-    return 'free';
-}
-
-function wabe_plan_tier(string $plan): string
-{
-    if (str_starts_with($plan, 'pro')) {
-        return 'pro';
-    }
-    if (str_starts_with($plan, 'advanced')) {
-        return 'advanced';
-    }
-    return 'free';
-}
-
-function wabe_calc_expires_at(string $plan): ?string
+function wabe_calc_expires_at(?string $billingCycle): ?string
 {
     $now = new DateTimeImmutable('now');
 
-    if (str_contains($plan, 'monthly')) {
+    if ($billingCycle === 'monthly') {
         return $now->modify('+1 month')->format('Y-m-d H:i:s');
     }
 
-    if (str_contains($plan, 'yearly')) {
+    if ($billingCycle === 'yearly') {
         return $now->modify('+1 year')->format('Y-m-d H:i:s');
     }
 
-    if (str_contains($plan, 'lifetime')) {
+    if ($billingCycle === 'lifetime' || $billingCycle === 'free') {
         return null;
     }
 
     return null;
+}
+
+function wabe_price_map(array $config): array
+{
+    $prices = $config['stripe']['prices'] ?? [];
+    $mapped = [];
+
+    foreach ($prices as $priceId => $row) {
+        $mapped[$priceId] = [
+            'plan' => (string)($row['plan'] ?? ''),
+            'billing_cycle' => (string)($row['billing'] ?? ''),
+        ];
+    }
+
+    return $mapped;
+}
+
+function wabe_find_plan_data(?string $priceId, array $config): ?array
+{
+    if (!$priceId) {
+        return null;
+    }
+
+    $map = wabe_price_map($config);
+    return $map[$priceId] ?? null;
 }
 
 function wabe_get_price_id_from_session(string $sessionId): ?string
@@ -174,74 +208,93 @@ function wabe_get_price_id_from_session(string $sessionId): ?string
         ]);
 
         if (!empty($lineItems->data[0]->price->id)) {
-            return (string) $lineItems->data[0]->price->id;
+            return (string)$lineItems->data[0]->price->id;
         }
     } catch (Throwable $e) {
-        wabe_log('Line item retrieval failed: ' . $e->getMessage());
+        wabe_log('Line items fetch failed: ' . $e->getMessage());
     }
 
     return null;
 }
 
-function wabe_find_plan_by_price_id(?string $priceId): ?string
-{
-    if (!$priceId) {
-        return null;
-    }
-
-    $map = wabe_price_plan_map();
-    return $map[$priceId] ?? null;
-}
-
-function wabe_order_exists(string $checkoutSessionId): bool
+/**
+ * =========================
+ * stripe_orders
+ * =========================
+ */
+function wabe_order_exists_by_event(string $eventId): bool
 {
     $pdo = wabe_db();
 
-    $stmt = $pdo->prepare('SELECT id FROM stripe_orders WHERE checkout_session_id = :checkout_session_id LIMIT 1');
+    $stmt = $pdo->prepare("
+        SELECT id
+        FROM stripe_orders
+        WHERE stripe_event_id = :stripe_event_id
+        LIMIT 1
+    ");
     $stmt->execute([
-        ':checkout_session_id' => $checkoutSessionId,
+        ':stripe_event_id' => $eventId,
     ]);
 
-    return (bool) $stmt->fetch();
+    return (bool)$stmt->fetch();
 }
 
-function wabe_insert_order(array $order): int
+function wabe_order_exists_by_session(string $checkoutSessionId): bool
+{
+    $pdo = wabe_db();
+
+    $stmt = $pdo->prepare("
+        SELECT id
+        FROM stripe_orders
+        WHERE stripe_checkout_session_id = :stripe_checkout_session_id
+        LIMIT 1
+    ");
+    $stmt->execute([
+        ':stripe_checkout_session_id' => $checkoutSessionId,
+    ]);
+
+    return (bool)$stmt->fetch();
+}
+
+function wabe_insert_order(array $data): int
 {
     $pdo = wabe_db();
 
     $sql = "
         INSERT INTO stripe_orders (
-            checkout_session_id,
-            payment_intent_id,
-            subscription_id,
-            customer_id,
+            stripe_event_id,
+            stripe_checkout_session_id,
+            stripe_payment_intent_id,
+            stripe_subscription_id,
+            stripe_customer_id,
             customer_email,
-            customer_name,
-            payment_link_id,
-            price_id,
             plan,
+            billing_cycle,
+            price_id,
             amount_total,
             currency,
             payment_status,
-            stripe_created_at,
-            raw_payload,
+            license_id,
+            license_key,
+            status,
             created_at,
             updated_at
         ) VALUES (
-            :checkout_session_id,
-            :payment_intent_id,
-            :subscription_id,
-            :customer_id,
+            :stripe_event_id,
+            :stripe_checkout_session_id,
+            :stripe_payment_intent_id,
+            :stripe_subscription_id,
+            :stripe_customer_id,
             :customer_email,
-            :customer_name,
-            :payment_link_id,
-            :price_id,
             :plan,
+            :billing_cycle,
+            :price_id,
             :amount_total,
             :currency,
             :payment_status,
-            :stripe_created_at,
-            :raw_payload,
+            :license_id,
+            :license_key,
+            :status,
             NOW(),
             NOW()
         )
@@ -249,81 +302,130 @@ function wabe_insert_order(array $order): int
 
     $stmt = $pdo->prepare($sql);
     $stmt->execute([
-        ':checkout_session_id' => $order['checkout_session_id'],
-        ':payment_intent_id'   => $order['payment_intent_id'],
-        ':subscription_id'     => $order['subscription_id'],
-        ':customer_id'         => $order['customer_id'],
-        ':customer_email'      => $order['customer_email'],
-        ':customer_name'       => $order['customer_name'],
-        ':payment_link_id'     => $order['payment_link_id'],
-        ':price_id'            => $order['price_id'],
-        ':plan'                => $order['plan'],
-        ':amount_total'        => $order['amount_total'],
-        ':currency'            => $order['currency'],
-        ':payment_status'      => $order['payment_status'],
-        ':stripe_created_at'   => $order['stripe_created_at'],
-        ':raw_payload'         => $order['raw_payload'],
+        ':stripe_event_id'            => $data['stripe_event_id'],
+        ':stripe_checkout_session_id' => $data['stripe_checkout_session_id'],
+        ':stripe_payment_intent_id'   => $data['stripe_payment_intent_id'],
+        ':stripe_subscription_id'     => $data['stripe_subscription_id'],
+        ':stripe_customer_id'         => $data['stripe_customer_id'],
+        ':customer_email'             => $data['customer_email'],
+        ':plan'                       => $data['plan'],
+        ':billing_cycle'              => $data['billing_cycle'],
+        ':price_id'                   => $data['price_id'],
+        ':amount_total'               => $data['amount_total'],
+        ':currency'                   => $data['currency'],
+        ':payment_status'             => $data['payment_status'],
+        ':license_id'                 => $data['license_id'],
+        ':license_key'                => $data['license_key'],
+        ':status'                     => $data['status'],
     ]);
 
-    return (int) $pdo->lastInsertId();
+    return (int)$pdo->lastInsertId();
 }
 
-function wabe_insert_license(array $license): int
+function wabe_update_order_license(int $orderId, ?int $licenseId, ?string $licenseKey): void
 {
     $pdo = wabe_db();
 
-    $sql = "
-        INSERT INTO licenses (
-            order_id,
-            license_key,
-            plan,
-            tier,
-            billing_type,
-            customer_email,
-            customer_name,
-            status,
-            max_activations,
-            current_activations,
-            expires_at,
-            created_at,
-            updated_at
-        ) VALUES (
-            :order_id,
-            :license_key,
-            :plan,
-            :tier,
-            :billing_type,
-            :customer_email,
-            :customer_name,
-            :status,
-            :max_activations,
-            :current_activations,
-            :expires_at,
-            NOW(),
-            NOW()
-        )
-    ";
-
-    $stmt = $pdo->prepare($sql);
+    $stmt = $pdo->prepare("
+        UPDATE stripe_orders
+        SET license_id = :license_id,
+            license_key = :license_key,
+            updated_at = NOW()
+        WHERE id = :id
+    ");
     $stmt->execute([
-        ':order_id'             => $license['order_id'],
-        ':license_key'          => $license['license_key'],
-        ':plan'                 => $license['plan'],
-        ':tier'                 => $license['tier'],
-        ':billing_type'         => $license['billing_type'],
-        ':customer_email'       => $license['customer_email'],
-        ':customer_name'        => $license['customer_name'],
-        ':status'               => $license['status'],
-        ':max_activations'      => $license['max_activations'],
-        ':current_activations'  => $license['current_activations'],
-        ':expires_at'           => $license['expires_at'],
+        ':license_id'  => $licenseId,
+        ':license_key' => $licenseKey,
+        ':id'          => $orderId,
     ]);
-
-    return (int) $pdo->lastInsertId();
 }
 
-function wabe_send_license_email(string $toEmail, string $customerName, string $licenseKey, string $plan): bool
+/**
+ * =========================
+ * licenses
+ * =========================
+ */
+function wabe_insert_license_dynamic(array $payload): ?int
 {
+    if (!wabe_table_exists('licenses')) {
+        wabe_log('licenses table not found. skip insert.');
+        return null;
+    }
+
+    $columns = wabe_get_table_columns('licenses');
+    if (empty($columns)) {
+        wabe_log('licenses columns not found. skip insert.');
+        return null;
+    }
+
+    $map = [
+        'license_key'         => $payload['license_key'] ?? null,
+        'plan'                => $payload['plan'] ?? null,
+        'status'              => $payload['status'] ?? 'active',
+        'customer_email'      => $payload['customer_email'] ?? null,
+        'customer_name'       => $payload['customer_name'] ?? null,
+        'expires_at'          => $payload['expires_at'] ?? null,
+        'billing_cycle'       => $payload['billing_cycle'] ?? null,
+        'tier'                => $payload['plan'] ?? null,
+        'domain_limit'        => 1,
+        'site_limit'          => 1,
+        'max_activations'     => 1,
+        'current_activations' => 0,
+        'order_id'            => $payload['order_id'] ?? null,
+        'stripe_order_id'     => $payload['order_id'] ?? null,
+        'stripe_customer_id'  => $payload['stripe_customer_id'] ?? null,
+        'created_at'          => date('Y-m-d H:i:s'),
+        'updated_at'          => date('Y-m-d H:i:s'),
+    ];
+
+    $insert = [];
+    foreach ($map as $column => $value) {
+        if (in_array($column, $columns, true)) {
+            $insert[$column] = $value;
+        }
+    }
+
+    if (empty($insert)) {
+        wabe_log('No matching columns for licenses insert.');
+        return null;
+    }
+
+    $colSql = [];
+    $valSql = [];
+    $binds  = [];
+
+    foreach ($insert as $column => $value) {
+        $colSql[] = "`{$column}`";
+        $valSql[] = ':' . $column;
+        $binds[':' . $column] = $value;
+    }
+
+    $sql = sprintf(
+        'INSERT INTO `licenses` (%s) VALUES (%s)',
+        implode(', ', $colSql),
+        implode(', ', $valSql)
+    );
+
+    $pdo = wabe_db();
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($binds);
+
+    return (int)$pdo->lastInsertId();
+}
+
+/**
+ * =========================
+ * mail
+ * =========================
+ */
+function wabe_send_license_email(
+    string $toEmail,
+    string $licenseKey,
+    string $plan,
+    string $billingCycle
+): bool {
+    global $mailFromEmail, $mailFromName;
+
     if ($toEmail === '') {
         return false;
     }
@@ -331,34 +433,37 @@ function wabe_send_license_email(string $toEmail, string $customerName, string $
     $subject = '【WP AI Blog Engine】ライセンスキーのお知らせ';
 
     $body = [];
-    $body[] = $customerName !== '' ? $customerName . ' 様' : 'お客様';
+    $body[] = 'WP AI Blog Engine をご購入いただきありがとうございます。';
     $body[] = '';
-    $body[] = 'この度は WP AI Blog Engine をご購入いただきありがとうございます。';
-    $body[] = '';
-    $body[] = 'ご購入プラン: ' . $plan;
+    $body[] = 'プラン: ' . $plan;
+    $body[] = '契約種別: ' . $billingCycle;
     $body[] = 'ライセンスキー: ' . $licenseKey;
     $body[] = '';
-    $body[] = 'プラグイン管理画面にライセンスキーを入力してご利用ください。';
-    $body[] = '';
     $body[] = '会員ページ: https://wabe.d-create.online/member/';
+    $body[] = 'プラグイン管理画面でもライセンス登録が可能です。';
     $body[] = '';
     $body[] = '※このメールは自動送信です。';
 
     $headers = [];
     $headers[] = 'MIME-Version: 1.0';
     $headers[] = 'Content-Type: text/plain; charset=UTF-8';
-    $headers[] = 'From: ' . LICENSE_EMAIL_NAME . ' <' . LICENSE_EMAIL_FROM . '>';
+    $headers[] = 'From: ' . $mailFromName . ' <' . $mailFromEmail . '>';
 
-    return mail($toEmail, mb_encode_mimeheader($subject, 'UTF-8'), implode("\n", $body), implode("\r\n", $headers));
+    return mail(
+        $toEmail,
+        mb_encode_mimeheader($subject, 'UTF-8'),
+        implode("\n", $body),
+        implode("\r\n", $headers)
+    );
 }
 
 /**
  * =========================
- * メイン処理
+ * main
  * =========================
  */
-$payload    = @file_get_contents('php://input');
-$sigHeader  = $_SERVER['HTTP_STRIPE_SIGNATURE'] ?? '';
+$payload   = @file_get_contents('php://input');
+$sigHeader = $_SERVER['HTTP_STRIPE_SIGNATURE'] ?? '';
 
 if ($payload === false || $payload === '') {
     wabe_json_response(400, [
@@ -394,109 +499,132 @@ try {
 }
 
 try {
+    wabe_log('Event received: ' . $event->type . ' / ' . $event->id);
+
     switch ($event->type) {
         case 'checkout.session.completed':
             /** @var \Stripe\Checkout\Session $session */
             $session = $event->data->object;
 
-            $checkoutSessionId = (string) ($session->id ?? '');
-            if ($checkoutSessionId === '') {
+            $eventId           = (string)($event->id ?? '');
+            $checkoutSessionId = (string)($session->id ?? '');
+            $paymentStatus     = (string)($session->payment_status ?? '');
+            $sessionStatus     = (string)($session->status ?? '');
+
+            if ($eventId === '' || $checkoutSessionId === '') {
+                wabe_log('Missing event or session ID.');
                 wabe_json_response(400, [
                     'success' => false,
-                    'message' => 'Session ID not found.',
+                    'message' => 'Missing event/session ID.',
                 ]);
             }
 
-            if (wabe_order_exists($checkoutSessionId)) {
-                wabe_log('Already processed session: ' . $checkoutSessionId);
+            if (wabe_order_exists_by_event($eventId) || wabe_order_exists_by_session($checkoutSessionId)) {
+                wabe_log('Already processed. event=' . $eventId . ' session=' . $checkoutSessionId);
                 wabe_json_response(200, [
                     'success' => true,
                     'message' => 'Already processed.',
                 ]);
             }
 
-            $paymentStatus = (string) ($session->payment_status ?? '');
-            $status        = (string) ($session->status ?? '');
-
-            if ($paymentStatus !== 'paid' || $status !== 'complete') {
-                wabe_log('Session not paid/complete: ' . $checkoutSessionId . ' payment_status=' . $paymentStatus . ' status=' . $status);
+            if ($paymentStatus !== 'paid' || $sessionStatus !== 'complete') {
+                wabe_log('Ignored unpaid/incomplete session. payment_status=' . $paymentStatus . ' status=' . $sessionStatus);
                 wabe_json_response(200, [
                     'success' => true,
-                    'message' => 'Ignored because payment is not completed yet.',
+                    'message' => 'Ignored because payment is not completed.',
                 ]);
             }
 
-            $priceId = wabe_get_price_id_from_session($checkoutSessionId);
-            $plan    = wabe_find_plan_by_price_id($priceId);
+            $priceId  = wabe_get_price_id_from_session($checkoutSessionId);
+            $planData = wabe_find_plan_data($priceId, $config);
 
-            if (!$plan) {
-                wabe_log('Unknown plan. session=' . $checkoutSessionId . ' price_id=' . (string)$priceId);
+            if (!$planData) {
+                wabe_log('Unknown price_id: ' . (string)$priceId);
                 wabe_json_response(400, [
                     'success' => false,
-                    'message' => 'Unknown price_id. Please update price map.',
+                    'message' => 'Unknown price_id. Update config.local.php stripe.prices.',
                     'price_id' => $priceId,
                 ]);
             }
 
-            $customerEmail = (string) (
+            $plan         = (string)$planData['plan'];
+            $billingCycle = (string)$planData['billing_cycle'];
+
+            $customerEmail = (string)(
                 $session->customer_details->email
                 ?? $session->customer_email
                 ?? ''
             );
 
-            $customerName = (string) (
+            $customerName = (string)(
                 $session->customer_details->name
                 ?? ''
             );
 
+            $licenseKey = wabe_generate_license_key($plan, $billingCycle);
+
             $orderId = wabe_insert_order([
-                'checkout_session_id' => $checkoutSessionId,
-                'payment_intent_id'   => (string) ($session->payment_intent ?? ''),
-                'subscription_id'     => (string) ($session->subscription ?? ''),
-                'customer_id'         => (string) ($session->customer ?? ''),
-                'customer_email'      => $customerEmail,
-                'customer_name'       => $customerName,
-                'payment_link_id'     => (string) ($session->payment_link ?? ''),
-                'price_id'            => (string) ($priceId ?? ''),
-                'plan'                => $plan,
-                'amount_total'        => (int) ($session->amount_total ?? 0),
-                'currency'            => strtoupper((string) ($session->currency ?? 'JPY')),
-                'payment_status'      => $paymentStatus,
-                'stripe_created_at'   => isset($session->created) ? date('Y-m-d H:i:s', (int)$session->created) : date('Y-m-d H:i:s'),
-                'raw_payload'         => $payload,
+                'stripe_event_id'            => $eventId,
+                'stripe_checkout_session_id' => $checkoutSessionId,
+                'stripe_payment_intent_id'   => (string)($session->payment_intent ?? ''),
+                'stripe_subscription_id'     => (string)($session->subscription ?? ''),
+                'stripe_customer_id'         => (string)($session->customer ?? ''),
+                'customer_email'             => $customerEmail,
+                'plan'                       => $plan,
+                'billing_cycle'              => $billingCycle,
+                'price_id'                   => (string)$priceId,
+                'amount_total'               => (int)($session->amount_total ?? 0),
+                'currency'                   => strtoupper((string)($session->currency ?? 'USD')),
+                'payment_status'             => $paymentStatus,
+                'license_id'                 => null,
+                'license_key'                => $licenseKey,
+                'status'                     => 'paid',
             ]);
 
-            $licenseKey = wabe_generate_license_key($plan);
-
-            $licenseId = wabe_insert_license([
-                'order_id'             => $orderId,
-                'license_key'          => $licenseKey,
-                'plan'                 => $plan,
-                'tier'                 => wabe_plan_tier($plan),
-                'billing_type'         => wabe_plan_type($plan),
-                'customer_email'       => $customerEmail,
-                'customer_name'        => $customerName,
-                'status'               => 'active',
-                'max_activations'      => 1,
-                'current_activations'  => 0,
-                'expires_at'           => wabe_calc_expires_at($plan),
+            $licenseId = wabe_insert_license_dynamic([
+                'order_id'           => $orderId,
+                'license_key'        => $licenseKey,
+                'plan'               => $plan,
+                'billing_cycle'      => $billingCycle,
+                'status'             => 'active',
+                'customer_email'     => $customerEmail,
+                'customer_name'      => $customerName,
+                'expires_at'         => wabe_calc_expires_at($billingCycle),
+                'stripe_customer_id' => (string)($session->customer ?? ''),
             ]);
 
-            wabe_send_license_email($customerEmail, $customerName, $licenseKey, $plan);
+            wabe_update_order_license($orderId, $licenseId, $licenseKey);
 
-            wabe_log('Processed session=' . $checkoutSessionId . ' order_id=' . $orderId . ' license_id=' . $licenseId . ' plan=' . $plan);
+            $mailSent = wabe_send_license_email(
+                $customerEmail,
+                $licenseKey,
+                $plan,
+                $billingCycle
+            );
+
+            wabe_log(
+                'Processed session=' . $checkoutSessionId .
+                    ' order_id=' . $orderId .
+                    ' license_id=' . (string)$licenseId .
+                    ' plan=' . $plan .
+                    ' billing_cycle=' . $billingCycle .
+                    ' price_id=' . (string)$priceId .
+                    ' mail=' . ($mailSent ? 'sent' : 'failed')
+            );
 
             wabe_json_response(200, [
-                'success'    => true,
-                'message'    => 'Webhook processed successfully.',
-                'order_id'   => $orderId,
-                'license_id' => $licenseId,
-                'plan'       => $plan,
+                'success'       => true,
+                'message'       => 'Webhook processed successfully.',
+                'order_id'      => $orderId,
+                'license_id'    => $licenseId,
+                'license_key'   => $licenseKey,
+                'plan'          => $plan,
+                'billing_cycle' => $billingCycle,
             ]);
             break;
 
         default:
-            wabe_log('Unhandled event type: ' . $event->type);
+            wabe_log('Ignored event type: ' . $event->type);
             wabe_json_response(200, [
                 'success' => true,
                 'message' => 'Event ignored.',

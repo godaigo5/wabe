@@ -366,14 +366,20 @@ class WABE_Admin
         }
 
         if (class_exists('WABE_License')) {
-            $license = new WABE_License();
-            if (class_exists('WABE_License') && method_exists('WABE_License', 'clear_cache')) {
+            if (method_exists('WABE_License', 'clear_cache')) {
                 WABE_License::clear_cache();
             }
-            if (class_exists('WABE_License') && method_exists('WABE_License', 'sync')) {
-                WABE_License::sync(true);
+
+            if (method_exists('WABE_License', 'sync')) {
+                $result = WABE_License::sync(true);
+
+                if (class_exists('WABE_Logger') && method_exists('WABE_Logger', 'info')) {
+                    WABE_Logger::info('License refresh result: ' . wp_json_encode($result, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+                }
             }
         }
+
+        $this->reload_options();
 
         wp_safe_redirect(admin_url('admin.php?page=wabe-license&refreshed=1'));
         exit;
@@ -381,11 +387,9 @@ class WABE_Admin
 
     public function get_plan()
     {
-        if (class_exists('WABE_License') && method_exists('WABE_License', 'current_plan')) {
-            $plan = 'free';
-            if (class_exists('WABE_License') && method_exists('WABE_License', 'get_plan')) {
-                $plan = WABE_License::get_plan();
-            }
+        if (class_exists('WABE_License') && method_exists('WABE_License', 'get_plan')) {
+            $plan = WABE_License::get_plan();
+
             if (is_string($plan) && $plan !== '') {
                 return sanitize_key($plan);
             }
@@ -462,11 +466,32 @@ class WABE_Admin
             $opt = [];
         }
 
+        $plan = sanitize_key($opt['plan'] ?? 'free');
+
+        if (class_exists('WABE_License') && method_exists('WABE_License', 'get_cached_license_data')) {
+            $cached = WABE_License::get_cached_license_data();
+
+            if (is_array($cached) && !empty($cached)) {
+                return [
+                    'status'         => sanitize_text_field($cached['status'] ?? ($opt['license_status'] ?? 'inactive')),
+                    'plan'           => sanitize_key($cached['plan'] ?? $plan),
+                    'checked_at'     => sanitize_text_field($cached['checked_at'] ?? ($opt['license_checked_at'] ?? '')),
+                    'expires_at'     => sanitize_text_field($cached['expires_at'] ?? ($opt['license_expires_at'] ?? '')),
+                    'customer_email' => sanitize_text_field($cached['customer_email'] ?? ($opt['license_customer_email'] ?? '')),
+                    'license_key'    => sanitize_text_field($cached['license_key'] ?? ($opt['license_key'] ?? '')),
+                    'message'        => sanitize_text_field($cached['message'] ?? ''),
+                ];
+            }
+        }
+
         return [
             'status'         => sanitize_text_field($opt['license_status'] ?? 'inactive'),
+            'plan'           => $plan,
             'checked_at'     => sanitize_text_field($opt['license_checked_at'] ?? ''),
+            'expires_at'     => sanitize_text_field($opt['license_expires_at'] ?? ''),
             'customer_email' => sanitize_text_field($opt['license_customer_email'] ?? ''),
             'license_key'    => sanitize_text_field($opt['license_key'] ?? ''),
+            'message'        => '',
         ];
     }
 

@@ -3,12 +3,12 @@
 declare(strict_types=1);
 
 /**
- * Public template config for WABEP API.
+ * Public config loader for WABEP API
  *
  * Priority:
  * 1) Environment variables
- * 2) config.local.php (if exists)
- * 3) Safe defaults / empty values
+ * 2) config.local.php
+ * 3) Safe defaults
  */
 
 $local = [];
@@ -22,17 +22,34 @@ if (is_file($localFile)) {
 }
 
 return [
+    'app' => [
+        'env' => getenv('WABEP_APP_ENV')
+            ?: ($local['app']['env'] ?? 'production'),
+
+        'debug' => getenv('WABEP_APP_DEBUG') !== false
+            ? filter_var(getenv('WABEP_APP_DEBUG'), FILTER_VALIDATE_BOOLEAN)
+            : (bool)($local['app']['debug'] ?? false),
+
+        'timezone' => getenv('WABEP_APP_TIMEZONE')
+            ?: ($local['app']['timezone'] ?? 'Asia/Tokyo'),
+    ],
+
     'db' => [
         'host' => getenv('WABEP_DB_HOST')
             ?: ($local['db']['host'] ?? ''),
+
         'port' => (int)(getenv('WABEP_DB_PORT')
             ?: ($local['db']['port'] ?? 3306)),
+
         'name' => getenv('WABEP_DB_NAME')
             ?: ($local['db']['name'] ?? ''),
+
         'user' => getenv('WABEP_DB_USER')
             ?: ($local['db']['user'] ?? ''),
+
         'pass' => getenv('WABEP_DB_PASS')
             ?: ($local['db']['pass'] ?? ''),
+
         'charset' => getenv('WABEP_DB_CHARSET')
             ?: ($local['db']['charset'] ?? 'utf8mb4'),
     ],
@@ -68,6 +85,10 @@ return [
         'currency' => getenv('WABEP_STRIPE_CURRENCY')
             ?: ($local['stripe']['currency'] ?? 'usd'),
 
+        /**
+         * price_id => [plan, billing]
+         * billing: monthly / yearly / lifetime / free
+         */
         'prices' => $local['stripe']['prices'] ?? [
             // Advanced
             'price_xxxxxxxxx_advanced_monthly' => [
@@ -97,5 +118,13 @@ return [
                 'billing' => 'lifetime',
             ],
         ],
+    ],
+
+    'mail' => [
+        'from_email' => getenv('WABEP_MAIL_FROM_EMAIL')
+            ?: ($local['mail']['from_email'] ?? 'no-reply@d-create.online'),
+
+        'from_name' => getenv('WABEP_MAIL_FROM_NAME')
+            ?: ($local['mail']['from_name'] ?? 'WP AI Blog Engine'),
     ],
 ];

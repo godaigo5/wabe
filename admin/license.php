@@ -82,17 +82,24 @@ if (!function_exists('wabe_license_mask_key')) {
         </div>
     <?php endif; ?>
 
+    <?php if (!empty($_GET['updated'])) : ?>
+        <div class="notice notice-success is-dismissible">
+            <p><?php esc_html_e('License information has been updated.', WABE_TEXTDOMAIN); ?></p>
+        </div>
+    <?php endif; ?>
+
     <div class="postbox" style="padding:20px;margin-top:20px;">
         <h2 style="margin-top:0;"><?php esc_html_e('License Key', WABE_TEXTDOMAIN); ?></h2>
 
         <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
             <input type="hidden" name="action" value="wabe_save_license_key">
-            <?php wp_nonce_field('wabe_save_license_key', 'wabe_license_nonce'); ?>
+            <?php wp_nonce_field('wabe_save_license_key'); ?>
 
             <table class="form-table" role="presentation">
                 <tr>
-                    <th scope="row"><label
-                            for="license_key"><?php esc_html_e('License Key', WABE_TEXTDOMAIN); ?></label></th>
+                    <th scope="row">
+                        <label for="license_key"><?php esc_html_e('License Key', WABE_TEXTDOMAIN); ?></label>
+                    </th>
                     <td>
                         <input type="text" class="regular-text" style="min-width:420px;" id="license_key"
                             name="license_key" value="<?php echo esc_attr($license_key); ?>"
@@ -108,9 +115,9 @@ if (!function_exists('wabe_license_mask_key')) {
         </form>
 
         <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>"
-            style="display:inline-block;margin-top: 8px;">
+            style="display:inline-block;margin-top:8px;">
             <input type="hidden" name="action" value="wabe_refresh_license">
-            <?php wp_nonce_field('wabe_refresh_license', 'wabe_refresh_license_nonce'); ?>
+            <?php wp_nonce_field('wabe_refresh_license'); ?>
             <?php submit_button(__('Refresh License Information', WABE_TEXTDOMAIN), 'secondary', 'submit', false); ?>
         </form>
     </div>

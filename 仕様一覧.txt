@@ -83,7 +83,6 @@ https://github.com/godaigo5/wabe/tree/main/wp-ai-blog-engineHP/wabe-wp-theme
 ---
 
 【現在の構成】
-
 ・OpenAI / Gemini 両対応
 ・画像生成（OpenAI / Gemini）
 ・Unsplashによる記事途中画像挿入（見出し後）
@@ -94,7 +93,6 @@ https://github.com/godaigo5/wabe/tree/main/wp-ai-blog-engineHP/wabe-wp-theme
 ---
 
 【プラン設計】
-
 ■ Free
 ・週1投稿
 ・公開OK
@@ -120,17 +118,14 @@ https://github.com/godaigo5/wabe/tree/main/wp-ai-blog-engineHP/wabe-wp-theme
 ---
 
 【現在の開発状況】
-
-・Webhook → ライセンス発行 → DB保存 完成
+・HP会員登録→会員ページ→ライセンス選択→Stripe決済→Thanks→DB保存→ライセンス記載のメール到着
 ・プラグイン本体ほぼ完成（デバッグ中）
 ・管理画面UI改善済み
 ・多言語化は未完成
-・LP / 会員導線は未完成
 
 ---
 
 【今後の優先順位】
-
 ① 記事途中画像（Unsplash）実装
 ② Advancedプラン完成
 ③ Google通知（sitemap）
@@ -140,7 +135,6 @@ https://github.com/godaigo5/wabe/tree/main/wp-ai-blog-engineHP/wabe-wp-theme
 ---
 
 【重要な方針】
-
 ・Freeでも「使える」状態にする（公開OK・自動投稿OK）
 ・差は「量（投稿数）」と「質（機能）」で出す
 ・Proは「収益特化機能」にする
@@ -149,7 +143,6 @@ https://github.com/godaigo5/wabe/tree/main/wp-ai-blog-engineHP/wabe-wp-theme
 ---
 
 【回答スタイル】
-
 ・実装ベースで回答
 ・差分ではなくコピペ可能な完全コードで提示
 ・プロダクトとして売れる前提で提案
@@ -160,4 +153,4 @@ https://github.com/godaigo5/wabe/tree/main/wp-ai-blog-engineHP/wabe-wp-theme
 この前提を理解した上で回答してください。
 
 ▼今やりたいこと
-記事途中画像（Unsplash）実装
+プラグインのデバック中ですが、ライセンスキーを保存を押下すると「Security check failed.」と出る。
