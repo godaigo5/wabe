@@ -8,7 +8,13 @@ class WABE_Utils
         if (!is_string($value) || $value === '') {
             return $value;
         }
+
         $decoded = base64_decode($value, true);
-        return ($decoded !== false) ? $decoded : $value;
+
+        if ($decoded === false) {
+            return $value;
+        }
+
+        return $decoded;
     }
 }
