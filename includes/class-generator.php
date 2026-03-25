@@ -336,6 +336,20 @@ class WABE_Generator
             }
 
             $markdown = $this->generate_full_article($context, $article_title);
+            if (in_array(($context['plan'] ?? 'free'), ['advanced', 'pro'], true)) {
+                $rewritten = $this->rewrite_article($markdown, $context, $article_title);
+
+                if (trim((string) $rewritten) !== '') {
+                    $rewritten_body_ok     = $this->is_body_length_ok($rewritten, $context);
+                    $rewritten_headings_ok = $this->are_headings_length_ok($rewritten, $context);
+
+                    if ($rewritten_body_ok && $rewritten_headings_ok) {
+                        $markdown = $rewritten;
+                    } elseif ($this->get_visible_length($rewritten) > $this->get_visible_length($markdown)) {
+                        $markdown = $rewritten;
+                    }
+                }
+            }
 
             if (trim($markdown) === '') {
                 if (class_exists('WABE_Logger') && method_exists('WABE_Logger', 'warning')) {
@@ -1004,80 +1018,140 @@ class WABE_Generator
         return $text;
     }
 
-    private function build_full_article_prompt(array $context, $article_title)
+    private function rewrite_article($article, array $context, $article_title = '')
     {
-        $keyword        = (string) ($context['seo_keyword'] ?? '');
-        $topic          = (string) ($context['topic'] ?? '');
-        $tone           = (string) ($context['tone'] ?? 'standard');
-        $language       = (string) ($context['language'] ?? 'Japanese');
-        $site_context   = trim((string) ($context['site_context'] ?? ''));
-        $writing_rules  = trim((string) ($context['writing_rules'] ?? ''));
-        $detail_level   = (string) ($context['detail_level'] ?? 'medium');
+        $article = trim((string) $article);
+        if ($article === '') {
+            return $article;
+        }
 
-        $length_profile = $context['length_profile'] ?? [];
-        $heading_profile = $context['heading_profile'] ?? [];
+        $plan = (string) ($context['plan'] ?? 'free');
+        if (!in_array($plan, ['advanced', 'pro'], true)) {
+            return $article;
+        }
 
-        $min_length = isset($length_profile['min']) ? (int) $length_profile['min'] : 1500;
-        $max_length = isset($length_profile['max']) ? (int) $length_profile['max'] : 4000;
+        $length_profile  = $context['length_profile'];
+        $heading_profile = $context['heading_profile'];
 
-        $h2_min = isset($heading_profile['min']) ? (int) $heading_profile['min'] : 8;
-        $h2_max = isset($heading_profile['soft_max']) ? (int) $heading_profile['soft_max'] : 32;
+        $rewrite_prompt = trim(
+            "You are a professional Japanese editor.\n" .
+                "Rewrite the following article so it feels more natural, more human-like, and less AI-generated.\n\n" .
 
-        return trim(
-            "Topic: {$topic}\n" .
-                "Title: {$article_title}\n" .
-                "Language: {$language}\n" .
-                "Tone: {$tone}\n" .
-                "Detail level: {$detail_level}\n\n" .
+                "[Goal]\n" .
+                "- Improve flow, rhythm, readability, and human warmth.\n" .
+                "- Remove robotic or templated phrasing.\n" .
+                "- Keep the article practical and trustworthy.\n\n" .
 
-                ($keyword !== '' ? "SEO Keyword: {$keyword}\n\n" : '') .
+                "[Rules]\n" .
+                "- Keep the original meaning and structure.\n" .
+                "- Do not remove important information.\n" .
+                "- Do not add completely new sections.\n" .
+                "- Preserve Markdown headings (## and ###).\n" .
+                "- Do not repeat the title in the body.\n" .
+                "- Keep the total article length between {$length_profile['min']} and {$length_profile['max']} Japanese characters.\n" .
+                "- Every H2 heading must stay between {$heading_profile['min']} and {$heading_profile['soft_max']} Japanese characters.\n" .
+                "- Keep the summary section and CTA section.\n\n" .
 
-                ($site_context !== '' ? "Site context:\n{$site_context}\n\n" : '') .
-                ($writing_rules !== '' ? "Writing rules:\n{$writing_rules}\n\n" : '') .
-
-                "Task:\n" .
-                "Write a complete, high-quality blog article in {$language}.\n\n" .
-
-                "[Structure requirements]\n" .
-                "- Include a natural introduction\n" .
-                "- Use multiple H2 sections and H3 subsections where appropriate\n" .
-                "- End with a natural conclusion\n" .
-                "- Do NOT repeat the title at the beginning of the body\n\n" .
-
-                "[Formatting]\n" .
-                "- Use markdown headings (## for H2, ### for H3)\n" .
-                "- Do NOT use HTML tags\n" .
-                "- Do NOT use bullet spam; use lists only when useful\n\n" .
-
-                "[Length constraints]\n" .
-                "- Total length must be between {$min_length} and {$max_length} Japanese characters\n" .
-                "- Each H2 heading must be between {$h2_min} and {$h2_max} Japanese characters\n\n" .
-
-                "[SEO guidelines]\n" .
-                "- Include the keyword naturally (no stuffing)\n" .
-                "- Make headings meaningful and useful\n" .
-                "- Write for readability first, SEO second\n\n" .
-
-                "[Content quality]\n" .
-                "- Avoid vague or generic explanations\n" .
-                "- Provide specific and practical information\n" .
-                "- Add examples where helpful\n" .
-                "- Each section must provide new value\n\n" .
-
-                "[Human-like writing guidance]\n" .
-                "- Avoid robotic and templated phrasing\n" .
-                "- Vary sentence length and rhythm\n" .
-                "- Avoid repeating the same sentence endings\n" .
-                "- Do not make every section the same size\n" .
-                "- Use smooth transitions between sections\n" .
-                "- Write as if explaining naturally to a real reader\n\n" .
+                "[Improvements]\n" .
+                "- Vary sentence endings and sentence length.\n" .
+                "- Improve transitions between paragraphs and sections.\n" .
+                "- Reduce stiffness and textbook-like explanations.\n" .
+                "- Add slight natural expressions where appropriate.\n" .
+                "- Make the article easier to picture for real readers.\n" .
+                "- Prefer concrete phrasing over vague generalities.\n\n" .
 
                 "[Important constraints]\n" .
-                "- Do NOT mention AI\n" .
-                "- Do NOT explain the writing process\n" .
-                "- Do NOT write meta commentary\n\n" .
+                "- Never mention AI.\n" .
+                "- Never explain your edits.\n" .
+                "- Output only the rewritten article.\n\n" .
 
-                "Output only the article."
+                "Article title:\n{$article_title}\n\n" .
+                "Topic:\n{$context['topic']}\n\n" .
+                "Tone:\n{$context['tone']}\n\n" .
+                "Article:\n{$article}"
+        );
+
+        $rewritten = trim((string) $this->ai->text($rewrite_prompt, [
+            'temperature'       => 0.85,
+            'max_output_tokens' => $this->estimate_max_output_tokens($context),
+        ]));
+
+        if ($rewritten === '') {
+            return $article;
+        }
+
+        return $rewritten;
+    }
+
+    private function build_full_article_prompt(array $context, $article_title)
+    {
+        $extra = '';
+
+        if (!empty($context['site_context'])) {
+            $extra .= "Site context:\n" . $this->decode_maybe_base64($context['site_context']) . "\n\n";
+        }
+
+        if (!empty($context['writing_rules'])) {
+            $extra .= "Writing rules:\n" . $this->decode_maybe_base64($context['writing_rules']) . "\n\n";
+        }
+
+        if (!empty($context['seo_keyword'])) {
+            $extra .= "SEO keyword:\n" . $context['seo_keyword'] . "\n\n";
+        }
+
+        if (!empty($context['internal_link_url']) && !empty($context['enable_internal_links'])) {
+            $extra .= "Internal link candidate URL:\n" . $context['internal_link_url'] . "\n\n";
+        }
+
+        $length_profile  = $context['length_profile'];
+        $heading_profile = $context['heading_profile'];
+
+        $detail_text = 'Give a balanced level of explanation.';
+        if ($context['detail_level'] === 'low') {
+            $detail_text = 'Keep explanations compact and practical.';
+        } elseif ($context['detail_level'] === 'high') {
+            $detail_text = 'Explain each point deeply with concrete examples and actionable advice.';
+        }
+
+        $recommended_h2_count = 3;
+        if ($context['plan'] === 'advanced') {
+            $recommended_h2_count = 4;
+        } elseif ($context['plan'] === 'pro') {
+            $recommended_h2_count = 5;
+        }
+
+        return trim(
+            "You are a professional Japanese SEO writer.\n" .
+                "Write in {$context['language']}.\n\n" .
+
+                $extra .
+
+                "Topic:\n{$context['topic']}\n\n" .
+                "Article title:\n{$article_title}\n\n" .
+                "Style:\n{$context['style']}\n\n" .
+                "Tone:\n{$context['tone']}\n\n" .
+
+                "Target total article length:\nAbout {$length_profile['target']} Japanese characters\n\n" .
+                "Valid total article length range:\n{$length_profile['min']} to {$length_profile['max']} Japanese characters including headings and body\n\n" .
+                "H2 heading length rule:\nEach H2 should ideally be between {$heading_profile['min']} and {$heading_profile['target_max']} Japanese characters, and must not exceed {$heading_profile['soft_max']} Japanese characters\n\n" .
+                "Recommended H2 count:\n{$recommended_h2_count}\n\n" .
+                "Detail instruction:\n{$detail_text}\n\n" .
+
+                "Task:\n" .
+                "- Write the full article body only.\n" .
+                "- Do NOT output the title again in the body.\n" .
+                "- Start directly with an introduction paragraph or the first H2.\n" .
+                "- Use Markdown-style headings only for H2 and H3 (##, ###).\n" .
+                "- Keep paragraphs short and readable.\n" .
+                "- Use bullet lists only where useful.\n" .
+                "- Include a summary section.\n" .
+                "- Include a CTA section at the end.\n" .
+                "- Keep the structure natural and complete.\n" .
+                "- Make the article feel human, practical, and realistic.\n" .
+                "- Avoid textbook-style explanations.\n" .
+                "- Include concrete mini-scenarios or examples where appropriate.\n" .
+                "- Avoid generic openings like 「本記事では〜について解説します」.\n" .
+                "- Avoid robotic endings like 「まとめると〜です」.\n"
         );
     }
 
