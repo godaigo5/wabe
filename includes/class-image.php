@@ -431,56 +431,34 @@ class WABE_Image
      */
     private function build_unsplash_query($heading, $topic, $title)
     {
-        $heading = trim((string) $heading);
-        $topic   = trim((string) $topic);
-        $title   = trim((string) $title);
+        $heading = $this->normalize_unsplash_query_fragment($heading);
+        $topic   = $this->normalize_unsplash_query_fragment($topic);
+        $title   = $this->normalize_unsplash_query_fragment($title);
 
-        $source = mb_strtolower(trim($heading . ' ' . $topic . ' ' . $title));
+        $parts = [];
 
-        $map = [
-            'seo'                 => 'seo analytics website ranking',
-            '検索'                => 'seo analytics website ranking',
-            'キーワード'          => 'seo keyword research analytics',
-            'wordpress'           => 'wordpress website dashboard',
-            'ワードプレス'        => 'wordpress website dashboard',
-            'webサイト'           => 'business website design',
-            'ホームページ'        => 'business website design',
-            '中小企業'            => 'small business website meeting',
-            '企業'                => 'small business office teamwork',
-            '会社'                => 'small business office teamwork',
-            '集客'                => 'digital marketing strategy business',
-            'マーケティング'      => 'digital marketing strategy business',
-            'コンテンツ'          => 'content marketing blog strategy',
-            'ブログ'              => 'content marketing blog writing',
-            '記事'                => 'content marketing blog writing',
-            '自動化'              => 'business automation workflow',
-            'ai'                  => 'ai automation technology business',
-            '速度'                => 'website performance speed analytics',
-            '表示速度'            => 'website performance speed analytics',
-            'モバイル'            => 'responsive website mobile design',
-            'スマホ'              => 'responsive website mobile design',
-            'セキュリティ'        => 'website security ssl protection',
-            'ssl'                 => 'website security ssl protection',
-            'https'               => 'website security ssl protection',
-            '分析'                => 'data analytics dashboard business',
-            'アクセス解析'        => 'data analytics dashboard business',
-        ];
-
-        foreach ($map as $keyword => $query) {
-            if ($keyword !== '' && mb_stripos($source, $keyword) !== false) {
-                return $query;
-            }
+        if ($heading !== '') {
+            $parts[] = $heading;
         }
 
-        // フォールバック
-        if ($title !== '') {
-            if (mb_stripos($source, 'business') !== false || mb_stripos($source, '企業') !== false || mb_stripos($source, '会社') !== false) {
-                return 'small business website strategy';
-            }
-            return 'business website technology';
+        if ($topic !== '') {
+            $parts[] = $topic;
+        } elseif ($title !== '') {
+            $parts[] = $title;
         }
 
-        return 'business technology';
+        $query = trim((string) preg_replace('/\s+/u', ' ', implode(' ', array_filter($parts))));
+        if ($query === '') {
+            return '';
+        }
+
+        if (function_exists('mb_strlen') && mb_strlen($query) > 80) {
+            $query = mb_substr($query, 0, 80);
+        } elseif (strlen($query) > 80) {
+            $query = substr($query, 0, 80);
+        }
+
+        return $query;
     }
 
 
@@ -543,33 +521,34 @@ class WABE_Image
 
     private function build_unsplash_japanese_fallbacks($heading, $topic, $title)
     {
-        $text = trim($heading . ' ' . $topic . ' ' . $title);
-        $queries = [];
+        $source = trim($heading . ' ' . $topic . ' ' . $title);
 
         $map = [
-            '業務自動化' => ['automation workflow office', 'business process automation'],
-            '自動化'     => ['automation workflow office', 'business process automation'],
-            'ノーコード' => ['no code app builder', 'software dashboard workspace'],
-            'ツール'     => ['software dashboard office', 'business tools workspace'],
-            '活用'       => ['business workflow office', 'productivity workspace laptop'],
-            '業務'       => ['business team office', 'meeting workspace'],
-            '仕事'       => ['business team office', 'modern office workspace'],
-            'ブログ'     => ['blog writing laptop', 'content marketing workspace'],
-            '記事'       => ['content writing laptop', 'blog website dashboard'],
-            'SEO'       => ['search engine optimization', 'digital marketing analytics'],
-            '集客'       => ['digital marketing business', 'marketing strategy office'],
-            '比較'       => ['comparison chart laptop', 'product comparison workspace'],
-            'ランキング' => ['comparison chart laptop', 'product comparison workspace'],
-            'AI'        => ['artificial intelligence technology', 'data technology'],
-            '画像'       => ['design creative workspace', 'photo editing laptop'],
-            'Web'       => ['website development laptop', 'web design workspace'],
-            'サイト'     => ['website development laptop', 'web design workspace'],
-            'WordPress' => ['website dashboard laptop', 'blog website dashboard'],
-            '効率化'     => ['productivity workspace laptop', 'focused desk workspace'],
+            '副業'         => ['side business laptop', 'freelance work desk'],
+            'ブログ'       => ['blog writing laptop', 'content creator workspace'],
+            'ワードプレス' => ['website development laptop', 'blog website dashboard'],
+            'wordpress'    => ['website development laptop', 'blog website dashboard'],
+            'seo'          => ['search engine optimization', 'digital marketing analytics'],
+            '集客'         => ['digital marketing business', 'marketing strategy office'],
+            '自動化'       => ['automation workflow office', 'business process automation'],
+            '業務効率化'   => ['productivity workspace laptop', 'automation workflow office'],
+            'ai'           => ['artificial intelligence technology', 'data technology'],
+            '生成ai'       => ['artificial intelligence technology', 'digital innovation'],
+            'web制作'      => ['web design workspace', 'website development laptop'],
+            'ホームページ' => ['website development laptop', 'modern business website'],
+            'マーケティング' => ['digital marketing business', 'marketing strategy office'],
+            '比較'         => ['comparison chart laptop', 'product comparison workspace'],
+            'ランキング'   => ['comparison chart laptop', 'top list workspace'],
+            'レビュー'     => ['product review laptop', 'comparison workspace'],
+            '仕事'         => ['business team office', 'workspace laptop meeting'],
+            '会社'         => ['business office team', 'modern office workspace'],
+            '会議'         => ['meeting workspace', 'business team office'],
+            '便利ツール'   => ['software dashboard office', 'business tools workspace'],
         ];
 
+        $queries = [];
         foreach ($map as $needle => $fallbacks) {
-            if (mb_strpos($text, $needle) !== false) {
+            if (mb_stripos($source, $needle) !== false) {
                 $queries = array_merge($queries, $fallbacks);
             }
         }
@@ -736,20 +715,21 @@ class WABE_Image
             'utm_medium' => 'referral',
         ], 'https://unsplash.com/');
 
-        $caption = sprintf(
-            'Photo by <a href="%s" target="_blank" rel="nofollow sponsored noopener">%s</a> on <a href="%s" target="_blank" rel="nofollow sponsored noopener">Unsplash</a>',
+        $caption_html = sprintf(
+            'Photo by <a href="%s" target="_blank" rel="noopener nofollow">%s</a> on <a href="%s" target="_blank" rel="noopener nofollow">Unsplash</a>',
             esc_url($author_href),
             esc_html($author_name),
             esc_url($unsplash_href)
         );
 
-        return
-            "\n<!-- wp:image {\"sizeSlug\":\"large\",\"linkDestination\":\"none\",\"className\":\"wabe-inline-unsplash-image\"} -->\n" .
+        return "\n\n" .
+            '<!-- wp:image {"sizeSlug":"large","linkDestination":"none","className":"wabe-inline-unsplash-image"} -->' .
             '<figure class="wp-block-image size-large wabe-inline-unsplash-image">' .
-            '<img src="' . esc_url($image_url) . '" alt="' . esc_attr($alt) . '" loading="lazy" referrerpolicy="no-referrer-when-downgrade" />' .
-            '<figcaption>' . $caption . '</figcaption>' .
-            "</figure>\n" .
-            "<!-- /wp:image -->\n";
+            '<img src="' . esc_url($image_url) . '" alt="' . esc_attr($alt) . '" loading="lazy" />' .
+            '<figcaption>' . $caption_html . '</figcaption>' .
+            '</figure>' .
+            '<!-- /wp:image -->' .
+            "\n\n";
     }
 
     /**

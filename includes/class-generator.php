@@ -377,7 +377,6 @@ class WABE_Generator
                 WABE_Logger::info('Generated markdown preview: ' . mb_substr((string) $markdown, 0, 1000));
             }
 
-            $markdown = $this->normalize_markdown_format($markdown);
             $content = $this->markdown_to_blocks($markdown, $article_title);
 
             if (class_exists('WABE_Image')) {
@@ -1230,120 +1229,119 @@ class WABE_Generator
 
     private function markdown_to_blocks($markdown, $article_title = '')
     {
-        $markdown = trim((string)$markdown);
-
-        if ($markdown === '') {
-            return '<!-- wp:paragraph --><p>' . esc_html($article_title) . '</p><!-- /wp:paragraph -->';
-        }
-
-        $lines = preg_split("/\r\n|\r|\n/u", $markdown);
-        if (!is_array($lines)) {
-            $lines = [$markdown];
-        }
+        $markdown = str_replace(["\r\n", "\r"], "\n", (string) $markdown);
+        $lines = explode("\n", $markdown);
 
         $blocks = [];
         $paragraph_buffer = [];
         $list_buffer = [];
 
-        $flush_paragraph = static function (&$blocks, &$paragraph_buffer) {
+        $flush_paragraph = function () use (&$paragraph_buffer, &$blocks) {
             if (empty($paragraph_buffer)) {
                 return;
             }
 
-            $text = trim(implode(' ', $paragraph_buffer));
+            $text = trim(implode("\n", $paragraph_buffer));
             $paragraph_buffer = [];
 
             if ($text === '') {
                 return;
             }
 
-            $html = wp_kses_post(make_clickable(esc_html($text)));
-            $blocks[] = '<!-- wp:paragraph --><p>' . $html . '</p><!-- /wp:paragraph -->';
+            $text = $this->format_inline_markdown($text);
+
+            $blocks[] = '<!-- wp:paragraph --><p>' . $text . '</p><!-- /wp:paragraph -->';
         };
 
-        $flush_list = static function (&$blocks, &$list_buffer) {
+        $flush_list = function () use (&$list_buffer, &$blocks) {
             if (empty($list_buffer)) {
                 return;
             }
 
             $items = [];
             foreach ($list_buffer as $item) {
-                $items[] = '<li>' . esc_html($item) . '</li>';
+                $item = trim($item);
+                if ($item === '') {
+                    continue;
+                }
+                $item = $this->format_inline_markdown($item);
+                $items[] = '<li>' . $item . '</li>';
             }
 
-            $blocks[] = '<!-- wp:list --><ul>' . implode('', $items) . '</ul><!-- /wp:list -->';
             $list_buffer = [];
+
+            if (!empty($items)) {
+                $blocks[] = '<!-- wp:list --><ul>' . implode('', $items) . '</ul><!-- /wp:list -->';
+            }
         };
 
         foreach ($lines as $line) {
-            $line = trim((string)$line);
+            $raw = rtrim($line);
+            $trimmed = trim($raw);
 
-            if ($line === '') {
-                $flush_paragraph($blocks, $paragraph_buffer);
-                $flush_list($blocks, $list_buffer);
+            // 空行
+            if ($trimmed === '') {
+                $flush_paragraph();
+                $flush_list();
                 continue;
             }
 
-            // 単独絵文字・番号だけの行は捨てる
-            if (preg_match('/^[\p{So}\p{Sk}\d]+$/u', $line)) {
+            // H4
+            if (preg_match('/^####\s+(.+)$/u', $trimmed, $m)) {
+                $flush_paragraph();
+                $flush_list();
+                $heading = esc_html(trim($m[1]));
+                $blocks[] = '<!-- wp:heading {"level":4} --><h4>' . $heading . '</h4><!-- /wp:heading -->';
                 continue;
             }
 
-            if (preg_match('/^###\s+(.+)$/u', $line, $m)) {
-                $flush_paragraph($blocks, $paragraph_buffer);
-                $flush_list($blocks, $list_buffer);
-                $blocks[] = '<!-- wp:heading {"level":3} --><h3>' . esc_html($m[1]) . '</h3><!-- /wp:heading -->';
+            // H3
+            if (preg_match('/^###\s+(.+)$/u', $trimmed, $m)) {
+                $flush_paragraph();
+                $flush_list();
+                $heading = esc_html(trim($m[1]));
+                $blocks[] = '<!-- wp:heading {"level":3} --><h3>' . $heading . '</h3><!-- /wp:heading -->';
                 continue;
             }
 
-            if (preg_match('/^##\s+(.+)$/u', $line, $m)) {
-                $flush_paragraph($blocks, $paragraph_buffer);
-                $flush_list($blocks, $list_buffer);
-                $blocks[] = '<!-- wp:heading {"level":2} --><h2>' . esc_html($m[1]) . '</h2><!-- /wp:heading -->';
+            // H2
+            if (preg_match('/^##\s+(.+)$/u', $trimmed, $m)) {
+                $flush_paragraph();
+                $flush_list();
+                $heading = esc_html(trim($m[1]));
+                $blocks[] = '<!-- wp:heading --><h2>' . $heading . '</h2><!-- /wp:heading -->';
                 continue;
             }
 
-            if (preg_match('/^[-*]\s+(.+)$/u', $line, $m)) {
-                $flush_paragraph($blocks, $paragraph_buffer);
-                $list_buffer[] = trim((string)$m[1]);
+            // 箇条書き
+            if (preg_match('/^\*\s+(.+)$/u', $trimmed, $m) || preg_match('/^-\s+(.+)$/u', $trimmed, $m)) {
+                $flush_paragraph();
+                $list_buffer[] = $m[1];
                 continue;
             }
 
-            $paragraph_buffer[] = $line;
+            // 通常段落
+            $flush_list();
+            $paragraph_buffer[] = $trimmed;
         }
 
-        $flush_paragraph($blocks, $paragraph_buffer);
-        $flush_list($blocks, $list_buffer);
+        $flush_paragraph();
+        $flush_list();
 
-        $content = trim(implode("\n\n", $blocks));
-
-        if ($content === '') {
-            $content = '<!-- wp:paragraph --><p>' . esc_html($article_title) . '</p><!-- /wp:paragraph -->';
-        }
-
-        return $content;
+        return implode("\n\n", $blocks);
     }
 
-    private function normalize_markdown_format($content)
+    private function format_inline_markdown($text)
     {
-        $content = (string) $content;
+        $text = esc_html((string) $text);
 
-        // H4変換 #### → <h4>
-        $content = preg_replace('/^####\s*(.+)$/mu', '<h4>$1</h4>', $content);
+        // **太字**
+        $text = preg_replace('/\*\*(.+?)\*\*/u', '<strong>$1</strong>', $text);
 
-        // H3変換 ### → <h3>
-        $content = preg_replace('/^###\s*(.+)$/mu', '<h3>$1</h3>', $content);
+        // __太字__ も許可したいなら
+        $text = preg_replace('/__(.+?)__/u', '<strong>$1</strong>', $text);
 
-        // H2変換 ## → <h2>
-        $content = preg_replace('/^##\s*(.+)$/mu', '<h2>$1</h2>', $content);
-
-        // 太字 **text** → <strong>
-        $content = preg_replace('/\*\*(.*?)\*\*/u', '<strong>$1</strong>', $content);
-
-        // 無駄な * を除去（単体）
-        $content = preg_replace('/(?<!\*)\*(?!\*)/u', '', $content);
-
-        return $content;
+        return $text;
     }
 
     private function apply_basic_seo_meta($post_id, array $context)
