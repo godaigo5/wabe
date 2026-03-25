@@ -377,6 +377,7 @@ class WABE_Generator
                 WABE_Logger::info('Generated markdown preview: ' . mb_substr((string) $markdown, 0, 1000));
             }
 
+            $markdown = $this->normalize_markdown_format($markdown);
             $content = $this->markdown_to_blocks($markdown, $article_title);
 
             if (class_exists('WABE_Image')) {
@@ -1319,6 +1320,28 @@ class WABE_Generator
         if ($content === '') {
             $content = '<!-- wp:paragraph --><p>' . esc_html($article_title) . '</p><!-- /wp:paragraph -->';
         }
+
+        return $content;
+    }
+
+    private function normalize_markdown_format($content)
+    {
+        $content = (string) $content;
+
+        // H4変換 #### → <h4>
+        $content = preg_replace('/^####\s*(.+)$/mu', '<h4>$1</h4>', $content);
+
+        // H3変換 ### → <h3>
+        $content = preg_replace('/^###\s*(.+)$/mu', '<h3>$1</h3>', $content);
+
+        // H2変換 ## → <h2>
+        $content = preg_replace('/^##\s*(.+)$/mu', '<h2>$1</h2>', $content);
+
+        // 太字 **text** → <strong>
+        $content = preg_replace('/\*\*(.*?)\*\*/u', '<strong>$1</strong>', $content);
+
+        // 無駄な * を除去（単体）
+        $content = preg_replace('/(?<!\*)\*(?!\*)/u', '', $content);
 
         return $content;
     }
