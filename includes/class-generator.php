@@ -517,6 +517,70 @@ class WABE_Generator
         ];
     }
 
+    private function build_human_writing_system_prompt(array $context)
+    {
+        $language = !empty($context['language']) ? (string) $context['language'] : 'Japanese';
+        $tone = !empty($context['tone']) ? (string) $context['tone'] : 'standard';
+
+        $tone_guide = 'Write in a balanced, natural Japanese tone.';
+        if ($tone === 'polite') {
+            $tone_guide = 'Write in natural and polite Japanese. Keep it friendly, clear, and trustworthy.';
+        } elseif ($tone === 'casual') {
+            $tone_guide = 'Write in natural, easy-to-read Japanese with a soft conversational feel.';
+        }
+
+        return trim(
+            "You are a professional {$language} blog writer.\n\n" .
+                "Your writing must feel like it was written by a real human, not an AI.\n\n" .
+
+                "[Core writing rules]\n" .
+                "- Avoid robotic, formulaic, or overly templated phrasing.\n" .
+                "- Vary sentence length naturally. Mix short and longer sentences.\n" .
+                "- Avoid repeating the same sentence endings or patterns.\n" .
+                "- Do not make every section the same length.\n" .
+                "- Keep paragraphs reasonably short and readable.\n" .
+                "- Each paragraph must add new value.\n" .
+                "- Prefer specific, practical explanations over vague generalities.\n" .
+                "- Use smooth transitions between sections and paragraphs.\n" .
+                "- Do not sound like a manual, textbook, or AI template.\n\n" .
+
+                "[Natural human-like expressions]\n" .
+                "- Occasionally use subtle human phrasing when appropriate.\n" .
+                "- Examples: 『実は〜』『意外と見落としがちですが〜』『正直なところ〜』『〜と感じる方も多いと思います』\n" .
+                "- Do not overuse these expressions.\n\n" .
+
+                "[Introduction rules]\n" .
+                "- Start with a relatable problem, question, or insight.\n" .
+                "- Avoid generic openings like 『本記事では〜について解説します』.\n\n" .
+
+                "[Conclusion rules]\n" .
+                "- End naturally and helpfully.\n" .
+                "- Avoid robotic summaries like 『まとめると〜です』.\n\n" .
+
+                "[Important constraints]\n" .
+                "- Never mention AI.\n" .
+                "- Never say the article was generated.\n" .
+                "- Do not explain your writing process.\n" .
+                "- Prioritize readability first, then SEO.\n\n" .
+
+                "[Tone guide]\n" .
+                $tone_guide
+        );
+    }
+
+    private function build_human_title_system_prompt(array $context)
+    {
+        return trim(
+            "You are a professional Japanese editor.\n" .
+                "Create a natural, human-like blog title.\n" .
+                "- Avoid generic AI-like titles.\n" .
+                "- Avoid clickbait that feels unnatural.\n" .
+                "- Make it readable, specific, and appealing.\n" .
+                "- Keep SEO in mind, but prioritize natural wording.\n" .
+                "- Output only the title."
+        );
+    }
+
     private function detect_plan_slug()
     {
         $plan = '';
@@ -754,11 +818,26 @@ class WABE_Generator
 
     private function generate_title(array $context)
     {
-        $prompt = $this->build_title_prompt($context);
+        $base_prompt = $this->build_title_prompt($context);
+
+        $human_prompt = trim(
+            "You are a professional Japanese editor.\n" .
+                "Create a title that feels naturally written by a real human.\n\n" .
+                "[Human-like title rules]\n" .
+                "- Avoid generic AI-like phrasing.\n" .
+                "- Avoid unnatural clickbait.\n" .
+                "- Keep the wording specific, smooth, and readable.\n" .
+                "- Prefer natural Japanese over stiff or mechanical wording.\n" .
+                "- Avoid incomplete fragments.\n" .
+                "- Output exactly one title only.\n" .
+                "- Do not output bullets, quotation marks, labels, or explanations.\n"
+        );
+
+        $prompt = $human_prompt . "\n\n" . $base_prompt;
 
         $quality = $context['generation_quality'] ?? 'high';
         $temperature = ($quality === 'fast') ? 0.5 : 0.7;
-        $max_tokens = ($quality === 'fast') ? 90 : 140;
+        $max_tokens  = ($quality === 'fast') ? 90 : 140;
 
         $text = $this->ai->text($prompt, [
             'temperature'       => $temperature,
@@ -767,13 +846,14 @@ class WABE_Generator
 
         $lines = $this->parse_lines($text);
         $title = !empty($lines[0]) ? sanitize_text_field($lines[0]) : '';
-        $title = preg_replace('/^#+\s*/u', '', (string)$title);
-        $title = trim((string)$title, " \t\n\r\0\x0B\"'「」【】");
+        $title = preg_replace('/^#+\s*/u', '', (string) $title);
+        $title = trim((string) $title, " \t\n\r\0\x0B\"'「」〖〗");
 
         if (!$this->is_title_length_ok($title, $context)) {
             $retry_prompt = $prompt . "\n\nIMPORTANT:\n" .
                 "- The title length is invalid.\n" .
-                "- Make it natural and complete.\n" .
+                "- Make it natural, complete, and human-like.\n" .
+                "- Do not sound robotic or templated.\n" .
                 "- Keep it between {$context['title_profile']['min']} and {$context['title_profile']['soft_max']} Japanese characters.\n" .
                 "- Do not output explanations.\n";
 
@@ -784,8 +864,8 @@ class WABE_Generator
 
             $retry_lines = $this->parse_lines($retry);
             $retry_title = !empty($retry_lines[0]) ? sanitize_text_field($retry_lines[0]) : '';
-            $retry_title = preg_replace('/^#+\s*/u', '', (string)$retry_title);
-            $retry_title = trim((string)$retry_title, " \t\n\r\0\x0B\"'「」【】");
+            $retry_title = preg_replace('/^#+\s*/u', '', (string) $retry_title);
+            $retry_title = trim((string) $retry_title, " \t\n\r\0\x0B\"'「」〖〗");
 
             if ($this->is_title_length_ok($retry_title, $context)) {
                 $title = $retry_title;
@@ -822,20 +902,65 @@ class WABE_Generator
 
     private function generate_full_article(array $context, $article_title)
     {
-        WABE_Logger::info('AI provider used: ' . $this->ai->provider());
-        WABE_Logger::info('AI model used: ' . $this->ai->model());
-        $prompt = $this->build_full_article_prompt($context, $article_title);
+        if (class_exists('WABE_Logger') && method_exists('WABE_Logger', 'info')) {
+            WABE_Logger::info('AI provider used: ' . $this->ai->provider());
+            WABE_Logger::info('AI model used: ' . $this->ai->model());
+        }
+
+        $base_prompt = $this->build_full_article_prompt($context, $article_title);
+
+        $human_prompt = trim(
+            "You are a professional Japanese blog writer.\n" .
+                "Your article must feel like it was written by a real human, not an AI.\n\n" .
+
+                "[Human-like writing rules]\n" .
+                "- Avoid robotic, formulaic, or overly templated writing.\n" .
+                "- Use natural Japanese phrasing.\n" .
+                "- Mix short and long sentences for rhythm.\n" .
+                "- Avoid repeating the same sentence endings or paragraph patterns.\n" .
+                "- Do not make every section the same length.\n" .
+                "- Keep paragraphs readable and not overly dense.\n" .
+                "- Each paragraph should add new value.\n" .
+                "- Prefer concrete and practical explanations over vague generalities.\n" .
+                "- Use smooth transitions between sections.\n" .
+                "- Do not sound like a textbook, instruction manual, or AI template.\n\n" .
+
+                "[Natural expression guidance]\n" .
+                "- When appropriate, use subtle human phrasing such as:\n" .
+                "  - 「実は〜」\n" .
+                "  - 「意外と見落としがちですが〜」\n" .
+                "  - 「正直なところ〜」\n" .
+                "  - 「〜と感じる方も多いと思います」\n" .
+                "- Do not overuse these expressions.\n\n" .
+
+                "[Introduction guidance]\n" .
+                "- Start naturally with a relatable problem, question, or useful insight.\n" .
+                "- Avoid generic openings like 「本記事では〜について解説します」.\n\n" .
+
+                "[Conclusion guidance]\n" .
+                "- End naturally and helpfully.\n" .
+                "- Avoid robotic closings like 「まとめると〜です」.\n" .
+                "- Keep the CTA natural and not pushy.\n\n" .
+
+                "[Important constraints]\n" .
+                "- Never mention AI.\n" .
+                "- Never say the text was generated.\n" .
+                "- Do not explain your writing process.\n" .
+                "- Prioritize readability first, then SEO.\n"
+        );
+
+        $prompt = $human_prompt . "\n\n" . $base_prompt;
 
         $quality = $context['generation_quality'] ?? 'high';
         $temperature = ($quality === 'fast') ? 0.5 : 0.7;
-        $max_tokens = $this->estimate_max_output_tokens($context);
+        $max_tokens  = $this->estimate_max_output_tokens($context);
 
-        $text = trim((string)$this->ai->text($prompt, [
+        $text = trim((string) $this->ai->text($prompt, [
             'temperature'       => $temperature,
             'max_output_tokens' => $max_tokens,
         ]));
 
-        $body_ok = $this->is_body_length_ok($text, $context);
+        $body_ok     = $this->is_body_length_ok($text, $context);
         $headings_ok = $this->are_headings_length_ok($text, $context);
 
         if (!$body_ok || !$headings_ok) {
@@ -854,15 +979,18 @@ class WABE_Generator
 
             $retry_prompt .=
                 "- Do not repeat the title in the body.\n" .
-                "- Ensure the summary and CTA are included.\n";
+                "- Ensure the summary and CTA are included.\n" .
+                "- Make the writing more natural and human-like.\n" .
+                "- Reduce robotic repetition.\n" .
+                "- Keep transitions smooth between sections.\n";
 
-            $retry = trim((string)$this->ai->text($retry_prompt, [
+            $retry = trim((string) $this->ai->text($retry_prompt, [
                 'temperature'       => 0.6,
                 'max_output_tokens' => $max_tokens,
             ]));
 
             if ($retry !== '') {
-                $retry_body_ok = $this->is_body_length_ok($retry, $context);
+                $retry_body_ok     = $this->is_body_length_ok($retry, $context);
                 $retry_headings_ok = $this->are_headings_length_ok($retry, $context);
 
                 if ($retry_body_ok && $retry_headings_ok) {
@@ -878,64 +1006,78 @@ class WABE_Generator
 
     private function build_full_article_prompt(array $context, $article_title)
     {
-        $extra = '';
+        $keyword        = (string) ($context['seo_keyword'] ?? '');
+        $topic          = (string) ($context['topic'] ?? '');
+        $tone           = (string) ($context['tone'] ?? 'standard');
+        $language       = (string) ($context['language'] ?? 'Japanese');
+        $site_context   = trim((string) ($context['site_context'] ?? ''));
+        $writing_rules  = trim((string) ($context['writing_rules'] ?? ''));
+        $detail_level   = (string) ($context['detail_level'] ?? 'medium');
 
-        if (!empty($context['site_context'])) {
-            $extra .= "Site context:\n" . $this->decode_maybe_base64($context['site_context']) . "\n\n";
-        }
+        $length_profile = $context['length_profile'] ?? [];
+        $heading_profile = $context['heading_profile'] ?? [];
 
-        if (!empty($context['writing_rules'])) {
-            $extra .= "Writing rules:\n" . $this->decode_maybe_base64($context['writing_rules']) . "\n\n";
-        }
+        $min_length = isset($length_profile['min']) ? (int) $length_profile['min'] : 1500;
+        $max_length = isset($length_profile['max']) ? (int) $length_profile['max'] : 4000;
 
-        if (!empty($context['seo_keyword'])) {
-            $extra .= "SEO keyword:\n" . $context['seo_keyword'] . "\n\n";
-        }
-
-        if (!empty($context['internal_link_url']) && !empty($context['enable_internal_links'])) {
-            $extra .= "Internal link candidate URL:\n" . $context['internal_link_url'] . "\n\n";
-        }
-
-        $length_profile = $context['length_profile'];
-        $heading_profile = $context['heading_profile'];
-
-        $detail_text = 'Give a balanced level of explanation.';
-        if ($context['detail_level'] === 'low') {
-            $detail_text = 'Keep explanations compact and practical.';
-        } elseif ($context['detail_level'] === 'high') {
-            $detail_text = 'Explain each point deeply with concrete examples and actionable advice.';
-        }
-
-        $recommended_h2_count = 3;
-        if ($context['plan'] === 'advanced') {
-            $recommended_h2_count = 4;
-        } elseif ($context['plan'] === 'pro') {
-            $recommended_h2_count = 5;
-        }
+        $h2_min = isset($heading_profile['min']) ? (int) $heading_profile['min'] : 8;
+        $h2_max = isset($heading_profile['soft_max']) ? (int) $heading_profile['soft_max'] : 32;
 
         return trim(
-            "You are a professional Japanese SEO writer.\n" .
-                "Write in {$context['language']}.\n\n" .
-                $extra .
-                "Topic:\n{$context['topic']}\n\n" .
-                "Article title:\n{$article_title}\n\n" .
-                "Style:\n{$context['style']}\n\n" .
-                "Tone:\n{$context['tone']}\n\n" .
-                "Target total article length:\nAbout {$length_profile['target']} Japanese characters\n\n" .
-                "Valid total article length range:\n{$length_profile['min']} to {$length_profile['max']} Japanese characters including headings and body\n\n" .
-                "H2 heading length rule:\nEach H2 should ideally be between {$heading_profile['min']} and {$heading_profile['target_max']} Japanese characters, and must not exceed {$heading_profile['soft_max']} Japanese characters\n\n" .
-                "Recommended H2 count:\n{$recommended_h2_count}\n\n" .
-                "Detail instruction:\n{$detail_text}\n\n" .
+            "Topic: {$topic}\n" .
+                "Title: {$article_title}\n" .
+                "Language: {$language}\n" .
+                "Tone: {$tone}\n" .
+                "Detail level: {$detail_level}\n\n" .
+
+                ($keyword !== '' ? "SEO Keyword: {$keyword}\n\n" : '') .
+
+                ($site_context !== '' ? "Site context:\n{$site_context}\n\n" : '') .
+                ($writing_rules !== '' ? "Writing rules:\n{$writing_rules}\n\n" : '') .
+
                 "Task:\n" .
-                "- Write the full article body only.\n" .
-                "- Do NOT output the title again in the body.\n" .
-                "- Start directly with an introduction paragraph or the first H2.\n" .
-                "- Use Markdown-style headings only for H2 and H3 (##, ###).\n" .
-                "- Keep paragraphs short and readable.\n" .
-                "- Use bullet lists where useful.\n" .
-                "- Include a summary section.\n" .
-                "- Include a CTA section at the end.\n" .
-                "- Keep the structure natural and complete.\n"
+                "Write a complete, high-quality blog article in {$language}.\n\n" .
+
+                "[Structure requirements]\n" .
+                "- Include a natural introduction\n" .
+                "- Use multiple H2 sections and H3 subsections where appropriate\n" .
+                "- End with a natural conclusion\n" .
+                "- Do NOT repeat the title at the beginning of the body\n\n" .
+
+                "[Formatting]\n" .
+                "- Use markdown headings (## for H2, ### for H3)\n" .
+                "- Do NOT use HTML tags\n" .
+                "- Do NOT use bullet spam; use lists only when useful\n\n" .
+
+                "[Length constraints]\n" .
+                "- Total length must be between {$min_length} and {$max_length} Japanese characters\n" .
+                "- Each H2 heading must be between {$h2_min} and {$h2_max} Japanese characters\n\n" .
+
+                "[SEO guidelines]\n" .
+                "- Include the keyword naturally (no stuffing)\n" .
+                "- Make headings meaningful and useful\n" .
+                "- Write for readability first, SEO second\n\n" .
+
+                "[Content quality]\n" .
+                "- Avoid vague or generic explanations\n" .
+                "- Provide specific and practical information\n" .
+                "- Add examples where helpful\n" .
+                "- Each section must provide new value\n\n" .
+
+                "[Human-like writing guidance]\n" .
+                "- Avoid robotic and templated phrasing\n" .
+                "- Vary sentence length and rhythm\n" .
+                "- Avoid repeating the same sentence endings\n" .
+                "- Do not make every section the same size\n" .
+                "- Use smooth transitions between sections\n" .
+                "- Write as if explaining naturally to a real reader\n\n" .
+
+                "[Important constraints]\n" .
+                "- Do NOT mention AI\n" .
+                "- Do NOT explain the writing process\n" .
+                "- Do NOT write meta commentary\n\n" .
+
+                "Output only the article."
         );
     }
 
