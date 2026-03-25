@@ -1229,100 +1229,105 @@ class WABE_Generator
 
     private function markdown_to_blocks($markdown, $article_title = '')
     {
-        $markdown = str_replace(["\r\n", "\r"], "\n", (string) $markdown);
+        $markdown = (string) $markdown;
+        $markdown = trim(str_replace(["\r\n", "\r"], "\n", $markdown));
+
+        if ($markdown === '') {
+            return '';
+        }
+
         $lines = explode("\n", $markdown);
-
         $blocks = [];
-        $paragraph_buffer = [];
-        $list_buffer = [];
+        $paragraph = [];
+        $list_items = [];
 
-        $flush_paragraph = function () use (&$paragraph_buffer, &$blocks) {
-            if (empty($paragraph_buffer)) {
+        $flush_paragraph = function () use (&$paragraph, &$blocks) {
+            if (empty($paragraph)) {
                 return;
             }
 
-            $text = trim(implode("\n", $paragraph_buffer));
-            $paragraph_buffer = [];
+            $text = trim(implode("\n", $paragraph));
+            $paragraph = [];
 
             if ($text === '') {
                 return;
             }
 
-            $text = $this->format_inline_markdown($text);
-
-            $blocks[] = '<!-- wp:paragraph --><p>' . $text . '</p><!-- /wp:paragraph -->';
+            $html = nl2br(esc_html($text));
+            $blocks[] = '<!-- wp:paragraph -->'
+                . '<p>' . $html . '</p>'
+                . '<!-- /wp:paragraph -->';
         };
 
-        $flush_list = function () use (&$list_buffer, &$blocks) {
-            if (empty($list_buffer)) {
+        $flush_list = function () use (&$list_items, &$blocks) {
+            if (empty($list_items)) {
                 return;
             }
 
-            $items = [];
-            foreach ($list_buffer as $item) {
-                $item = trim($item);
-                if ($item === '') {
-                    continue;
-                }
-                $item = $this->format_inline_markdown($item);
-                $items[] = '<li>' . $item . '</li>';
+            $items_html = '';
+            foreach ($list_items as $item) {
+                $items_html .= '<li>' . esc_html($item) . '</li>';
             }
+            $list_items = [];
 
-            $list_buffer = [];
-
-            if (!empty($items)) {
-                $blocks[] = '<!-- wp:list --><ul>' . implode('', $items) . '</ul><!-- /wp:list -->';
-            }
+            $blocks[] = '<!-- wp:list -->'
+                . '<ul>' . $items_html . '</ul>'
+                . '<!-- /wp:list -->';
         };
 
         foreach ($lines as $line) {
-            $raw = rtrim($line);
-            $trimmed = trim($raw);
+            $line = rtrim($line);
 
-            // 空行
-            if ($trimmed === '') {
+            if ($line === '') {
                 $flush_paragraph();
                 $flush_list();
                 continue;
             }
 
-            // H4
-            if (preg_match('/^####\s+(.+)$/u', $trimmed, $m)) {
+            if (preg_match('/^###\s+(.+)$/u', $line, $m)) {
                 $flush_paragraph();
                 $flush_list();
-                $heading = esc_html(trim($m[1]));
-                $blocks[] = '<!-- wp:heading {"level":4} --><h4>' . $heading . '</h4><!-- /wp:heading -->';
+
+                $blocks[] = '<!-- wp:heading {"level":3} -->'
+                    . '<h3>' . esc_html(trim($m[1])) . '</h3>'
+                    . '<!-- /wp:heading -->';
                 continue;
             }
 
-            // H3
-            if (preg_match('/^###\s+(.+)$/u', $trimmed, $m)) {
+            if (preg_match('/^##\s+(.+)$/u', $line, $m)) {
                 $flush_paragraph();
                 $flush_list();
-                $heading = esc_html(trim($m[1]));
-                $blocks[] = '<!-- wp:heading {"level":3} --><h3>' . $heading . '</h3><!-- /wp:heading -->';
+
+                $blocks[] = '<!-- wp:heading -->'
+                    . '<h2>' . esc_html(trim($m[1])) . '</h2>'
+                    . '<!-- /wp:heading -->';
                 continue;
             }
 
-            // H2
-            if (preg_match('/^##\s+(.+)$/u', $trimmed, $m)) {
+            if (preg_match('/^#\s+(.+)$/u', $line, $m)) {
                 $flush_paragraph();
                 $flush_list();
-                $heading = esc_html(trim($m[1]));
-                $blocks[] = '<!-- wp:heading --><h2>' . $heading . '</h2><!-- /wp:heading -->';
+
+                $heading_text = trim((string) $m[1]);
+
+                if ($article_title !== '' && $heading_text === $article_title) {
+                    continue;
+                }
+
+                $blocks[] = '<!-- wp:heading {"level":1} -->'
+                    . '<h1>' . esc_html($heading_text) . '</h1>'
+                    . '<!-- /wp:heading -->';
                 continue;
             }
 
-            // 箇条書き
-            if (preg_match('/^\*\s+(.+)$/u', $trimmed, $m) || preg_match('/^-\s+(.+)$/u', $trimmed, $m)) {
+            if (preg_match('/^\-\s+(.+)$/u', $line, $m) || preg_match('/^\*\s+(.+)$/u', $line, $m)) {
                 $flush_paragraph();
-                $list_buffer[] = $m[1];
+                $list_items[] = trim((string) $m[1]);
                 continue;
             }
 
-            // 通常段落
             $flush_list();
-            $paragraph_buffer[] = $trimmed;
+            $paragraph[] = $line;
         }
 
         $flush_paragraph();
