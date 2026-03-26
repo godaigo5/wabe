@@ -2,684 +2,604 @@ msgid ""
 msgstr ""
 "Project-Id-Version: WP AI Blog Engine 1.0.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-03-18 00:00+0000\n"
-"PO-Revision-Date: 2026-03-19 17:22+0000\n"
+"POT-Creation-Date: 2026-03-26 00:00+0900\n"
+"PO-Revision-Date: 2026-03-26 16:02+0000\n"
 "Last-Translator: \n"
 "Language-Team: 日本語\n"
 "Language: ja\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Generator: Loco https://localise.biz/\n"
+"X-Domain: wp-ai-blog-engine\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
+"X-Generator: Loco https://localise.biz/\n"
 "X-Loco-Version: 2.8.3; wp-6.9.4; php-8.3.30"
 
-#: generated
-msgid "Activate"
-msgstr "有効化"
+#, fuzzy
+#| msgid "Insert images after headings"
+msgid " Insert images after headings"
+msgstr "見出しの後に画像を挿入"
 
-#: generated
-msgid "Activate License"
-msgstr "ライセンスを有効化"
-
-#: generated
 msgid "Active"
 msgstr "有効"
 
-#: generated
+msgid "active"
+msgstr "有効"
+
+msgid "Add one topic per input row."
+msgstr "1行につき1件の題材を入力してください。"
+
+msgid "Add Topic"
+msgstr "題材を追加"
+
 msgid "Advanced"
 msgstr "Advanced"
 
-#: generated
-msgid "Advanced features available in Pro."
-msgstr "Proで高度な機能が利用できます。"
+msgid "Affiliate features"
+msgstr "アフィリエイト機能"
 
-#: generated
-msgid "After purchase, paste your license key here and save."
-msgstr "購入後、ここにライセンスキーを貼り付けて保存してください。"
+msgid "AI Provider"
+msgstr "AIプロバイダー"
 
-#: generated
-msgid "AI Topic Generator"
-msgstr "AI題材生成"
+msgid "AI Topic Suggestions"
+msgstr "AI題材候補"
 
-#: generated
 msgid ""
-"AI-powered blog automation for WordPress with licensing, SEO, images, and "
-"Pro automation features."
-msgstr "SEO対策、画像編集、プロ向け自動化機能を備えた、AI搭載のWordPressブログ自動化ツール。"
+"AI-powered blog generation plugin for WordPress with OpenAI / Gemini support "
+"and license-based plan control."
+msgstr "OpenAI / Gemini対応、ライセンスベースのプラン制御を備えたWordPress向けAIブログ生成プラグインです。"
 
-#: generated
-msgid "Allowed Sites"
-msgstr "許可サイト数"
+msgid "API Plan"
+msgstr "APIプラン"
 
-#: generated
-msgid "API Connection Test"
-msgstr "API接続テスト"
+#| msgid "Author name"
+msgid "Author Name"
+msgstr "著者名"
 
-#: generated
-msgid "API Key"
-msgstr "APIキー"
+msgid "Auto posting"
+msgstr "自動投稿"
 
-#: generated
-msgid "Article"
-msgstr "記事"
+msgid "Automatic Posting"
+msgstr "自動投稿"
 
-#: generated
-msgid "Article generated successfully."
-msgstr "記事を生成しました。"
+msgid "Automation & Features"
+msgstr "自動化と機能"
 
-#: generated
-msgid "Article Outline Generator"
-msgstr "記事構成生成"
+msgid "Available"
+msgstr "利用可能"
 
-#: generated
-msgid "Auto Publish"
-msgstr "記事自動公開"
+msgid "Back to Settings"
+msgstr "設定に戻る"
 
-#: generated
-msgid "Best for testing the plugin."
-msgstr "プラグインのテストに最適です。"
+msgid "Blog"
+msgstr "ブログ"
 
-#: generated
-msgid "blocked"
-msgstr "停止"
+msgid "Business"
+msgstr "ビジネス"
 
-#: generated
-msgid "Buy Advanced"
-msgstr "Advancedを購入"
-
-#: generated
-msgid "Buy Pro"
-msgstr "Proを購入"
-
-#: generated
 msgid "Casual"
 msgstr "カジュアル"
 
-#: generated
-msgid "Check"
-msgstr "確認"
+msgid "Checked At"
+msgstr "確認日時"
 
-#: generated
-msgid "Check License"
-msgstr "ライセンスを確認"
+msgid "Checked at"
+msgstr "確認日時"
 
-#: generated
-msgid "Chinese"
-msgstr "中国語"
+msgid "Choose the provider and model used to generate articles."
+msgstr "記事生成に使用するプロバイダーとモデルを選択します。"
 
-#: generated
 msgid "Clear Logs"
-msgstr "ログを全削除"
+msgstr "ログを削除"
 
-#: generated
-msgid "Connection failed."
-msgstr "接続に失敗しました。"
+msgid "Comparison / ranking article generation"
+msgstr "比較記事 / ランキング記事生成"
 
-#: generated
-msgid "Connection successful."
-msgstr "接続に成功しました。"
+msgid "Configure article structure and generation behavior."
+msgstr "記事構成と生成動作を設定します。"
 
-#: generated
-msgid "Content generation failed."
-msgstr "本文生成に失敗しました。"
+msgid "Configure featured images and inline Unsplash images."
+msgstr "アイキャッチ画像と本文内のUnsplash画像を設定します。"
 
-#: generated
-msgid "Cron deactivated."
-msgstr "Cronを停止しました。"
+msgid "Control schedule and advanced article features."
+msgstr "自動実行スケジュールと高度な記事機能を設定します。"
 
-#: generated
-msgid "Cron registered."
-msgstr "Cronを登録しました。"
+msgid "Current License Status"
+msgstr "現在のライセンス状態"
 
-#: generated
-msgid "Cron rescheduled."
-msgstr "Cronを再登録しました。"
+msgid "Current license status and active plan."
+msgstr "現在のライセンス状態と有効なプランです。"
 
-#: generated
-msgid "Current Features"
-msgstr "現在利用可能な機能"
+msgid "Current Plan"
+msgstr "現在のプラン"
 
-#: generated
-msgid "Current License Data"
-msgstr "現在のライセンス情報"
+msgid "Current plan"
+msgstr "現在のプラン"
 
-#: generated
-msgid "Current Plan:"
-msgstr "現在のプラン:"
+msgid "Current plan allows up to %d headings."
+msgstr "現在のプランでは見出し数は最大%d件まで設定できます。"
 
-#: generated
-msgid "Dashboard"
-msgstr "ダッシュボード"
+msgid "Current plan allows up to %d posts per week."
+msgstr "現在のプランでは週%d件まで投稿できます。"
 
-#: generated
-msgid "Date"
-msgstr "日時"
+msgid "Current plan limits and available features."
+msgstr "現在のプランの制限と利用可能機能です。"
 
-#: generated
-msgid "Deactivate"
-msgstr "無効化"
+msgid "Current:"
+msgstr "現在:"
 
-#: generated
-msgid "Deactivate License"
-msgstr "ライセンスを無効化"
+msgid "Customer email"
+msgstr "購入者メールアドレス"
 
-#: generated
-msgid "Description Style"
-msgstr "説明スタイル"
+msgid "Customer Email Address"
+msgstr "購入者メールアドレス"
 
-#: generated
-msgid "Disabled"
-msgstr "使用不可"
+msgid "Debug"
+msgstr "デバッグ"
 
-#: generated
-msgid "Documentation"
-msgstr "ドキュメント"
+#| msgid "Detail level"
+msgid "Detail Level"
+msgstr "詳細レベル"
 
-#: generated
-msgid "Domain"
-msgstr "ドメイン"
+msgid ""
+"Domain activation may not be completed. After registering your domain on the "
+"member page, press \"Refresh License Information\"."
+msgstr ""
+"ドメインの有効化が完了していない可能性があります。会員ページでドメインを登録後、「Refresh License "
+"Information」を押してください。"
 
-#: generated
 msgid "Draft"
 msgstr "下書き"
 
-#: generated
-msgid "Edit"
-msgstr "編集"
+msgid "Duplicate Check"
+msgstr "重複チェック"
 
-#: generated
-msgid "Enabled"
-msgstr "有効"
+msgid "Duplicate check"
+msgstr "重複チェック"
 
-#: generated
-msgid "English"
-msgstr "英語"
+msgid "Enable automatic posting"
+msgstr "自動投稿を有効化"
 
-#: generated
-msgid "Enter your API key"
-msgstr "APIキーを入力してください"
+msgid "Enable duplicate check"
+msgstr "重複チェックを有効化"
 
-#: generated
-msgid "Enter your license key"
-msgstr "ライセンスキーを入力してください"
+msgid "Enable external links"
+msgstr "外部リンクを有効化"
 
-#: generated
+msgid "Enable featured image generation"
+msgstr "アイキャッチ画像生成を有効化"
+
+msgid "Enable internal links"
+msgstr "内部リンクを有効化"
+
+msgid "Enable outline generator"
+msgstr "構成生成を有効化"
+
+msgid "Enable SEO support"
+msgstr "SEO機能を有効化"
+
+msgid "Enable topic prediction"
+msgstr "題材予測を有効化"
+
+msgid "Enter the license key you received after purchase."
+msgstr "購入後に受け取ったライセンスキーを入力してください。"
+
 msgid "Error"
 msgstr "エラー"
 
-#: generated
+msgid "Expanded"
+msgstr "拡張"
+
 msgid "Expired"
 msgstr "期限切れ"
 
-#: generated
 msgid "Expires At"
 msgstr "有効期限"
 
-#: generated
+msgid "Expires at"
+msgstr "有効期限"
+
+msgid "External Links"
+msgstr "外部リンク"
+
+msgid "External links"
+msgstr "外部リンク"
+
 msgid "Feature"
 msgstr "機能"
 
-#: generated
-msgid "Featured Image Generation"
-msgstr "アイキャッチ画像生成"
+msgid "Featured Image"
+msgstr "アイキャッチ画像"
 
-#: generated
-msgid "Featured image set."
-msgstr "アイキャッチ画像を設定しました。"
+msgid "Featured image"
+msgstr "アイキャッチ画像"
 
-#: generated
-msgid "For bloggers who want automation, SEO, and images."
-msgstr "ブロガー向け。自動化、SEO、画像を利用したい方用。"
+msgid "Fixed"
+msgstr "固定"
 
-#: generated
-msgid ""
-"For full AI automation with topic generation, internal links, and outlines."
-msgstr "トピック生成、内部リンク、アウトライン作成など、AIによる完全な自動化を実現します。"
+msgid "Formal"
+msgstr "フォーマル"
 
-#: generated
 msgid "Free"
-msgstr "無料版"
+msgstr "Free"
 
-#: generated
-msgid "Free plan in use"
-msgstr "-"
+msgid "Friendly"
+msgstr "親しみやすい"
 
-#: generated
-msgid "French"
-msgstr "フランス語"
+msgid "Gemini API Key"
+msgstr "Gemini APIキー"
 
-#: generated
-msgid "Generate AI Topics"
-msgstr "AIで題材生成"
+msgid "Gemini Model"
+msgstr "Geminiモデル"
 
-#: generated
 msgid "Generate Now"
 msgstr "今すぐ生成"
 
-#: generated
-msgid "Generate Topics"
-msgstr "題材を生成"
+msgid "Generate Predicted Topics"
+msgstr "予測題材を生成"
 
-#: generated
-msgid "Generate with Current Topic"
-msgstr "この題材で今すぐ生成"
+msgid "Generate Suggested Topics"
+msgstr "題材候補を生成"
 
-#: generated
-msgid "Generated Titles"
-msgstr "生成タイトル一覧"
+msgid "Generate suggested topics and append them to the queue."
+msgstr "題材候補を生成し、キューに追加します。"
 
-#: generated
-msgid "Generation Count"
-msgstr "生成数"
+msgid "Generation is not ready. Please check your settings."
+msgstr "生成の準備ができていません。設定を確認してください。"
 
-#: generated
-msgid "Generation History"
-msgstr "生成履歴"
+msgid "Generation Quality"
+msgstr "生成品質"
 
-#: generated
-msgid "German"
-msgstr "ドイツ語"
+msgid "Generator class not found."
+msgstr "Generator クラスが見つかりません。"
 
-#: generated
-msgid "Health Check"
-msgstr "ヘルスチェック"
+msgid "Heading Count"
+msgstr "見出し数"
 
-#: generated
-msgid "Help"
-msgstr "ヘルプ"
+msgid "Heading count"
+msgstr "見出し数"
 
-#: generated
+msgid "High"
+msgstr "高"
+
 msgid "History"
 msgstr "履歴"
 
-#: generated
-msgid "Image"
+msgid "How-to"
+msgstr "ハウツー"
+
+msgid "Image Style"
+msgstr "画像スタイル"
+
+msgid "Image style"
+msgstr "画像スタイル"
+
+msgid "Images"
 msgstr "画像"
 
-#: generated
 msgid "Inactive"
-msgstr "未アクティベート"
+msgstr "無効"
 
-#: generated
 msgid "Info"
 msgstr "情報"
 
-#: generated
-msgid "Insufficient setup. Please add topic and style."
-msgstr "設定が不足しています。題材とスタイルを入力してください。"
+msgid "Inline images"
+msgstr "本文内画像"
 
-#: generated
-msgid "Internal Link Generator"
-msgstr "内部リンク生成"
+msgid "Inline Unsplash Images"
+msgstr "本文内画像（Unsplash）"
 
-#: generated
+msgid "Inline Unsplash images"
+msgstr "本文内画像（Unsplash）"
+
+msgid "Internal Links"
+msgstr "内部リンク"
+
+msgid "Internal links"
+msgstr "内部リンク"
+
 msgid "Invalid"
 msgstr "無効"
 
-#: generated
-msgid "Invalid License"
-msgstr "無効なライセンス"
+msgid "Invalid license API response."
+msgstr "ライセンスAPIの応答が不正です。"
 
-#: generated
-msgid "Japanese"
-msgstr "日本語"
+msgid "Keep the queue compact for easier operation."
+msgstr "操作しやすいよう、キューは少なめに保つのがおすすめです。"
 
-#: generated
-msgid "Korean"
-msgstr "韓国語"
+msgid "Last checked"
+msgstr "最終確認日時"
 
-#: generated
-msgid "Language"
-msgstr "言語"
+msgid "Level"
+msgstr "レベル"
 
-#: generated
 msgid "License"
 msgstr "ライセンス"
 
-#: generated
-msgid "License activated."
-msgstr "ライセンスを有効化しました。"
+msgid "License & Plan"
+msgstr "ライセンスとプラン"
 
-#: generated
-msgid "License active"
-msgstr "ライセンス認証済み"
+msgid "License API URL is not configured."
+msgstr "ライセンスAPIのURLが設定されていません。"
 
-#: generated
-msgid "License blocked"
-msgstr "ライセンス停止"
-
-#: generated
-msgid "License check failed."
-msgstr "ライセンス確認に失敗しました。"
-
-#: generated
-msgid "License deactivated."
-msgstr "ライセンスを無効化しました。"
-
-#: generated
-msgid "License expired"
-msgstr "ライセンスの有効期限切れ"
-
-#: generated
-msgid "License Features"
-msgstr "ライセンス機能"
-
-#: generated
-msgid "License inactive"
-msgstr "ライセンスが無効"
-
-#: generated
 msgid "License Key"
 msgstr "ライセンスキー"
 
-#: generated
-msgid "License saved and synchronized."
-msgstr "ライセンスが保存され、同期されました。"
+msgid "License key is not set."
+msgstr "ライセンスキーが設定されていません。"
 
-#: generated
+msgid "License key saved."
+msgstr "ライセンスキーを保存しました。"
+
 msgid "License Status"
 msgstr "ライセンス状態"
 
-#: generated
-msgid "Log"
-msgstr "ログ"
+msgid "License status"
+msgstr "ライセンス状態"
 
-#: generated
-msgid "Log Level"
-msgstr "ログレベル"
+msgid "List"
+msgstr "リスト"
 
-#: generated
+msgid "Locked"
+msgstr "ロック中"
+
+msgid "Locked."
+msgstr "ロックされています。"
+
+msgid "Locked. Upgrade to %s to use this feature."
+msgstr "ロックされています。この機能を使うには %s にアップグレードしてください。"
+
+msgid "Log Entries"
+msgstr "ログ一覧"
+
+msgid "Log Overview"
+msgstr "ログ概要"
+
 msgid "Logs"
 msgstr "ログ"
 
-#: generated
-msgid "Logs cleared."
-msgstr "ログを削除しました。"
+msgid "Low"
+msgstr "低"
 
-#: generated
-msgid "Manual Generate"
-msgstr "手動生成"
+msgid "Luxury"
+msgstr "ラグジュアリー"
 
-#: generated
-msgid "Manual generation executed."
-msgstr "手動生成を実行しました。"
+msgid "Medium"
+msgstr "中"
 
-#: generated
 msgid "Message"
 msgstr "メッセージ"
 
-#: generated
-msgid "month"
-msgstr "月"
+msgid "Multiple"
+msgstr "複数"
 
-#: generated
-msgid "Never"
-msgstr "なし"
+msgid "Natural"
+msgstr "ナチュラル"
 
-#: generated
-msgid "Next Scheduled Run"
-msgstr "次回投稿予定"
+msgid "News"
+msgstr "ニュース"
 
-#: generated
-msgid "No history yet."
-msgstr "履歴はまだありません。"
+msgid "Next scheduled run"
+msgstr "次回の自動実行"
 
-#: generated
 msgid "No logs found."
 msgstr "ログはありません。"
 
-#: generated
-msgid "No."
-msgstr "No"
+msgid "No topics yet."
+msgstr "題材はまだありません。"
 
-#: generated
-msgid "Not Ready"
-msgstr "未準備"
+msgid "Normal"
+msgstr "通常"
 
-#: generated
-msgid "Not Scheduled"
-msgstr "未設定"
+msgid "Not scheduled"
+msgstr "未スケジュール"
 
-#: generated
 msgid "OpenAI API Key"
 msgstr "OpenAI APIキー"
 
-#: generated
-msgid "or"
-msgstr "または"
+msgid "OpenAI Model"
+msgstr "OpenAIモデル"
 
-#: generated
-msgid "Outline"
-msgstr "構成"
+msgid "Outline Generator"
+msgstr "構成生成"
 
-#: generated
-msgid "Permission denied."
-msgstr "権限がありません。"
+msgid "Outline generator"
+msgstr "構成生成"
 
-#: generated
-msgid "Plan"
-msgstr "プラン"
-
-#: generated
 msgid "Plan Comparison"
 msgstr "プラン比較"
 
-#: generated
-msgid "Plugin Version"
-msgstr "プラグインバージョン"
+msgid "Plan Summary"
+msgstr "プラン概要"
 
-#: generated
-msgid "Polite"
-msgstr "丁寧"
+msgid "Pollinations API Key"
+msgstr "Pollinations APIキー"
 
-#: generated
-msgid "Post Link"
-msgstr "投稿リンク"
+msgid "Pollinations Image Model"
+msgstr "Pollinations画像モデル"
 
-#: generated
+msgid "Post generated successfully."
+msgstr "投稿を生成しました。"
+
+#| msgid "Post status"
 msgid "Post Status"
 msgstr "投稿ステータス"
 
-#: generated
-msgid "Post Title"
-msgstr "投稿タイトル"
+msgid "Post:"
+msgstr "投稿:"
 
-#: generated
-msgid "Posts"
-msgstr "投稿"
+msgid "Posts Per Week"
+msgstr "週あたり投稿数"
 
-#: generated
+msgid "Posts per week"
+msgstr "週あたり投稿数"
+
 msgid "Pro"
 msgstr "Pro"
 
-#: generated
+msgid "Professional"
+msgstr "プロフェッショナル"
+
+msgid "Provider"
+msgstr "プロバイダー"
+
 msgid "Publish"
 msgstr "公開"
 
-#: generated
+msgid "Publish posts"
+msgstr "投稿公開"
+
+msgid "Queued Topics"
+msgstr "予約題材"
+
+msgid "Queued topics"
+msgstr "予約題材"
+
 msgid "Ready"
 msgstr "準備完了"
 
-#: generated
-msgid "Ready to Post"
-msgstr "投稿準備状態"
+msgid "Ready status"
+msgstr "準備状態"
 
-#: generated
-msgid "Related Articles"
-msgstr "関連記事"
+msgid "Recently generated topics and created posts."
+msgstr "最近生成されたトピックと作成された投稿。"
 
-#: generated
-msgid "Save"
-msgstr "保存"
+msgid "Refresh License Information"
+msgstr "ライセンス情報を再取得"
 
-#: generated
-msgid "Save License"
-msgstr "ライセンスを保存"
+msgid "Register topics one by one. You can add up to 10 topics."
+msgstr "題材を1件ずつ登録します。最大10件まで追加できます。"
 
-#: generated
+msgid "Remove"
+msgstr "削除"
+
+msgid "Review"
+msgstr "レビュー"
+
+msgid "Save License Key"
+msgstr "ライセンスキーを保存"
+
 msgid "Save Settings"
 msgstr "設定を保存"
 
-#: generated
-msgid "Saved."
-msgstr "保存しました。"
+msgid "Save Topics"
+msgstr "題材を保存"
 
-#: generated
-msgid "Schedule"
-msgstr "スケジュール"
+msgid "Schedule enabled"
+msgstr "自動投稿を有効化"
 
-#: generated
 msgid "Security check failed."
 msgstr "セキュリティチェックに失敗しました。"
 
-#: generated
-msgid "Select plan"
-msgstr "プランを選択"
-
-#: generated
 msgid "SEO"
 msgstr "SEO"
 
-#: generated
-msgid "SEO Optimization"
-msgstr "SEO最適化"
+msgid "SEO features"
+msgstr "SEO機能"
 
-#: generated
 msgid "Settings"
 msgstr "設定"
 
-#: generated
 msgid "Settings saved."
 msgstr "設定を保存しました。"
 
-#: generated
-msgid "Site"
-msgstr "サイト"
+msgid "Site Context"
+msgstr "サイト情報"
 
-#: generated
-msgid "Spanish"
-msgstr "スペイン語"
+msgid "Site context"
+msgstr "サイト情報"
 
-#: generated
+msgid "Site Context & Writing Rules"
+msgstr "サイト情報と執筆ルール"
+
+msgid "Specific topics usually generate better posts."
+msgstr "具体的な題材のほうが、より良い記事になりやすいです。"
+
 msgid "Standard"
 msgstr "標準"
 
-#: generated
-msgid "Status"
-msgstr "状態"
+msgid "Stored logs:"
+msgstr "保存済みログ数:"
 
-#: generated
-msgid "Style"
-msgstr "スタイル"
+msgid "Tech"
+msgstr "テック"
 
-#: generated
-msgid "Support"
-msgstr "サポート"
+msgid "Test article generation immediately with the current settings."
+msgstr "現在の設定で記事生成をすぐにテストします。"
 
-#: generated
-msgid "System Status"
-msgstr "システムステータス"
+msgid ""
+"These fields are Base64-encoded in the browser before submission to reduce "
+"the chance of server-side 403 errors on long text."
+msgstr "長文テキストでサーバー側の403エラーが起きにくいよう、これらの項目は送信前にブラウザ側でBase64エンコードされます。"
 
-#: generated
-msgid "Title Generation Count"
-msgstr "タイトル生成数"
+msgid "Time"
+msgstr "時刻"
 
-#: generated
-msgid "Title generation failed."
-msgstr "タイトル生成に失敗しました。"
+msgid "Tips"
+msgstr "ヒント"
 
-#: generated
 msgid "Tone"
 msgstr "トーン"
 
-#: generated
-msgid "Tools"
-msgstr "ツール"
+msgid "Tone control"
+msgstr "トーン変更"
 
-#: generated
-msgid "Topic"
+msgid "Topic History"
+msgstr "題材履歴"
+
+msgid "Topic Prediction"
+msgstr "題材予測"
+
+msgid "Topic prediction"
+msgstr "題材予測"
+
+msgid "Topics"
 msgstr "題材"
 
-#: generated
-msgid "Topic List"
-msgstr "題材一覧"
-
-#: generated
-msgid "Topic Management"
-msgstr "題材管理"
-
-#: generated
-msgid "Topic saved."
+msgid "Topics saved."
 msgstr "題材を保存しました。"
 
-#: generated
-msgid "Topics"
-msgstr "題材管理"
+msgid "Unlimited"
+msgstr "無制限"
 
-#: generated
-msgid "Unavailable Features"
-msgstr "利用できない機能"
+msgid "Unsplash Access Key"
+msgstr "Unsplashアクセスキー"
 
-#: generated
-msgid "Unknown"
-msgstr "不明"
+msgid "Used for article generation and image generation."
+msgstr "記事生成と画像生成に使用されます。"
 
-#: generated
-msgid "Upgrade Plan"
-msgstr "プランをアップグレード"
+msgid "Used for inline article images. Secret Key is not required here."
+msgstr "本文内画像に使用されます。ここではSecret Keyは不要です。"
 
-#: generated
-msgid "Upgrade to unlock this feature."
-msgstr "この機能を使うにはアップグレードしてください。"
+msgid "Used only for image generation if you enable it in your implementation."
+msgstr "実装で有効にした場合のみ画像生成に使用されます。"
 
-#: generated
 msgid "Valid"
 msgstr "有効"
 
-#: generated
-msgid "Valid License"
-msgstr "有効なライセンス"
-
-#: generated
-msgid "View"
-msgstr "閲覧"
-
-#: generated
 msgid "Warning"
 msgstr "警告"
 
-#: generated
-msgid "Weekly"
-msgstr "週間"
+msgid "Weekly posts"
+msgstr "週あたり投稿数"
 
-#: generated
-msgid "Weekly Post Limit"
-msgstr "週間投稿上限"
-
-#: generated
-msgid "Weekly Posts"
-msgstr "週の投稿数"
-
-#: generated
-msgid "year"
-msgstr "年"
-
-#: generated
 msgid ""
-"You are currently using the Free plan. Upgrade to unlock more automation "
-"features."
-msgstr "現在、無料プランをご利用中です。アップグレードすると、より多くの自動化機能が利用可能になります。"
+"WordPress automatic posting runs when your site receives visits. If your "
+"site has very few visits, scheduled posting may be delayed."
+msgstr ""
+"WordPressの自動投稿はサイトへのアクセスがあったときに実行されます。アクセスが少ないサイトでは、予定時刻より遅れて投稿される場合があります。"
 
-#: generated
-msgid ""
-"You are using the Advanced plan. Upgrade to Pro for full automation features."
-msgstr "現在、アドバンスプランをご利用中です。完全な自動化機能をご利用いただくには、プロプランにアップグレードしてください。"
+msgid "WP AI Blog Engine"
+msgstr "WP AI Blog Engine"
 
-#: generated
-msgid "You are using the Pro plan with all core automation features enabled."
-msgstr "すべての主要な自動化機能が有効になっているProプランをご利用中です。"
+msgid "Writing Rules"
+msgstr "執筆ルール"
 
-#: generated
-msgid "You do not have permission."
-msgstr "権限がありません。"
+msgid "Writing rules"
+msgstr "執筆ルール"
+
+msgid "Writing Settings"
+msgstr "執筆設定"
+
+msgid "You do not have permission to access this page."
+msgstr "このページにアクセスする権限がありません。"

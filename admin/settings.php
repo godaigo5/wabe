@@ -160,7 +160,8 @@ if (!function_exists('wabe_settings_lock_text')) {
                         <div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:16px;">
                             <div style="font-size:12px;color:#6b7280;margin-bottom:6px;">
                                 <?php esc_html_e('License status', WABE_TEXTDOMAIN); ?></div>
-                            <div style="font-size:16px;font-weight:700;"><?php echo esc_html($license_status); ?></div>
+                            <div style="font-size:16px;font-weight:700;">
+                                <?php esc_html_e($license_status, WABE_TEXTDOMAIN); ?></div>
                         </div>
                         <div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:16px;">
                             <div style="font-size:12px;color:#6b7280;margin-bottom:6px;">
@@ -222,11 +223,6 @@ if (!function_exists('wabe_settings_lock_text')) {
                                         name="<?php echo esc_attr(WABE_OPTION); ?>[openai_api_key]"
                                         value="<?php echo esc_attr($opt['openai_api_key'] ?? ''); ?>"
                                         autocomplete="off">
-                                    <?php if ($openai_masked) : ?>
-                                        <p class="description">
-                                            <?php echo esc_html(sprintf(__('Current: %s', WABE_TEXTDOMAIN), $openai_masked)); ?>
-                                        </p>
-                                    <?php endif; ?>
                                     <p class="description">
                                         <?php esc_html_e('Used for article generation and image generation.', WABE_TEXTDOMAIN); ?>
                                     </p>
@@ -261,11 +257,6 @@ if (!function_exists('wabe_settings_lock_text')) {
                                         name="<?php echo esc_attr(WABE_OPTION); ?>[gemini_api_key]"
                                         value="<?php echo esc_attr($opt['gemini_api_key'] ?? ''); ?>"
                                         autocomplete="off">
-                                    <?php if ($gemini_masked) : ?>
-                                        <p class="description">
-                                            <?php echo esc_html(sprintf(__('Current: %s', WABE_TEXTDOMAIN), $gemini_masked)); ?>
-                                        </p>
-                                    <?php endif; ?>
                                     <p class="description">
                                         <?php esc_html_e('Used for article generation and image generation.', WABE_TEXTDOMAIN); ?>
                                     </p>
@@ -299,11 +290,6 @@ if (!function_exists('wabe_settings_lock_text')) {
                                         name="<?php echo esc_attr(WABE_OPTION); ?>[pollinations_api_key]"
                                         value="<?php echo esc_attr($opt['pollinations_api_key'] ?? ''); ?>"
                                         autocomplete="off">
-                                    <?php if ($pollinations_masked) : ?>
-                                        <p class="description">
-                                            <?php echo esc_html(sprintf(__('Current: %s', WABE_TEXTDOMAIN), $pollinations_masked)); ?>
-                                        </p>
-                                    <?php endif; ?>
                                     <p class="description">
                                         <?php esc_html_e('Used only for image generation if you enable it in your implementation.', WABE_TEXTDOMAIN); ?>
                                     </p>
@@ -337,8 +323,9 @@ if (!function_exists('wabe_settings_lock_text')) {
                         <tbody>
                             <tr>
                                 <th scope="row">
-                                    <label
-                                        for="wabe_heading_count"><?php esc_html_e('Heading Count', WABE_TEXTDOMAIN); ?></label>
+                                    <label for="wabe_heading_count">
+                                        <?php esc_html_e('Heading Count', WABE_TEXTDOMAIN); ?>
+                                    </label>
                                 </th>
                                 <td>
                                     <select id="wabe_heading_count"
@@ -365,7 +352,9 @@ if (!function_exists('wabe_settings_lock_text')) {
 
                             <tr>
                                 <th scope="row">
-                                    <label for="wabe_tone"><?php esc_html_e('Tone', WABE_TEXTDOMAIN); ?></label>
+                                    <label for="wabe_tone">
+                                        <?php esc_html_e('Tone', WABE_TEXTDOMAIN); ?>
+                                    </label>
                                 </th>
                                 <td>
                                     <select id="wabe_tone" name="<?php echo esc_attr(WABE_OPTION); ?>[tone]">
@@ -385,8 +374,9 @@ if (!function_exists('wabe_settings_lock_text')) {
 
                             <tr>
                                 <th scope="row">
-                                    <label
-                                        for="wabe_detail_level"><?php esc_html_e('Detail Level', WABE_TEXTDOMAIN); ?></label>
+                                    <label for="wabe_detail_level">
+                                        <?php esc_html_e('Detail Level', WABE_TEXTDOMAIN); ?>
+                                    </label>
                                 </th>
                                 <td>
                                     <select id="wabe_detail_level"
@@ -403,8 +393,9 @@ if (!function_exists('wabe_settings_lock_text')) {
 
                             <tr>
                                 <th scope="row">
-                                    <label
-                                        for="wabe_generation_quality"><?php esc_html_e('Generation Quality', WABE_TEXTDOMAIN); ?></label>
+                                    <label for="wabe_generation_quality">
+                                        <?php esc_html_e('Generation Quality', WABE_TEXTDOMAIN); ?>
+                                    </label>
                                 </th>
                                 <td>
                                     <select id="wabe_generation_quality"
@@ -419,8 +410,9 @@ if (!function_exists('wabe_settings_lock_text')) {
 
                             <tr>
                                 <th scope="row">
-                                    <label
-                                        for="wabe_author_name"><?php esc_html_e('Author Name', WABE_TEXTDOMAIN); ?></label>
+                                    <label for="wabe_author_name">
+                                        <?php esc_html_e('Author Name', WABE_TEXTDOMAIN); ?>
+                                    </label>
                                 </th>
                                 <td>
                                     <input id="wabe_author_name" type="text" class="regular-text"
@@ -431,8 +423,9 @@ if (!function_exists('wabe_settings_lock_text')) {
 
                             <tr>
                                 <th scope="row">
-                                    <label
-                                        for="wabe_post_status"><?php esc_html_e('Post Status', WABE_TEXTDOMAIN); ?></label>
+                                    <label for="wabe_post_status">
+                                        <?php esc_html_e('Post Status', WABE_TEXTDOMAIN); ?>
+                                    </label>
                                 </th>
                                 <td>
                                     <select id="wabe_post_status"
@@ -458,9 +451,7 @@ if (!function_exists('wabe_settings_lock_text')) {
                     style="background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:24px;box-shadow:0 1px 3px rgba(0,0,0,.04);">
                     <h2 style="margin:0 0 6px;font-size:20px;">
                         <?php esc_html_e('Site Context & Writing Rules', WABE_TEXTDOMAIN); ?></h2>
-                    <p style="margin:0 0 20px;color:#6b7280;">
-                        <?php esc_html_e('These fields are Base64-encoded in the browser before submission to reduce the chance of server-side 403 errors on long text.', WABE_TEXTDOMAIN); ?>
-                    </p>
+
 
                     <input type="hidden" id="wabe_site_context_hidden"
                         name="<?php echo esc_attr(WABE_OPTION); ?>[site_context]" value="">

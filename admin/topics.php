@@ -133,9 +133,9 @@ if (empty($render_topics)) {
                     </div>
                 </div>
 
-                <?php if (!empty($history)) : ?>
+                <?php if (!empty($history)) : $count = 0; ?>
                     <div style="margin-top:18px;display:grid;gap:12px;">
-                        <?php foreach (array_reverse($history) as $item) : ?>
+                        <?php foreach ($history as $item) : ?>
                             <?php
                             $topic_text = is_array($item) ? (string) ($item['topic'] ?? '') : '';
                             $tone = is_array($item) ? (string) ($item['tone'] ?? 'standard') : 'standard';
@@ -143,34 +143,35 @@ if (empty($render_topics)) {
                             $post_id = is_array($item) ? (int) ($item['post_id'] ?? 0) : 0;
                             $post_title = $post_id > 0 ? get_the_title($post_id) : '';
                             $post_link = $post_id > 0 ? get_permalink($post_id) : '';
+                            if ($post_id > 0 && $post_link) :
+                                $count++;
+                                if ($count >= 20) {
+                                    break;
+                                }
                             ?>
-                            <div style="border:1px solid #e5e7eb;border-radius:12px;padding:14px;background:#fafafa;">
-                                <div style="font-weight:700;margin-bottom:6px;">
-                                    <?php echo esc_html($topic_text !== '' ? $topic_text : '—'); ?>
-                                </div>
+                                <div style="border:1px solid #e5e7eb;border-radius:12px;padding:14px;background:#fafafa;">
+                                    <div style="font-weight:700;margin-bottom:6px;">
+                                        <?php echo esc_html($topic_text !== '' ? $topic_text : '—'); ?>
+                                    </div>
 
-                                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
-                                    <span
-                                        style="display:inline-flex;padding:4px 10px;border-radius:999px;background:#eef2ff;color:#3730a3;font-size:12px;font-weight:700;">
-                                        <?php echo esc_html($tone_options[$tone] ?? $tone); ?>
-                                    </span>
-                                    <span
-                                        style="display:inline-flex;padding:4px 10px;border-radius:999px;background:#f3f4f6;color:#374151;font-size:12px;font-weight:700;">
-                                        <?php echo esc_html(wabe_topics_style_label($style)); ?>
-                                    </span>
-                                </div>
-
-                                <?php if ($post_id > 0 && $post_link) : ?>
+                                    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+                                        <span
+                                            style="display:inline-flex;padding:4px 10px;border-radius:999px;background:#eef2ff;color:#3730a3;font-size:12px;font-weight:700;">
+                                            <?php echo esc_html($tone_options[$tone] ?? $tone); ?>
+                                        </span>
+                                        <span
+                                            style="display:inline-flex;padding:4px 10px;border-radius:999px;background:#f3f4f6;color:#374151;font-size:12px;font-weight:700;">
+                                            <?php echo esc_html(wabe_topics_style_label($style)); ?>
+                                        </span>
+                                    </div>
                                     <div style="font-size:13px;color:#4b5563;">
                                         <?php esc_html_e('Post:', WABE_TEXTDOMAIN); ?>
                                         <a href="<?php echo esc_url($post_link); ?>" target="_blank" rel="noopener noreferrer">
                                             <?php echo esc_html($post_title !== '' ? $post_title : ('#' . $post_id)); ?>
                                         </a>
                                     </div>
-                                <?php else : ?>
-                                    <div style="font-size:13px;color:#6b7280;">—</div>
-                                <?php endif; ?>
-                            </div>
+                                </div>
+                            <?php endif; ?>
                         <?php endforeach; ?>
                     </div>
                 <?php else : ?>
