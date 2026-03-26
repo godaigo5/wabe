@@ -722,14 +722,21 @@ class WABE_Image
             esc_url($unsplash_href)
         );
 
-        return "\n\n" .
-            '<!-- wp:image {"sizeSlug":"large","linkDestination":"none","className":"wabe-inline-unsplash-image"} -->' .
-            '<figure class="wp-block-image size-large wabe-inline-unsplash-image">' .
-            '<img src="' . esc_url($image_url) . '" alt="' . esc_attr($alt) . '" loading="lazy" />' .
-            '<figcaption>' . $caption_html . '</figcaption>' .
-            '</figure>' .
-            '<!-- /wp:image -->' .
-            "\n\n";
+        $attrs = wp_json_encode([
+            'url'             => esc_url($image_url),
+            'alt'             => (string) $alt,
+            'sizeSlug'        => 'large',
+            'linkDestination' => 'none',
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+        return "\n\n"
+            . '<!-- wp:image ' . $attrs . ' -->'
+            . '<figure class="wp-block-image size-large">'
+            . '<img src="' . esc_url($image_url) . '" alt="' . esc_attr($alt) . '" />'
+            . '<figcaption class="wp-element-caption">' . $caption_html . '</figcaption>'
+            . '</figure>'
+            . '<!-- /wp:image -->'
+            . "\n\n";
     }
 
     /**
@@ -756,21 +763,46 @@ class WABE_Image
         }
 
         $current_index = -1;
+        $matched_block_heading = false;
 
+        // Gutenbergの heading block 全体を対象にする
         $content = preg_replace_callback(
-            '/(<h([23])\b[^>]*>.*?<\/h\2>)/isu',
-            function ($m) use (&$current_index, $map) {
+            '/(<!--\s+wp:heading(?:\s+\{.*?\})?\s+-->\s*<h([23])\b[^>]*>.*?<\/h\2>\s*<!--\s+\/wp:heading\s+-->)/isu',
+            function ($m) use (&$current_index, $map, &$matched_block_heading) {
+                $matched_block_heading = true;
                 $current_index++;
-                $heading_html = (string) $m[1];
+
+                $heading_block = (string) $m[1];
 
                 if (!isset($map[$current_index])) {
-                    return $heading_html;
+                    return $heading_block;
                 }
 
-                return $heading_html . "\n" . $map[$current_index];
+                return $heading_block . "\n\n" . $map[$current_index];
             },
             $content
         );
+
+        // Gutenberg block が無い場合だけ、生の <h2>/<h3> を対象にする
+        if (!$matched_block_heading) {
+            $current_index = -1;
+
+            $content = preg_replace_callback(
+                '/(<h([23])\b[^>]*>.*?<\/h\2>)/isu',
+                function ($m) use (&$current_index, $map) {
+                    $current_index++;
+
+                    $heading_html = (string) $m[1];
+
+                    if (!isset($map[$current_index])) {
+                        return $heading_html;
+                    }
+
+                    return $heading_html . "\n\n" . $map[$current_index];
+                },
+                $content
+            );
+        }
 
         return (string) $content;
     }
