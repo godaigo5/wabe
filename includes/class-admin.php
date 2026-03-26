@@ -349,7 +349,13 @@ class WABE_Admin
     {
         $this->guard();
 
-        if (!isset($_POST['_wpnonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['_wpnonce'])), 'wabe_clear_logs')) {
+        if (
+            !isset($_POST['wabe_clear_logs_nonce']) ||
+            !wp_verify_nonce(
+                sanitize_text_field(wp_unslash($_POST['wabe_clear_logs_nonce'])),
+                'wabe_clear_logs'
+            )
+        ) {
             wp_die(esc_html__('Security check failed.', WABE_TEXTDOMAIN));
         }
 

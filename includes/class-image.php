@@ -110,11 +110,6 @@ class WABE_Image
             return $content;
         }
 
-        if (!$this->can_use_unsplash_in_article()) {
-            $this->log_info('Unsplash: skipped (disabled or key missing)');
-            return $content;
-        }
-
         $plan     = sanitize_key((string) ($args['plan'] ?? 'free'));
         $topic    = trim((string) ($args['topic'] ?? ''));
         $title    = trim((string) ($args['title'] ?? ''));
@@ -125,20 +120,23 @@ class WABE_Image
             return $content;
         }
 
-        if (strpos($content, 'wabe-inline-unsplash-image') !== false) {
-            $this->log_info('Unsplash: skipped because inline image already exists');
+        if (
+            strpos($content, 'wabe-inline-ai-image') !== false ||
+            strpos($content, 'wabe-inline-unsplash-image') !== false
+        ) {
+            $this->log_info('Inline image: skipped because inline image already exists');
             return $content;
         }
 
         $headings = $this->extract_headings_from_content($content);
         if (empty($headings)) {
-            $this->log_info('Unsplash: no headings found');
+            $this->log_info('Inline image: no headings found');
             return $content;
         }
 
         $candidate_headings = $this->select_unsplash_target_headings($headings, $limit);
         if (empty($candidate_headings)) {
-            $this->log_info('Unsplash: no candidate headings selected');
+            $this->log_info('Inline image: no candidate headings selected');
             return $content;
         }
 
@@ -151,9 +149,41 @@ class WABE_Image
                 break;
             }
 
-            $queries = $this->build_unsplash_queries($heading['text'], $topic, $title, $language);
+            $heading_text = trim((string) ($heading['text'] ?? ''));
+            if ($heading_text === '') {
+                continue;
+            }
+
+            // 1) OpenAI -> Gemini
+            $ai_attachment_id = $this->generate_inline_ai_attachment($heading_text, $topic, $title);
+
+            if ($ai_attachment_id) {
+                $block = $this->build_attachment_image_block($ai_attachment_id, $heading_text);
+                if ($block !== '') {
+                    $insertions[] = [
+                        'heading_index' => (int) $heading['index'],
+                        'block'         => $block,
+                    ];
+
+                    $this->log_info(
+                        'Inline image: AI selected heading tag=' . $heading['tag'] .
+                            ' index=' . (int) $heading['index'] .
+                            ' text=' . $heading_text .
+                            ' attachment_id=' . (int) $ai_attachment_id
+                    );
+                    continue;
+                }
+            }
+
+            // 2) Unsplash fallback
+            if (!$this->can_use_unsplash_in_article()) {
+                $this->log_info('Inline image: AI failed and Unsplash unavailable for heading=' . $heading_text);
+                continue;
+            }
+
+            $queries = $this->build_unsplash_queries($heading_text, $topic, $title, $language);
             if (empty($queries)) {
-                $this->log_info('Unsplash: no query candidates for heading=' . $heading['text']);
+                $this->log_info('Unsplash: no query candidates for heading=' . $heading_text);
                 continue;
             }
 
@@ -177,7 +207,7 @@ class WABE_Image
             }
 
             if (!$photo) {
-                $this->log_info('Unsplash: no photo found for heading=' . $heading['text']);
+                $this->log_info('Inline image: AI failed and no Unsplash photo found for heading=' . $heading_text);
                 continue;
             }
 
@@ -186,9 +216,9 @@ class WABE_Image
                 $used_photo_ids[$photo_id] = true;
             }
 
-            $block = $this->build_unsplash_image_block($photo, $heading['text']);
+            $block = $this->build_unsplash_image_block($photo, $heading_text);
             if ($block === '') {
-                $this->log_info('Unsplash: block build failed - heading=' . $heading['text']);
+                $this->log_info('Unsplash: block build failed - heading=' . $heading_text);
                 continue;
             }
 
@@ -200,7 +230,7 @@ class WABE_Image
             $this->log_info(
                 'Unsplash: selected heading tag=' . $heading['tag'] .
                     ' index=' . (int) $heading['index'] .
-                    ' text=' . $heading['text'] .
+                    ' text=' . $heading_text .
                     ' query=' . $used_query
             );
 
@@ -208,41 +238,12 @@ class WABE_Image
         }
 
         if (empty($insertions)) {
-            $fallback_heading = $candidate_headings[0] ?? null;
-            if (is_array($fallback_heading)) {
-                $fallback_queries = $this->build_unsplash_queries('', $topic, $title, $language);
-                foreach ($fallback_queries as $query) {
-                    if ($query === '' || isset($used_queries[$query])) {
-                        continue;
-                    }
-                    $used_queries[$query] = true;
-                    $this->log_info('Unsplash: fallback searching query=' . $query);
-                    $photo = $this->search_unsplash_photo($query, array_keys($used_photo_ids));
-                    if (!$photo) {
-                        continue;
-                    }
-                    $block = $this->build_unsplash_image_block($photo, (string) ($fallback_heading['text'] ?? ''));
-                    if ($block === '') {
-                        continue;
-                    }
-                    $insertions[] = [
-                        'heading_index' => (int) ($fallback_heading['index'] ?? 0),
-                        'block'         => $block,
-                    ];
-                    $this->ping_unsplash_download($photo);
-                    $this->log_info('Unsplash: fallback image inserted with query=' . $query);
-                    break;
-                }
-            }
-        }
-
-        if (empty($insertions)) {
-            $this->log_info('Unsplash: no image blocks created');
+            $this->log_info('Inline image: no image blocks created');
             return $content;
         }
 
         $content = $this->insert_blocks_after_headings($content, $insertions);
-        $this->log_info('Unsplash: inserted ' . count($insertions) . ' in-article image(s)');
+        $this->log_info('Inline image: inserted ' . count($insertions) . ' in-article image(s)');
 
         return $content;
     }
@@ -734,6 +735,149 @@ class WABE_Image
             . '<figure class="wp-block-image size-large">'
             . '<img src="' . esc_url($image_url) . '" alt="' . esc_attr($alt) . '" />'
             . '<figcaption class="wp-element-caption">' . $caption_html . '</figcaption>'
+            . '</figure>'
+            . '<!-- /wp:image -->'
+            . "\n\n";
+    }
+
+    private function generate_inline_ai_attachment($heading_text, $topic = '', $title = '')
+    {
+        $heading_text = trim((string) $heading_text);
+        $topic        = trim((string) $topic);
+        $title        = trim((string) $title);
+
+        if ($heading_text === '') {
+            return false;
+        }
+
+        $prompt = $this->build_inline_image_prompt($heading_text, $topic, $title);
+
+        $image = $this->generate_with_openai($prompt);
+        if ($image) {
+            $this->log_info('Inline image: OpenAI success for heading=' . $heading_text);
+        } else {
+            $this->log_warning('Inline image: OpenAI failed, fallback to Gemini for heading=' . $heading_text);
+            $image = $this->generate_with_gemini($prompt);
+
+            if ($image) {
+                $this->log_info('Inline image: Gemini success for heading=' . $heading_text);
+            } else {
+                $this->log_warning('Inline image: Gemini failed for heading=' . $heading_text);
+                return false;
+            }
+        }
+
+        if (empty($image['bytes']) || empty($image['mime'])) {
+            $this->log_warning('Inline image: invalid AI image payload for heading=' . $heading_text);
+            return false;
+        }
+
+        $attachment_title = trim($title . ' ' . $heading_text);
+        if ($attachment_title === '') {
+            $attachment_title = 'inline-image';
+        }
+
+        $attachment_id = $this->save_generated_image(0, $attachment_title, $image['bytes'], $image['mime']);
+        if (!$attachment_id) {
+            $this->log_warning('Inline image: save_generated_image failed for heading=' . $heading_text);
+            return false;
+        }
+
+        update_post_meta($attachment_id, '_wp_attachment_image_alt', sanitize_text_field($heading_text));
+
+        return (int) $attachment_id;
+    }
+
+    private function build_inline_image_prompt($heading_text, $topic = '', $title = '')
+    {
+        $heading_text = trim(wp_strip_all_tags((string) $heading_text));
+        $topic        = trim(wp_strip_all_tags((string) $topic));
+        $title        = trim(wp_strip_all_tags((string) $title));
+
+        $style_map = [
+            'modern'   => 'modern, clean, professional',
+            'business' => 'business, trustworthy, polished',
+            'blog'     => 'editorial, attractive, blog-style',
+            'tech'     => 'technology-focused, sleek, modern',
+            'luxury'   => 'premium, elegant, refined',
+            'natural'  => 'soft natural lighting, warm, approachable',
+        ];
+
+        $style_text = $style_map[$this->image_style] ?? $style_map['modern'];
+
+        $site_context = '';
+        if (class_exists('WABE_Utils') && method_exists('WABE_Utils', 'wabe_maybe_base64_decode')) {
+            $site_context = (string) WABE_Utils::wabe_maybe_base64_decode($this->options['site_context'] ?? '');
+        } else {
+            $site_context = (string) ($this->options['site_context'] ?? '');
+        }
+
+        $site_context = trim(wp_strip_all_tags($site_context));
+
+        if (function_exists('mb_strlen') && mb_strlen($site_context) > 250) {
+            $site_context = mb_substr($site_context, 0, 250);
+        } elseif (strlen($site_context) > 250) {
+            $site_context = substr($site_context, 0, 250);
+        }
+
+        $prompt = 'Create an in-article image for a WordPress blog post section.'
+            . ' Section heading: ' . $heading_text . '.';
+
+        if ($topic !== '') {
+            $prompt .= ' Article topic: ' . $topic . '.';
+        }
+
+        if ($title !== '') {
+            $prompt .= ' Article title: ' . $title . '.';
+        }
+
+        $prompt .= ' Generate a concrete visual scene that matches the section heading as specifically as possible.'
+            . ' Prefer a relevant scene over a generic business stock image.'
+            . ' Style: ' . $style_text . '.'
+            . ' Landscape composition suitable for a blog content image.'
+            . ' No text, no letters, no logo, no watermark.';
+
+        if ($site_context !== '') {
+            $prompt .= ' Website/business context: ' . $site_context . '.';
+        }
+
+        return $prompt;
+    }
+
+    private function build_attachment_image_block($attachment_id, $alt = '')
+    {
+        $attachment_id = (int) $attachment_id;
+        if ($attachment_id < 1) {
+            return '';
+        }
+
+        $image_url = wp_get_attachment_image_url($attachment_id, 'large');
+        if (!$image_url) {
+            $image_url = wp_get_attachment_url($attachment_id);
+        }
+
+        if (!$image_url) {
+            return '';
+        }
+
+        $alt = trim((string) $alt);
+        if ($alt === '') {
+            $alt = (string) get_post_meta($attachment_id, '_wp_attachment_image_alt', true);
+        }
+
+        $attrs = wp_json_encode([
+            'id'              => $attachment_id,
+            'sizeSlug'        => 'large',
+            'linkDestination' => 'none',
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+        return "\n\n"
+            . '<!-- wp:image ' . $attrs . ' -->'
+            . '<figure class="wp-block-image size-large wabe-inline-ai-image">'
+            . wp_get_attachment_image($attachment_id, 'large', false, [
+                'class' => 'wp-image-' . $attachment_id,
+                'alt'   => $alt,
+            ])
             . '</figure>'
             . '<!-- /wp:image -->'
             . "\n\n";
