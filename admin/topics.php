@@ -4,7 +4,14 @@ if (!defined('ABSPATH')) exit;
 $opt = is_array($this->options ?? null) ? $this->options : [];
 $topics = is_array($opt['topics'] ?? null) ? $opt['topics'] : [];
 $history = is_array($opt['history'] ?? null) ? $opt['history'] : [];
-$max_topics = 10;
+
+for ($i = count($topics); $i < 10; $i++) {
+    $topics[] = [
+        'topic' => '',
+        'style' => 'normal',
+        'tone'  => 'standard',
+    ];
+}
 
 if (!function_exists('wabe_topics_tone_options')) {
     function wabe_topics_tone_options()
@@ -23,6 +30,7 @@ if (!function_exists('wabe_topics_style_label')) {
     function wabe_topics_style_label($style)
     {
         $style = (string) $style;
+
         $map = [
             'standard' => __('Standard', WABE_TEXTDOMAIN),
             'normal'   => __('Normal', WABE_TEXTDOMAIN),
@@ -31,33 +39,45 @@ if (!function_exists('wabe_topics_style_label')) {
             'news'     => __('News', WABE_TEXTDOMAIN),
             'list'     => __('List', WABE_TEXTDOMAIN),
         ];
+
         return $map[$style] ?? $style;
     }
 }
 
-$tone_options = wabe_topics_tone_options();
+if (!function_exists('wabe_topics_history_date')) {
+    function wabe_topics_history_date($row)
+    {
+        $post_id = (int) ($row['post_id'] ?? 0);
 
-/**
- * 表示用に topic 文字列だけを安全に取り出す
- */
-$render_topics = [];
-foreach ($topics as $topic_item) {
-    if (is_array($topic_item)) {
-        $render_topics[] = (string) ($topic_item['topic'] ?? '');
-    } elseif (is_string($topic_item)) {
-        $render_topics[] = $topic_item;
+        if ($post_id > 0) {
+            $post = get_post($post_id);
+            if ($post && !empty($post->post_date) && $post->post_date !== '0000-00-00 00:00:00') {
+                return mysql2date(
+                    get_option('date_format') . ' ' . get_option('time_format'),
+                    $post->post_date
+                );
+            }
+        }
+
+        foreach (['created_at', 'generated_at', 'date', 'created'] as $key) {
+            if (!empty($row[$key])) {
+                $ts = strtotime((string) $row[$key]);
+                if ($ts) {
+                    return wp_date(get_option('date_format') . ' ' . get_option('time_format'), $ts);
+                }
+                return (string) $row[$key];
+            }
+        }
+
+        return '';
     }
 }
 
-$render_topics = array_slice($render_topics, 0, $max_topics);
-
-if (empty($render_topics)) {
-    $render_topics[] = '';
-}
+$tone_options = wabe_topics_tone_options();
 ?>
 
 <div class="wrap">
-    <h1 style="margin-bottom:16px;"><?php esc_html_e('Topics', WABE_TEXTDOMAIN); ?></h1>
+    <h1 style="margin-bottom: 18px;"><?php esc_html_e('Topics', WABE_TEXTDOMAIN); ?></h1>
 
     <?php if (!empty($_GET['updated'])) : ?>
         <div class="notice notice-success is-dismissible">
@@ -65,129 +85,193 @@ if (empty($render_topics)) {
         </div>
     <?php endif; ?>
 
-    <?php if (!empty($_GET['predicted'])) : ?>
-        <div class="notice notice-success is-dismissible">
-            <p><?php esc_html_e('Predicted topics added.', WABE_TEXTDOMAIN); ?></p>
-        </div>
-    <?php endif; ?>
+    <div style="display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:20px;align-items:start;">
 
-    <div style="display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:20px;align-items:start;">
         <div style="display:flex;flex-direction:column;gap:20px;">
 
             <div
-                style="background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:24px;box-shadow:0 1px 3px rgba(0,0,0,.04);">
-                <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;">
+                style="background:#fff;border:1px solid #dcdcde;border-radius:14px;padding:22px;box-shadow:0 1px 2px rgba(0,0,0,.04);">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">
                     <div>
-                        <h2 style="margin:0 0 6px;font-size:20px;">
+                        <h2 style="margin:0 0 6px;font-size:22px;">
                             <?php esc_html_e('Queued Topics', WABE_TEXTDOMAIN); ?></h2>
-                        <p style="margin:0;color:#6b7280;">
+                        <p style="margin:0;color:#646970;">
                             <?php esc_html_e('Register topics one by one. You can add up to 10 topics.', WABE_TEXTDOMAIN); ?>
                         </p>
                     </div>
-                    <span id="wabe-topics-count-badge"
-                        style="display:inline-flex;align-items:center;padding:8px 14px;border-radius:999px;font-weight:700;background:#eff6ff;color:#1d4ed8;">
-                        <?php echo esc_html(count(array_filter($render_topics, static function ($v) {
-                            return trim((string) $v) !== '';
-                        })) . ' / ' . $max_topics); ?>
-                    </span>
                 </div>
 
-                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" id="wabe-topics-form"
-                    style="margin-top:20px;">
+                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>"
+                    style="margin-top:18px;">
                     <input type="hidden" name="action" value="wabe_save_topics">
                     <?php wp_nonce_field('wabe_save_topics'); ?>
 
-                    <div id="wabe-topics-container" style="display:grid;gap:10px;">
-                        <?php foreach ($render_topics as $index => $value) : ?>
-                            <div class="wabe-topic-row" style="display:flex;gap:10px;align-items:center;">
-                                <span class="wabe-topic-number"
-                                    style="width:28px;height:28px;border-radius:999px;background:#f3f4f6;color:#374151;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex:0 0 28px;">
-                                    <?php echo esc_html($index + 1); ?>
-                                </span>
-                                <input type="text" name="topics[]" value="<?php echo esc_attr($value); ?>"
+                    <div id="wabe-topics-rows" style="display:flex;flex-direction:column;gap:12px;">
+                        <?php foreach ($topics as $index => $row) : ?>
+                            <?php
+                            $topic_value = is_array($row) ? (string) ($row['topic'] ?? '') : '';
+                            $style_value = is_array($row) ? (string) ($row['style'] ?? 'normal') : 'normal';
+                            $tone_value  = is_array($row) ? (string) ($row['tone'] ?? 'standard') : 'standard';
+                            ?>
+                            <div class="wabe-topic-row"
+                                style="display:grid;grid-template-columns:minmax(0,1fr) 140px 140px auto;gap:10px;align-items:center;">
+                                <input type="text"
+                                    name="<?php echo esc_attr(WABE_OPTION); ?>[topics][<?php echo esc_attr($index); ?>][topic]"
+                                    value="<?php echo esc_attr($topic_value); ?>"
                                     placeholder="<?php echo esc_attr__('Enter topic', WABE_TEXTDOMAIN); ?>"
-                                    class="regular-text" style="flex:1;max-width:none;">
-                                <button type="button"
-                                    class="button wabe-remove-topic"><?php esc_html_e('Remove', WABE_TEXTDOMAIN); ?></button>
+                                    class="regular-text" style="width:100%;max-width:none;">
+
+                                <select
+                                    name="<?php echo esc_attr(WABE_OPTION); ?>[topics][<?php echo esc_attr($index); ?>][tone]"
+                                    style="width:100%;">
+                                    <?php foreach ($tone_options as $tone_key => $tone_label) : ?>
+                                        <option value="<?php echo esc_attr($tone_key); ?>"
+                                            <?php selected($tone_value, $tone_key); ?>>
+                                            <?php echo esc_html($tone_label); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+
+                                <select
+                                    name="<?php echo esc_attr(WABE_OPTION); ?>[topics][<?php echo esc_attr($index); ?>][style]"
+                                    style="width:100%;">
+                                    <option value="normal" <?php selected($style_value, 'normal'); ?>>
+                                        <?php esc_html_e('Normal', WABE_TEXTDOMAIN); ?></option>
+                                    <option value="how-to" <?php selected($style_value, 'how-to'); ?>>
+                                        <?php esc_html_e('How-to', WABE_TEXTDOMAIN); ?></option>
+                                    <option value="review" <?php selected($style_value, 'review'); ?>>
+                                        <?php esc_html_e('Review', WABE_TEXTDOMAIN); ?></option>
+                                    <option value="news" <?php selected($style_value, 'news'); ?>>
+                                        <?php esc_html_e('News', WABE_TEXTDOMAIN); ?></option>
+                                    <option value="list" <?php selected($style_value, 'list'); ?>>
+                                        <?php esc_html_e('List', WABE_TEXTDOMAIN); ?></option>
+                                </select>
+
+                                <button type="button" class="button wabe-remove-topic-row">
+                                    <?php esc_html_e('Remove', WABE_TEXTDOMAIN); ?>
+                                </button>
                             </div>
                         <?php endforeach; ?>
                     </div>
 
                     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;">
-                        <button type="button" class="button"
-                            id="wabe-add-topic"><?php esc_html_e('Add Topic', WABE_TEXTDOMAIN); ?></button>
                         <?php submit_button(__('Save Topics', WABE_TEXTDOMAIN), 'primary', 'submit', false); ?>
+                        <button type="button" class="button" id="wabe-add-topic-row">
+                            <?php esc_html_e('Add Topic', WABE_TEXTDOMAIN); ?>
+                        </button>
                     </div>
                 </form>
             </div>
 
             <div
-                style="background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:24px;box-shadow:0 1px 3px rgba(0,0,0,.04);">
-                <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;">
+                style="background:#fff;border:1px solid #dcdcde;border-radius:14px;padding:22px;box-shadow:0 1px 2px rgba(0,0,0,.04);">
+                <div
+                    style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
                     <div>
-                        <h2 style="margin:0 0 6px;font-size:20px;">
+                        <h2 style="margin:0 0 6px;font-size:22px;">
                             <?php esc_html_e('Topic History', WABE_TEXTDOMAIN); ?></h2>
-                        <p style="margin:0;color:#6b7280;">
+                        <p style="margin:0;color:#646970;">
                             <?php esc_html_e('Recently generated topics and created posts.', WABE_TEXTDOMAIN); ?>
                         </p>
                     </div>
+                    <div
+                        style="font-size:12px;font-weight:600;color:#1d2327;background:#f6f7f7;border:1px solid #dcdcde;border-radius:999px;padding:6px 10px;">
+                        <?php echo esc_html__('Latest 20', WABE_TEXTDOMAIN); ?>
+                    </div>
                 </div>
 
-                <?php if (!empty($history)) : $count = 0; ?>
-                    <div style="margin-top:18px;display:grid;gap:12px;">
-                        <?php foreach ($history as $item) : ?>
+                <?php
+                $count = 0;
+                ?>
+
+                <?php if (!empty($history)) : ?>
+                    <div style="display:flex;flex-direction:column;gap:14px;">
+                        <?php foreach (array_reverse($history) as $row) : ?>
                             <?php
-                            $topic_text = is_array($item) ? (string) ($item['topic'] ?? '') : '';
-                            $tone = is_array($item) ? (string) ($item['tone'] ?? 'standard') : 'standard';
-                            $style = is_array($item) ? (string) ($item['style'] ?? 'standard') : 'standard';
-                            $post_id = is_array($item) ? (int) ($item['post_id'] ?? 0) : 0;
+                            $post_id = (int) ($row['post_id'] ?? 0);
                             $post_title = $post_id > 0 ? get_the_title($post_id) : '';
                             $post_link = $post_id > 0 ? get_permalink($post_id) : '';
+                            $topic = (string) ($row['topic'] ?? '');
+                            $tone = (string) ($row['tone'] ?? 'standard');
+                            $style = (string) ($row['style'] ?? 'normal');
+                            $posted_at = wabe_topics_history_date($row);
+
                             if ($post_id > 0 && $post_link) :
                                 $count++;
-                                if ($count >= 20) {
+                                if ($count > 20) {
                                     break;
                                 }
                             ?>
-                                <div style="border:1px solid #e5e7eb;border-radius:12px;padding:14px;background:#fafafa;">
-                                    <div style="font-weight:700;margin-bottom:6px;">
-                                        <?php echo esc_html($topic_text !== '' ? $topic_text : '—'); ?>
+                                <div
+                                    style="border:1px solid #dcdcde;border-radius:14px;background:linear-gradient(180deg,#ffffff 0%,#fbfbfc 100%);padding:6px 12px;box-shadow:0 2px 8px rgba(0,0,0,.04);">
+                                    <div
+                                        style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">
+                                        <div style="flex:1;min-width:280px;">
+                                            <div style="font-size:18px;font-weight:700;line-height:1.6;color:#1d2327;">
+                                                <?php echo esc_html($topic); ?>
+                                            </div>
+
+                                            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+
+                                                <!-- Tone -->
+                                                <span
+                                                    style="display:inline-flex; align-items:center; gap:6px; border-radius:999px; background:#eef2ff;">
+                                                    <?php esc_html_e('Tone', WABE_TEXTDOMAIN); ?>:
+                                                    <?php echo esc_html($tone_options[$tone] ?? $tone); ?>
+                                                </span>
+
+                                                <!-- Style -->
+                                                <span
+                                                    style="display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; background:#f3f4f6;">
+                                                    <?php esc_html_e('Style', WABE_TEXTDOMAIN); ?>:
+                                                    <?php echo esc_html(wabe_topics_style_label($style)); ?>
+                                                </span>
+
+                                            </div>
+                                        </div>
+
+                                        <?php if ($posted_at !== '') : ?>
+                                            <div
+                                                style="font-size:12px;color:#646970;white-space:nowrap;background:#f6f7f7;border:1px solid #dcdcde;border-radius:999px; ">
+                                                <?php esc_html_e('Posted:', WABE_TEXTDOMAIN); ?>
+                                                <?php echo esc_html($posted_at); ?>
+                                            </div>
+                                        <?php endif; ?>
                                     </div>
 
-                                    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
-                                        <span
-                                            style="display:inline-flex;padding:4px 10px;border-radius:999px;background:#eef2ff;color:#3730a3;font-size:12px;font-weight:700;">
-                                            <?php echo esc_html($tone_options[$tone] ?? $tone); ?>
-                                        </span>
-                                        <span
-                                            style="display:inline-flex;padding:4px 10px;border-radius:999px;background:#f3f4f6;color:#374151;font-size:12px;font-weight:700;">
-                                            <?php echo esc_html(wabe_topics_style_label($style)); ?>
-                                        </span>
-                                    </div>
-                                    <div style="font-size:13px;color:#4b5563;">
-                                        <?php esc_html_e('Post:', WABE_TEXTDOMAIN); ?>
-                                        <a href="<?php echo esc_url($post_link); ?>" target="_blank" rel="noopener noreferrer">
-                                            <?php echo esc_html($post_title !== '' ? $post_title : ('#' . $post_id)); ?>
+                                    <div
+                                        style="border-top:1px solid #ececec;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+                                        <div style="font-size:13px;color:#50575e;">
+                                            <?php esc_html_e('Post:', WABE_TEXTDOMAIN); ?>
+                                            <strong style="color:#1d2327;"><?php echo esc_html($post_title); ?></strong>
+                                        </div>
+
+                                        <a href="<?php echo esc_url($post_link); ?>" target="_blank" rel="noopener noreferrer"
+                                            style="display:inline-flex;align-items:center;justify-content:center;padding:8px 14px;border-radius:8px;background:#2271b1;color:#fff;text-decoration:none;font-size:13px;font-weight:600;">
+                                            <?php esc_html_e('Open Post', WABE_TEXTDOMAIN); ?>
                                         </a>
                                     </div>
                                 </div>
                             <?php endif; ?>
                         <?php endforeach; ?>
                     </div>
+
+                    <?php if ($count === 0) : ?>
+                        <p style="margin:0;color:#646970;"><?php esc_html_e('No topics yet.', WABE_TEXTDOMAIN); ?></p>
+                    <?php endif; ?>
+
                 <?php else : ?>
-                    <p style="margin-top:18px;color:#6b7280;">
-                        <?php esc_html_e('No topic history yet.', WABE_TEXTDOMAIN); ?>
-                    </p>
+                    <p style="margin:0;color:#646970;"><?php esc_html_e('No topics yet.', WABE_TEXTDOMAIN); ?></p>
                 <?php endif; ?>
             </div>
         </div>
 
         <div style="display:flex;flex-direction:column;gap:20px;">
             <div
-                style="background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:24px;box-shadow:0 1px 3px rgba(0,0,0,.04);">
+                style="background:#fff;border:1px solid #dcdcde;border-radius:14px;padding:22px;box-shadow:0 1px 2px rgba(0,0,0,.04);">
                 <h2 style="margin:0 0 6px;font-size:20px;"><?php esc_html_e('AI Topic Suggestions', WABE_TEXTDOMAIN); ?>
                 </h2>
-                <p style="margin:0 0 16px;color:#6b7280;">
+                <p style="margin:0 0 16px;color:#646970;">
                     <?php esc_html_e('Generate suggested topics and append them to the queue.', WABE_TEXTDOMAIN); ?>
                 </p>
 
@@ -199,9 +283,9 @@ if (empty($render_topics)) {
             </div>
 
             <div
-                style="background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:24px;box-shadow:0 1px 3px rgba(0,0,0,.04);">
+                style="background:#fff;border:1px solid #dcdcde;border-radius:14px;padding:22px;box-shadow:0 1px 2px rgba(0,0,0,.04);">
                 <h2 style="margin:0 0 6px;font-size:20px;"><?php esc_html_e('Tips', WABE_TEXTDOMAIN); ?></h2>
-                <ul style="margin:12px 0 0 18px;color:#4b5563;line-height:1.8;">
+                <ul style="margin:12px 0 0 18px;color:#50575e;line-height:1.9;">
                     <li><?php esc_html_e('Add one topic per input row.', WABE_TEXTDOMAIN); ?></li>
                     <li><?php esc_html_e('Specific topics usually generate better posts.', WABE_TEXTDOMAIN); ?></li>
                     <li><?php esc_html_e('Keep the queue compact for easier operation.', WABE_TEXTDOMAIN); ?></li>
@@ -212,90 +296,69 @@ if (empty($render_topics)) {
 </div>
 
 <script>
-    (function() {
-        var maxTopics = <?php echo (int) $max_topics; ?>;
-        var container = document.getElementById('wabe-topics-container');
-        var addButton = document.getElementById('wabe-add-topic');
-        var countBadge = document.getElementById('wabe-topics-count-badge');
+    document.addEventListener('DOMContentLoaded', function() {
+        const addButton = document.getElementById('wabe-add-topic-row');
+        const container = document.getElementById('wabe-topics-rows');
 
-        if (!container || !addButton) return;
+        if (!addButton || !container) return;
 
-        function escapeHtml(value) {
-            return String(value)
-                .replace(/&/g, '&amp;')
-                .replace(/"/g, '&quot;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;');
-        }
+        addButton.addEventListener('click', function() {
+            const rows = container.querySelectorAll('.wabe-topic-row');
+            const index = rows.length;
 
-        function updateRowNumbers() {
-            var rows = container.querySelectorAll('.wabe-topic-row');
-            var filled = 0;
+            if (index >= 10) return;
 
-            rows.forEach(function(row, index) {
-                var badge = row.querySelector('.wabe-topic-number');
-                var input = row.querySelector('input[name="topics[]"]');
-
-                if (badge) {
-                    badge.textContent = String(index + 1);
-                }
-                if (input && input.value.trim() !== '') {
-                    filled++;
-                }
-            });
-
-            if (countBadge) {
-                countBadge.textContent = filled + ' / ' + maxTopics;
-            }
-
-            addButton.disabled = rows.length >= maxTopics;
-        }
-
-        function createRow(value) {
-            var row = document.createElement('div');
+            const row = document.createElement('div');
             row.className = 'wabe-topic-row';
-            row.style.display = 'flex';
+            row.style.display = 'grid';
+            row.style.gridTemplateColumns = 'minmax(0,1fr) 140px 140px auto';
             row.style.gap = '10px';
             row.style.alignItems = 'center';
 
-            row.innerHTML =
-                '<span class="wabe-topic-number" style="width:28px;height:28px;border-radius:999px;background:#f3f4f6;color:#374151;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex:0 0 28px;">1</span>' +
-                '<input type="text" name="topics[]" value="' + escapeHtml(value || '') +
-                '" placeholder="<?php echo esc_js(__('Enter topic', WABE_TEXTDOMAIN)); ?>" class="regular-text" style="flex:1;max-width:none;">' +
-                '<button type="button" class="button wabe-remove-topic"><?php echo esc_js(__('Remove', WABE_TEXTDOMAIN)); ?></button>';
+            row.innerHTML = `
+            <input
+                type="text"
+                name="<?php echo esc_attr(WABE_OPTION); ?>[topics][${index}][topic]"
+                value=""
+                placeholder="<?php echo esc_attr__('Enter topic', WABE_TEXTDOMAIN); ?>"
+                class="regular-text"
+                style="width:100%;max-width:none;"
+            >
+            <select
+                name="<?php echo esc_attr(WABE_OPTION); ?>[topics][${index}][tone]"
+                style="width:100%;"
+            >
+                <option value="standard"><?php echo esc_html(__('Standard', WABE_TEXTDOMAIN)); ?></option>
+                <option value="professional"><?php echo esc_html(__('Professional', WABE_TEXTDOMAIN)); ?></option>
+                <option value="casual"><?php echo esc_html(__('Casual', WABE_TEXTDOMAIN)); ?></option>
+                <option value="friendly"><?php echo esc_html(__('Friendly', WABE_TEXTDOMAIN)); ?></option>
+                <option value="formal"><?php echo esc_html(__('Formal', WABE_TEXTDOMAIN)); ?></option>
+            </select>
+            <select
+                name="<?php echo esc_attr(WABE_OPTION); ?>[topics][${index}][style]"
+                style="width:100%;"
+            >
+                <option value="normal"><?php echo esc_html(__('Normal', WABE_TEXTDOMAIN)); ?></option>
+                <option value="how-to"><?php echo esc_html(__('How-to', WABE_TEXTDOMAIN)); ?></option>
+                <option value="review"><?php echo esc_html(__('Review', WABE_TEXTDOMAIN)); ?></option>
+                <option value="news"><?php echo esc_html(__('News', WABE_TEXTDOMAIN)); ?></option>
+                <option value="list"><?php echo esc_html(__('List', WABE_TEXTDOMAIN)); ?></option>
+            </select>
+            <button type="button" class="button wabe-remove-topic-row">
+                <?php echo esc_html(__('Remove', WABE_TEXTDOMAIN)); ?>
+            </button>
+        `;
 
-            return row;
-        }
-
-        addButton.addEventListener('click', function() {
-            var rows = container.querySelectorAll('.wabe-topic-row');
-            if (rows.length >= maxTopics) return;
-
-            container.appendChild(createRow(''));
-            updateRowNumbers();
+            container.appendChild(row);
         });
 
         container.addEventListener('click', function(e) {
-            if (!e.target.classList.contains('wabe-remove-topic')) return;
+            if (!e.target.classList.contains('wabe-remove-topic-row')) return;
 
-            var rows = container.querySelectorAll('.wabe-topic-row');
-            if (rows.length <= 1) {
-                var input = rows[0].querySelector('input[name="topics[]"]');
-                if (input) input.value = '';
-                updateRowNumbers();
-                return;
-            }
-
-            e.target.closest('.wabe-topic-row').remove();
-            updateRowNumbers();
-        });
-
-        container.addEventListener('input', function(e) {
-            if (e.target && e.target.name === 'topics[]') {
-                updateRowNumbers();
+            const row = e.target.closest('.wabe-topic-row');
+            if (row) {
+                row.remove();
             }
         });
-
-        updateRowNumbers();
-    })();
+    });
 </script>
