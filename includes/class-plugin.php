@@ -3,7 +3,9 @@ if (!defined('ABSPATH')) exit;
 
 class WABE_Plugin
 {
-    /** @var WABE_Admin|null */
+    /**
+     * @var WABE_Admin|null
+     */
     private $admin = null;
 
     public function __construct()
@@ -36,6 +38,7 @@ class WABE_Plugin
             'includes/class-topic-generator.php',
             'includes/class-generator.php',
             'includes/class-cron.php',
+            'includes/class-sitemap.php',
             'includes/class-admin.php',
         ];
 
@@ -56,6 +59,10 @@ class WABE_Plugin
     {
         if (class_exists('WABE_Cron')) {
             WABE_Cron::init();
+        }
+
+        if (class_exists('WABE_Sitemap')) {
+            WABE_Sitemap::init();
         }
 
         if (is_admin() && class_exists('WABE_Admin') && $this->admin === null) {
@@ -143,7 +150,6 @@ class WABE_Plugin
             ]);
         }
     }
-
 
     /**
      * プラグイン有効化時

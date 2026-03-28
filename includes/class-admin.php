@@ -240,34 +240,56 @@ class WABE_Admin
     {
         $this->guard();
 
-        if (!isset($_POST['_wpnonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['_wpnonce'])), 'wabe_save_topics')) {
+        if (
+            !isset($_POST['_wpnonce']) ||
+            !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['_wpnonce'])), 'wabe_save_topics')
+        ) {
             wp_die(esc_html__('Security check failed.', WABE_TEXTDOMAIN));
         }
 
         $this->reload_options();
 
-        $posted_topics = isset($_POST['topics']) && is_array($_POST['topics'])
-            ? wp_unslash($_POST['topics'])
+        $posted = isset($_POST[WABE_OPTION]) && is_array($_POST[WABE_OPTION])
+            ? wp_unslash($_POST[WABE_OPTION])
+            : [];
+
+        $posted_topics = isset($posted['topics']) && is_array($posted['topics'])
+            ? $posted['topics']
             : [];
 
         $topics = [];
-        $default_tone = sanitize_key($this->options['tone'] ?? 'standard');
+        $allowed_tones = ['standard', 'professional', 'casual', 'friendly', 'formal'];
+        $allowed_styles = ['standard', 'normal', 'how-to', 'review', 'news', 'list'];
 
-        foreach ($posted_topics as $topic_text) {
-            $topic_text = trim(wp_strip_all_tags((string) $topic_text));
+        foreach ($posted_topics as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
 
+            $topic_text = trim(wp_strip_all_tags((string) ($row['topic'] ?? '')));
             if ($topic_text === '') {
                 continue;
             }
 
+            $tone = sanitize_key($row['tone'] ?? 'standard');
+            if (!in_array($tone, $allowed_tones, true)) {
+                $tone = 'standard';
+            }
+
+            $style = sanitize_key($row['style'] ?? 'normal');
+            if (!in_array($style, $allowed_styles, true)) {
+                $style = 'normal';
+            }
+
             $topics[] = [
                 'topic' => $topic_text,
-                'tone'  => $default_tone,
-                'style' => 'standard',
+                'tone'  => $tone,
+                'style' => $style,
             ];
         }
 
         $topics = array_slice(array_values($topics), 0, 10);
+
         $this->options['topics'] = $topics;
 
         if (!isset($this->options['history']) || !is_array($this->options['history'])) {
@@ -275,6 +297,10 @@ class WABE_Admin
         }
 
         update_option(WABE_OPTION, $this->options);
+
+        if (class_exists('WABE_Logger') && method_exists('WABE_Logger', 'info')) {
+            WABE_Logger::info('Topics saved: ' . count($topics));
+        }
 
         wp_safe_redirect(admin_url('admin.php?page=wabe-topics&updated=1'));
         exit;
