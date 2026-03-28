@@ -506,11 +506,6 @@ if (!function_exists('wabe_settings_lock_text')) {
                                         name="<?php echo esc_attr(WABE_OPTION); ?>[unsplash_access_key]"
                                         value="<?php echo esc_attr($opt['unsplash_access_key'] ?? ''); ?>"
                                         autocomplete="off">
-                                    <?php if ($unsplash_masked) : ?>
-                                        <p class="description">
-                                            <?php echo esc_html(sprintf(__('Current: %s', WABE_TEXTDOMAIN), $unsplash_masked)); ?>
-                                        </p>
-                                    <?php endif; ?>
                                     <p class="description">
                                         <?php esc_html_e('Used for inline article images. Secret Key is not required here.', WABE_TEXTDOMAIN); ?>
                                     </p>

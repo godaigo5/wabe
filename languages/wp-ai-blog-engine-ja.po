@@ -3,7 +3,7 @@ msgstr ""
 "Project-Id-Version: WP AI Blog Engine 1.0.0\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-03-26 00:00+0900\n"
-"PO-Revision-Date: 2026-03-26 16:02+0000\n"
+"PO-Revision-Date: 2026-03-28 15:44+0000\n"
 "Last-Translator: \n"
 "Language-Team: 日本語\n"
 "Language: ja\n"
@@ -136,6 +136,11 @@ msgstr "購入者メールアドレス"
 
 msgid "Debug"
 msgstr "デバッグ"
+
+msgid ""
+"Describe your site, target audience, expertise, positioning, and important "
+"context for article generation."
+msgstr "あなたのサイト、ターゲット層、専門分野、ポジショニング、そして記事作成における重要な背景について説明してください。"
 
 #| msgid "Detail level"
 msgid "Detail Level"
@@ -591,6 +596,11 @@ msgstr ""
 
 msgid "WP AI Blog Engine"
 msgstr "WP AI Blog Engine"
+
+msgid ""
+"Write tone, formatting, prohibited expressions, CTA policy, style guide, and "
+"other writing instructions here."
+msgstr "トーン、書式設定、禁止表現、CTAポリシー、スタイルガイド、その他の執筆に関する指示事項をここに記述してください。"
 
 msgid "Writing Rules"
 msgstr "執筆ルール"
