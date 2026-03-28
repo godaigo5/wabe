@@ -99,7 +99,7 @@ get_header();
     </div>
   </section>
 
-  <section class="wabe-section wabe-problems">
+  <section class="wabe-section wabe-problems" id="problems">
     <div class="wabe-container">
       <div class="wabe-section-head">
         <span class="wabe-eyebrow">Problem</span>
@@ -140,7 +140,7 @@ get_header();
     </div>
   </section>
 
-  <section class="wabe-section">
+  <section class="wabe-section" id="flow">
     <div class="wabe-container">
       <div class="wabe-section-head">
         <span class="wabe-eyebrow">Flow</span>
@@ -168,7 +168,7 @@ get_header();
     </div>
   </section>
 
-  <section class="wabe-section">
+  <section class="wabe-section" id="features">
     <div class="wabe-container">
       <div class="wabe-section-head">
         <span class="wabe-eyebrow">Features</span>
