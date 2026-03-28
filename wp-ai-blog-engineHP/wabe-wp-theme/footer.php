@@ -1,68 +1,47 @@
 <?php
 if (!defined('ABSPATH')) exit;
 ?>
-<footer class="wabe-site-footer">
-  <div class="wabe-footer-inner">
-    <div class="wabe-footer-grid">
-      <div class="wabe-footer-brand">
-        <h2 class="wabe-footer-title">WP AI Blog Engine</h2>
-        <p class="wabe-footer-text">
-          タイトル・見出し・本文・画像生成まで対応。<br>
-          WordPressの記事更新を、AIで続けやすくするためのプラグインです。
-        </p>
-        <div class="wabe-footer-cta">
-          <a href="<?php echo esc_url(home_url('/free')); ?>"
-            class="wabe-footer-btn wabe-footer-btn-secondary">無料で試す</a>
-          <a href="<?php echo esc_url(home_url('/advanced')); ?>"
-            class="wabe-footer-btn wabe-footer-btn-primary">Advancedを見る</a>
+<footer class="site-footer wabe-footer">
+    <div class="wabe-footer__inner">
+        <div class="wabe-footer__grid">
+            <div class="wabe-footer__brand">
+                <h2>WP AI Blog Engine</h2>
+                <p>
+                    WordPressの記事更新を、AIでもっと続けやすく。
+                    タイトル・見出し・本文・画像生成まで対応し、
+                    日々の運用負担を減らすためのWordPressプラグインです。
+                </p>
+            </div>
+
+            <div>
+                <p class="wabe-footer__nav-title">メニュー</p>
+                <ul class="wabe-footer__nav">
+                    <li><a href="<?php echo esc_url(home_url('/#pain')); ?>">お悩み</a></li>
+                    <li><a href="<?php echo esc_url(home_url('/#features')); ?>">特長</a></li>
+                    <li><a href="<?php echo esc_url(home_url('/#flow')); ?>">使い方</a></li>
+                    <li><a href="<?php echo esc_url(home_url('/#pricing')); ?>">料金</a></li>
+                    <li><a href="<?php echo esc_url(home_url('/#faq')); ?>">FAQ</a></li>
+                </ul>
+            </div>
+
+            <div>
+                <p class="wabe-footer__nav-title">はじめる</p>
+                <div class="wabe-footer__cta">
+                    <a class="wabe-footer__btn wabe-footer__btn--primary"
+                        href="<?php echo esc_url(home_url('/free/')); ?>">無料で試す</a>
+                    <a class="wabe-footer__btn wabe-footer__btn--secondary"
+                        href="<?php echo esc_url(home_url('/advanced/')); ?>">Advancedを見る</a>
+                </div>
+            </div>
         </div>
-      </div>
 
-      <div>
-        <h3 class="wabe-footer-heading">サイト</h3>
-        <ul class="wabe-footer-links">
-          <li><a href="<?php echo esc_url(home_url('/')); ?>">トップ</a></li>
-          <li><a href="<?php echo esc_url(home_url('/#features')); ?>">特長</a></li>
-          <li><a href="<?php echo esc_url(home_url('/#flow')); ?>">使い方</a></li>
-          <li><a href="<?php echo esc_url(home_url('/#pricing')); ?>">料金プラン</a></li>
-          <li><a href="<?php echo esc_url(home_url('/#faq')); ?>">よくある質問</a></li>
-        </ul>
-      </div>
-
-      <div>
-        <h3 class="wabe-footer-heading">プラン</h3>
-        <ul class="wabe-footer-links">
-          <li><a href="<?php echo esc_url(home_url('/free')); ?>">Free</a></li>
-          <li><a href="<?php echo esc_url(home_url('/advanced')); ?>">Advanced</a></li>
-          <li><a href="<?php echo esc_url(home_url('/pro')); ?>">Pro</a></li>
-          <li><a href="<?php echo esc_url(home_url('/member')); ?>">会員ページ</a></li>
-          <li><a href="<?php echo esc_url(home_url('/register')); ?>">会員登録</a></li>
-        </ul>
-      </div>
-
-      <div>
-        <h3 class="wabe-footer-heading">導入前の確認</h3>
-        <ul class="wabe-footer-links">
-          <li><a href="<?php echo esc_url(home_url('/#faq')); ?>">購入前の不安を解消</a></li>
-          <li><a href="<?php echo esc_url(home_url('/#pricing')); ?>">プラン比較を見る</a></li>
-          <li><a href="<?php echo esc_url(home_url('/advanced')); ?>">主力プランを見る</a></li>
-          <li><a href="<?php echo esc_url(home_url('/pro')); ?>">上位プランを見る</a></li>
-        </ul>
-      </div>
+        <div class="wabe-footer__bottom">
+            <p>© <?php echo esc_html(date('Y')); ?> WP AI Blog Engine. All rights reserved.</p>
+            <p>AIで記事更新を、もっと続けやすく。</p>
+        </div>
     </div>
-
-    <div class="wabe-footer-bottom">
-      <div class="wabe-footer-copy">
-        © <?php echo esc_html(date_i18n('Y')); ?> WP AI Blog Engine / D-CREATE
-      </div>
-      <div class="wabe-footer-bottom-links">
-        <a href="<?php echo esc_url(home_url('/')); ?>">Home</a>
-        <a href="<?php echo esc_url(home_url('/member')); ?>">Member</a>
-        <a href="<?php echo esc_url(home_url('/register')); ?>">Register</a>
-      </div>
-    </div>
-  </div>
 </footer>
+
 <?php wp_footer(); ?>
 </body>
 
