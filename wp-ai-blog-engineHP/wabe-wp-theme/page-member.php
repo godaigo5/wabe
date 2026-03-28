@@ -13,8 +13,45 @@ get_header();
 
 $user = wp_get_current_user();
 $license = wabe_get_user_license_data($user->ID);
+$licenses = function_exists('wabe_get_user_licenses') ? wabe_get_user_licenses($user->ID) : [];
 $license_message = wabe_license_message();
-$default_domain = $license['licensed_domain'] ? $license['licensed_domain'] : wabe_member_default_domain();
+$default_domain = !empty($license['licensed_domain']) ? $license['licensed_domain'] : wabe_member_default_domain();
+
+if (!function_exists('wabe_member_plan_label')) {
+    function wabe_member_plan_label($plan)
+    {
+        $plan = strtolower((string) $plan);
+        $map = [
+            'free' => 'Free',
+            'advanced' => 'Advanced',
+            'pro' => 'Pro',
+            'advanced-monthly' => 'Advanced 月額',
+            'advanced-yearly' => 'Advanced 年額',
+            'advanced-lifetime' => 'Advanced 買い切り',
+            'pro-monthly' => 'Pro 月額',
+            'pro-yearly' => 'Pro 年額',
+            'pro-lifetime' => 'Pro 買い切り',
+        ];
+        return $map[$plan] ?? ($plan !== '' ? ucfirst($plan) : '未登録');
+    }
+}
+
+if (!function_exists('wabe_member_status_badge')) {
+    function wabe_member_status_badge($status)
+    {
+        $status = strtolower((string) $status);
+        $map = [
+            'active'   => ['label' => '有効',   'bg' => '#dcfce7', 'color' => '#166534'],
+            'valid'    => ['label' => '確認済み', 'bg' => '#dbeafe', 'color' => '#1d4ed8'],
+            'inactive' => ['label' => '未使用', 'bg' => '#f3f4f6', 'color' => '#374151'],
+            'invalid'  => ['label' => '無効',   'bg' => '#fee2e2', 'color' => '#991b1b'],
+            'expired'  => ['label' => '期限切れ', 'bg' => '#fee2e2', 'color' => '#991b1b'],
+        ];
+        $item = $map[$status] ?? ['label' => ($status !== '' ? $status : '未確認'), 'bg' => '#f3f4f6', 'color' => '#374151'];
+
+        return '<span class="wabe-status-badge" style="background:' . esc_attr($item['bg']) . ';color:' . esc_attr($item['color']) . ';">' . esc_html($item['label']) . '</span>';
+    }
+}
 ?>
 
 <main class="wabe-member-page">
@@ -22,6 +59,7 @@ $default_domain = $license['licensed_domain'] ? $license['licensed_domain'] : wa
         <div class="wabe-container">
             <div class="wabe-member-hero-inner">
                 <div>
+                    <span class="wabe-member-hero-badge">MEMBER PAGE</span>
                     <h1>会員ページ</h1>
                     <p><?php echo esc_html($user->display_name ?: $user->user_email); ?> さん、ようこそ。</p>
                 </div>
@@ -69,28 +107,31 @@ $default_domain = $license['licensed_domain'] ? $license['licensed_domain'] : wa
                 </div>
 
                 <div class="wabe-panel">
-                    <h2>現在のライセンス</h2>
+                    <h2>現在のメインライセンス</h2>
                     <dl class="wabe-meta">
                         <div>
                             <dt>ライセンスキー</dt>
-                            <dd><?php echo esc_html($license['license_key'] ? wabe_mask_license_key($license['license_key']) : '未登録'); ?>
+                            <dd><?php echo esc_html(!empty($license['license_key']) ? wabe_mask_license_key($license['license_key']) : '未登録'); ?>
                             </dd>
                         </div>
                         <div>
                             <dt>プラン</dt>
-                            <dd><?php echo esc_html($license['license_plan'] ?: '未登録'); ?></dd>
+                            <dd><?php echo esc_html(!empty($license['license_plan']) ? wabe_member_plan_label($license['license_plan']) : '未登録'); ?>
+                            </dd>
                         </div>
                         <div>
                             <dt>状態</dt>
-                            <dd><?php echo esc_html($license['license_status'] ?: '未確認'); ?></dd>
+                            <dd><?php echo wabe_member_status_badge($license['license_status'] ?? ''); ?></dd>
                         </div>
                         <div>
                             <dt>使用ドメイン</dt>
-                            <dd><?php echo esc_html($license['licensed_domain'] ?: '-'); ?></dd>
+                            <dd><?php echo esc_html(!empty($license['licensed_domain']) ? $license['licensed_domain'] : '-'); ?>
+                            </dd>
                         </div>
                         <div>
                             <dt>最終チェック</dt>
-                            <dd><?php echo esc_html($license['license_checked'] ?: '-'); ?></dd>
+                            <dd><?php echo esc_html(!empty($license['license_checked']) ? $license['license_checked'] : '-'); ?>
+                            </dd>
                         </div>
                     </dl>
                 </div>
@@ -98,7 +139,7 @@ $default_domain = $license['licensed_domain'] ? $license['licensed_domain'] : wa
 
             <div class="wabe-panel">
                 <h2>プランを購入する</h2>
-                <p class="wabe-muted">Stripe Payment Link を本番URLへ差し替えてご利用ください。</p>
+                <p class="wabe-muted">希望プランを選択してください。購入後、会員ページでライセンスを有効化できます。</p>
 
                 <div class="wabe-pricing-grid">
                     <div class="wabe-price-card">
@@ -108,7 +149,8 @@ $default_domain = $license['licensed_domain'] ? $license['licensed_domain'] : wa
                             href="<?php echo esc_url(WABE_STRIPE_FREE_URL); ?>">Freeを見る</a>
                     </div>
 
-                    <div class="wabe-price-card">
+                    <div class="wabe-price-card wabe-price-card-featured">
+                        <span class="wabe-price-card-badge">おすすめ</span>
                         <h3>Advanced</h3>
                         <p>中級者・実運用向け</p>
                         <div class="wabe-inline-buttons">
@@ -139,15 +181,13 @@ $default_domain = $license['licensed_domain'] ? $license['licensed_domain'] : wa
             <div class="wabe-member-grid">
                 <div class="wabe-panel">
                     <h2>ライセンス確認 / 有効化</h2>
-                    <p class="wabe-muted">決済後に発行されたライセンスキーを入力してください。</p>
+                    <p class="wabe-muted">決済後に発行されたライセンスキーを入力してください。複数のライセンスキーを登録できます。</p>
 
                     <form method="post" class="wabe-form">
                         <?php wp_nonce_field('wabe_license_action', 'wabe_license_nonce'); ?>
                         <label>
                             <span>ライセンスキー</span>
-                            <input type="text" name="license_key"
-                                value="<?php echo esc_attr($license['license_key']); ?>"
-                                placeholder="例: WABE-PRO-XXXX-XXXX">
+                            <input type="text" name="license_key" value="" placeholder="例: WABE-PRO-XXXX-XXXX">
                         </label>
 
                         <label>
@@ -166,268 +206,90 @@ $default_domain = $license['licensed_domain'] ? $license['licensed_domain'] : wa
                 </div>
 
                 <div class="wabe-panel">
-                    <h2>ライセンス無効化</h2>
-                    <p class="wabe-muted">別サイトへ移行する場合などに使用してください。</p>
-
-                    <form method="post" class="wabe-form">
-                        <?php wp_nonce_field('wabe_license_action', 'wabe_license_nonce'); ?>
-                        <label>
-                            <span>ライセンスキー</span>
-                            <input type="text" name="license_key"
-                                value="<?php echo esc_attr($license['license_key']); ?>"
-                                placeholder="例: WABE-PRO-XXXX-XXXX">
-                        </label>
-
-                        <label>
-                            <span>使用ドメイン</span>
-                            <input type="text" name="domain" value="<?php echo esc_attr($default_domain); ?>"
-                                placeholder="example.com">
-                        </label>
-
-                        <button class="wabe-btn wabe-btn-danger" type="submit" name="wabe_action"
-                            value="wabe_license_deactivate">無効化する</button>
-                    </form>
+                    <h2>導入の流れ</h2>
+                    <ol class="wabe-steps">
+                        <li>会員登録を行う</li>
+                        <li>会員ページから希望プランを購入する</li>
+                        <li>決済後に発行されたライセンスキーを受け取る</li>
+                        <li>このページでライセンスキーを入力し、有効化する</li>
+                        <li>WordPressプラグイン管理画面にライセンスキーを入力して利用開始</li>
+                    </ol>
                 </div>
             </div>
 
             <div class="wabe-panel">
-                <h2>導入の流れ</h2>
-                <ol class="wabe-steps">
-                    <li>会員登録を行う</li>
-                    <li>会員ページから希望プランを購入する</li>
-                    <li>決済後に発行されたライセンスキーを受け取る</li>
-                    <li>このページでライセンスキーを入力し、有効化する</li>
-                    <li>WordPressプラグイン管理画面にライセンスキーを入力して利用開始</li>
-                </ol>
+                <div class="wabe-panel-headline">
+                    <div>
+                        <h2>登録済みライセンス一覧</h2>
+                        <p class="wabe-muted">1つのアカウントで複数のライセンスキーを管理できます。</p>
+                    </div>
+                    <div class="wabe-license-count"><?php echo esc_html(count($licenses)); ?>件</div>
+                </div>
+
+                <?php if (!empty($licenses)) : ?>
+                    <div class="wabe-license-table-wrap">
+                        <table class="wabe-license-table">
+                            <thead>
+                                <tr>
+                                    <th>ライセンスキー</th>
+                                    <th>プラン</th>
+                                    <th>状態</th>
+                                    <th>使用ドメイン</th>
+                                    <th>最終チェック</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($licenses as $row) : ?>
+                                    <?php
+                                    $row_key = (string) ($row['license_key'] ?? '');
+                                    $row_domain = (string) ($row['licensed_domain'] ?? '');
+                                    ?>
+                                    <tr>
+                                        <td><?php echo esc_html($row_key); ?>
+                                        </td>
+                                        <td><?php echo esc_html(wabe_member_plan_label($row['license_plan'] ?? '')); ?></td>
+                                        <td><?php echo wabe_member_status_badge($row['license_status'] ?? ''); ?></td>
+                                        <td><?php echo esc_html($row_domain !== '' ? $row_domain : '-'); ?></td>
+                                        <td><?php echo esc_html(!empty($row['license_checked']) ? $row['license_checked'] : '-'); ?>
+                                        </td>
+                                        <td>
+                                            <div class="wabe-row-actions">
+                                                <form method="post" class="wabe-row-form">
+                                                    <?php wp_nonce_field('wabe_license_action', 'wabe_license_nonce'); ?>
+                                                    <input type="hidden" name="license_key"
+                                                        value="<?php echo esc_attr($row_key); ?>">
+                                                    <input type="hidden" name="domain"
+                                                        value="<?php echo esc_attr($row_domain !== '' ? $row_domain : $default_domain); ?>">
+                                                    <button class="wabe-btn wabe-btn-primary wabe-btn-small" type="submit"
+                                                        name="wabe_action" value="wabe_license_activate">有効化</button>
+                                                </form>
+
+                                                <form method="post" class="wabe-row-form">
+                                                    <?php wp_nonce_field('wabe_license_action', 'wabe_license_nonce'); ?>
+                                                    <input type="hidden" name="license_key"
+                                                        value="<?php echo esc_attr($row_key); ?>">
+                                                    <input type="hidden" name="domain"
+                                                        value="<?php echo esc_attr($row_domain !== '' ? $row_domain : $default_domain); ?>">
+                                                    <button class="wabe-btn wabe-btn-danger wabe-btn-small" type="submit"
+                                                        name="wabe_action" value="wabe_license_deactivate"
+                                                        onclick="return confirm('このライセンスを無効化しますか？');">無効化</button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                <?php else : ?>
+                    <div class="wabe-empty-state">
+                        まだライセンスは登録されていません。購入後、上のフォームからライセンスキーを追加してください。
+                    </div>
+                <?php endif; ?>
             </div>
         </div>
     </section>
 </main>
-
-<style>
-    .wabe-container {
-        max-width: 1100px;
-        margin: 0 auto;
-        padding: 0 20px
-    }
-
-    .wabe-member-page {
-        background: #f6f8fc;
-        padding-bottom: 80px
-    }
-
-    .wabe-member-hero {
-        padding: 56px 0 22px;
-        background: linear-gradient(135deg, #0f172a, #1d4ed8)
-    }
-
-    .wabe-member-hero-inner {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 20px
-    }
-
-    .wabe-member-hero h1 {
-        margin: 0 0 8px;
-        color: #fff;
-        font-size: 36px
-    }
-
-    .wabe-member-hero p {
-        margin: 0;
-        color: rgba(255, 255, 255, .85)
-    }
-
-    .wabe-member-actions {
-        display: flex;
-        gap: 12px
-    }
-
-    .wabe-member-section {
-        padding: 28px 0 0
-    }
-
-    .wabe-member-grid {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 24px;
-        margin-bottom: 24px
-    }
-
-    .wabe-panel {
-        background: #fff;
-        border: 1px solid #dbe4f0;
-        border-radius: 18px;
-        padding: 28px;
-        box-shadow: 0 10px 30px rgba(15, 23, 42, .06);
-        margin-bottom: 24px
-    }
-
-    .wabe-panel h2 {
-        margin: 0 0 10px;
-        font-size: 24px;
-        color: #0f172a
-    }
-
-    .wabe-muted {
-        margin: 0 0 18px;
-        color: #64748b
-    }
-
-    .wabe-meta {
-        display: grid;
-        gap: 14px;
-        margin: 0
-    }
-
-    .wabe-meta div {
-        display: grid;
-        grid-template-columns: 140px 1fr;
-        gap: 14px;
-        padding-bottom: 12px;
-        border-bottom: 1px solid #eef2f7
-    }
-
-    .wabe-meta dt {
-        font-weight: 700;
-        color: #334155
-    }
-
-    .wabe-meta dd {
-        margin: 0;
-        color: #0f172a
-    }
-
-    .wabe-pricing-grid {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 18px
-    }
-
-    .wabe-price-card {
-        border: 1px solid #dbe4f0;
-        border-radius: 16px;
-        padding: 22px;
-        background: #f8fbff
-    }
-
-    .wabe-price-card h3 {
-        margin: 0 0 8px;
-        font-size: 22px
-    }
-
-    .wabe-price-card p {
-        margin: 0 0 16px;
-        color: #64748b
-    }
-
-    .wabe-form {
-        display: grid;
-        gap: 16px
-    }
-
-    .wabe-form label {
-        display: grid;
-        gap: 8px
-    }
-
-    .wabe-form span {
-        font-weight: 700;
-        color: #1e293b
-    }
-
-    .wabe-form input[type="text"] {
-        width: 100%;
-        padding: 14px 16px;
-        border: 1px solid #cbd5e1;
-        border-radius: 12px;
-        background: #fff;
-        font-size: 15px
-    }
-
-    .wabe-inline-buttons {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px
-    }
-
-    .wabe-btn {
-        display: inline-flex;
-        justify-content: center;
-        align-items: center;
-        min-height: 46px;
-        padding: 0 16px;
-        border-radius: 12px;
-        text-decoration: none;
-        font-weight: 700;
-        cursor: pointer;
-        border: none
-    }
-
-    .wabe-btn-primary {
-        background: #2563eb;
-        color: #fff
-    }
-
-    .wabe-btn-outline {
-        background: #fff;
-        color: #0f172a;
-        border: 1px solid #cbd5e1
-    }
-
-    .wabe-btn-danger {
-        background: #dc2626;
-        color: #fff
-    }
-
-    .wabe-btn-light {
-        background: #fff;
-        color: #0f172a
-    }
-
-    .wabe-alert {
-        padding: 14px 16px;
-        border-radius: 12px;
-        margin-bottom: 20px
-    }
-
-    .wabe-alert-success {
-        background: #dcfce7;
-        color: #166534;
-        border: 1px solid #bbf7d0
-    }
-
-    .wabe-alert-error {
-        background: #fee2e2;
-        color: #991b1b;
-        border: 1px solid #fecaca
-    }
-
-    .wabe-steps {
-        margin: 0;
-        padding-left: 20px;
-        color: #1e293b;
-        display: grid;
-        gap: 10px
-    }
-
-    @media (max-width: 980px) {
-
-        .wabe-member-grid,
-        .wabe-pricing-grid {
-            grid-template-columns: 1fr
-        }
-
-        .wabe-member-hero-inner {
-            flex-direction: column;
-            align-items: flex-start
-        }
-
-        .wabe-meta div {
-            grid-template-columns: 1fr
-        }
-    }
-</style>
 
 <?php get_footer(); ?>

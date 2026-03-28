@@ -140,6 +140,19 @@ get_header();
     </div>
   </section>
 
+  <section class="wabe-section" id="manga_problems">
+    <div class="wabe-container">
+      <div class="wabe-manga-problem">
+        <img class="wabe-manga-img pc-only"
+          src="http://wabe.d-create.online/wp-content/uploads/2026/03/Gemini_Generated_Image_6keiwq6keiwq6kei.png"
+          alt="記事更新しないと・・・">
+        <img class="wabe-manga-img sp-only"
+          src="http://wabe.d-create.online/wp-content/uploads/2026/03/Gemini_Generated_Image_tngk1utngk1utngk.png"
+          alt="記事更新しないと・・・">
+      </div>
+    </div>
+  </section>
+
   <section class="wabe-section" id="flow">
     <div class="wabe-container">
       <div class="wabe-section-head">
@@ -221,7 +234,6 @@ get_header();
 
       <div class="wabe-pricing-cards">
         <div class="wabe-plan">
-          <span class="wabe-chip">Free</span>
           <h3>Free</h3>
           <div class="wabe-price">¥0</div>
           <p class="wabe-subtext">まずは試したい方向け。無料でも公開運用と自動投稿に対応しています。</p>
@@ -240,7 +252,6 @@ get_header();
 
         <div class="wabe-plan wabe-plan-featured">
           <div class="wabe-plan-recommend">おすすめ</div>
-          <span class="wabe-chip">Advanced</span>
           <h3>Advanced</h3>
           <div class="wabe-price">主力プラン</div>
           <p class="wabe-subtext">更新をしっかり回したい方向け。日常運用で一番バランスのよいプランです。</p>
@@ -260,7 +271,6 @@ get_header();
         </div>
 
         <div class="wabe-plan">
-          <span class="wabe-chip">Pro</span>
           <h3>Pro</h3>
           <div class="wabe-price">近日強化予定</div>
           <p class="wabe-subtext">収益化を強化したい方向け。将来的にアフィリエイト機能を追加予定です。</p>

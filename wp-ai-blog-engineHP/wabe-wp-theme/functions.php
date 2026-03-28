@@ -157,24 +157,6 @@ function wabe_member_default_domain()
     return $host ? $host : '';
 }
 
-/**
- * Current user license meta
- */
-function wabe_get_user_license_data($user_id = 0)
-{
-    $user_id = $user_id ? absint($user_id) : get_current_user_id();
-
-    return [
-        'license_key'      => (string) get_user_meta($user_id, 'wabe_license_key', true),
-        'license_plan'     => (string) get_user_meta($user_id, 'wabe_license_plan', true),
-        'license_status'   => (string) get_user_meta($user_id, 'wabe_license_status', true),
-        'licensed_domain'  => (string) get_user_meta($user_id, 'wabe_licensed_domain', true),
-        'license_message'  => (string) get_user_meta($user_id, 'wabe_license_message', true),
-        'license_checked'  => (string) get_user_meta($user_id, 'wabe_license_checked', true),
-        'license_active_at' => (string) get_user_meta($user_id, 'wabe_license_active_at', true),
-    ];
-}
-
 function wabe_mask_license_key($key)
 {
     $key = (string) $key;
@@ -247,50 +229,6 @@ function wabe_license_api_request($endpoint, array $body = [])
         'message' => $message,
         'data'    => $json,
     ];
-}
-
-/**
- * Save license meta
- */
-function wabe_save_license_meta($user_id, $license_key, array $api_result = [], $domain = '')
-{
-    $data = isset($api_result['data']) && is_array($api_result['data']) ? $api_result['data'] : [];
-
-    $plan = '';
-    if (!empty($data['plan'])) {
-        $plan = sanitize_text_field($data['plan']);
-    } elseif (!empty($data['tier'])) {
-        $plan = sanitize_text_field($data['tier']);
-    }
-
-    $status = '';
-    if (!empty($data['status'])) {
-        $status = sanitize_text_field($data['status']);
-    } else {
-        $status = !empty($api_result['ok']) ? 'active' : 'invalid';
-    }
-
-    update_user_meta($user_id, 'wabe_license_key', sanitize_text_field($license_key));
-    update_user_meta($user_id, 'wabe_license_plan', $plan);
-    update_user_meta($user_id, 'wabe_license_status', $status);
-    update_user_meta($user_id, 'wabe_licensed_domain', sanitize_text_field($domain));
-    update_user_meta($user_id, 'wabe_license_message', sanitize_text_field($api_result['message'] ?? ''));
-    update_user_meta($user_id, 'wabe_license_checked', current_time('mysql'));
-
-    if (!empty($api_result['ok'])) {
-        update_user_meta($user_id, 'wabe_license_active_at', current_time('mysql'));
-    }
-}
-
-function wabe_clear_license_meta($user_id)
-{
-    delete_user_meta($user_id, 'wabe_license_key');
-    delete_user_meta($user_id, 'wabe_license_plan');
-    delete_user_meta($user_id, 'wabe_license_status');
-    delete_user_meta($user_id, 'wabe_licensed_domain');
-    delete_user_meta($user_id, 'wabe_license_message');
-    delete_user_meta($user_id, 'wabe_license_checked');
-    delete_user_meta($user_id, 'wabe_license_active_at');
 }
 
 /**
@@ -546,4 +484,221 @@ function wabe_license_message()
     ];
 
     return isset($map[$msg]) ? $map[$msg] : '';
+}
+
+
+/**
+ * User licenses (multi-license support)
+ */
+function wabe_get_user_licenses($user_id = 0)
+{
+    $user_id = $user_id ? absint($user_id) : get_current_user_id();
+    $licenses = get_user_meta($user_id, 'wabe_member_licenses', true);
+
+    if (!is_array($licenses)) {
+        $licenses = [];
+    }
+
+    $normalized = [];
+    foreach ($licenses as $row) {
+        if (!is_array($row)) {
+            continue;
+        }
+
+        $license_key = isset($row['license_key']) ? sanitize_text_field((string) $row['license_key']) : '';
+        if ($license_key === '') {
+            continue;
+        }
+
+        $normalized[] = [
+            'license_key'       => $license_key,
+            'license_plan'      => isset($row['license_plan']) ? sanitize_text_field((string) $row['license_plan']) : '',
+            'license_status'    => isset($row['license_status']) ? sanitize_text_field((string) $row['license_status']) : '',
+            'licensed_domain'   => isset($row['licensed_domain']) ? sanitize_text_field((string) $row['licensed_domain']) : '',
+            'license_message'   => isset($row['license_message']) ? sanitize_text_field((string) $row['license_message']) : '',
+            'license_checked'   => isset($row['license_checked']) ? sanitize_text_field((string) $row['license_checked']) : '',
+            'license_active_at' => isset($row['license_active_at']) ? sanitize_text_field((string) $row['license_active_at']) : '',
+        ];
+    }
+
+    if (empty($normalized)) {
+        $legacy = [
+            'license_key'       => (string) get_user_meta($user_id, 'wabe_license_key', true),
+            'license_plan'      => (string) get_user_meta($user_id, 'wabe_license_plan', true),
+            'license_status'    => (string) get_user_meta($user_id, 'wabe_license_status', true),
+            'licensed_domain'   => (string) get_user_meta($user_id, 'wabe_licensed_domain', true),
+            'license_message'   => (string) get_user_meta($user_id, 'wabe_license_message', true),
+            'license_checked'   => (string) get_user_meta($user_id, 'wabe_license_checked', true),
+            'license_active_at' => (string) get_user_meta($user_id, 'wabe_license_active_at', true),
+        ];
+
+        if ($legacy['license_key'] !== '') {
+            $normalized[] = $legacy;
+            update_user_meta($user_id, 'wabe_member_licenses', $normalized);
+        }
+    }
+
+    usort($normalized, function ($a, $b) {
+        return strcmp((string) ($b['license_checked'] ?? ''), (string) ($a['license_checked'] ?? ''));
+    });
+
+    return $normalized;
+}
+
+function wabe_update_user_license_list($user_id, $license_key, array $api_result = [], $domain = '')
+{
+    $user_id     = absint($user_id);
+    $license_key = sanitize_text_field((string) $license_key);
+    $domain      = sanitize_text_field((string) $domain);
+
+    if ($user_id <= 0 || $license_key === '') {
+        return;
+    }
+
+    $licenses = wabe_get_user_licenses($user_id);
+    $data = isset($api_result['data']) && is_array($api_result['data']) ? $api_result['data'] : [];
+
+    $plan = '';
+    if (!empty($data['plan'])) {
+        $plan = sanitize_text_field($data['plan']);
+    } elseif (!empty($data['tier'])) {
+        $plan = sanitize_text_field($data['tier']);
+    }
+
+    $status = '';
+    if (!empty($data['status'])) {
+        $status = sanitize_text_field($data['status']);
+    } else {
+        $status = !empty($api_result['ok']) ? 'active' : 'invalid';
+    }
+
+    $new_row = [
+        'license_key'       => $license_key,
+        'license_plan'      => $plan,
+        'license_status'    => $status,
+        'licensed_domain'   => $domain,
+        'license_message'   => sanitize_text_field($api_result['message'] ?? ''),
+        'license_checked'   => current_time('mysql'),
+        'license_active_at' => !empty($api_result['ok']) ? current_time('mysql') : '',
+    ];
+
+    $updated = false;
+    foreach ($licenses as $index => $row) {
+        if (($row['license_key'] ?? '') === $license_key) {
+            $licenses[$index] = array_merge($row, $new_row);
+            if (empty($licenses[$index]['license_active_at']) && !empty($row['license_active_at'])) {
+                $licenses[$index]['license_active_at'] = $row['license_active_at'];
+            }
+            if (!empty($api_result['ok'])) {
+                $licenses[$index]['license_active_at'] = current_time('mysql');
+            }
+            $updated = true;
+            break;
+        }
+    }
+
+    if (!$updated) {
+        $licenses[] = $new_row;
+    }
+
+    update_user_meta($user_id, 'wabe_member_licenses', array_values($licenses));
+}
+
+function wabe_remove_user_license($user_id, $license_key)
+{
+    $user_id     = absint($user_id);
+    $license_key = sanitize_text_field((string) $license_key);
+
+    if ($user_id <= 0 || $license_key === '') {
+        return;
+    }
+
+    $licenses = wabe_get_user_licenses($user_id);
+    $filtered = [];
+
+    foreach ($licenses as $row) {
+        if (($row['license_key'] ?? '') === $license_key) {
+            continue;
+        }
+        $filtered[] = $row;
+    }
+
+    update_user_meta($user_id, 'wabe_member_licenses', array_values($filtered));
+}
+
+/**
+ * Current user main license meta
+ */
+function wabe_get_user_license_data($user_id = 0)
+{
+    $user_id = $user_id ? absint($user_id) : get_current_user_id();
+    $licenses = wabe_get_user_licenses($user_id);
+    $primary = [];
+
+    foreach ($licenses as $row) {
+        if (($row['license_status'] ?? '') === 'active') {
+            $primary = $row;
+            break;
+        }
+    }
+
+    if (empty($primary) && !empty($licenses[0])) {
+        $primary = $licenses[0];
+    }
+
+    return [
+        'license_key'       => (string) ($primary['license_key'] ?? get_user_meta($user_id, 'wabe_license_key', true)),
+        'license_plan'      => (string) ($primary['license_plan'] ?? get_user_meta($user_id, 'wabe_license_plan', true)),
+        'license_status'    => (string) ($primary['license_status'] ?? get_user_meta($user_id, 'wabe_license_status', true)),
+        'licensed_domain'   => (string) ($primary['licensed_domain'] ?? get_user_meta($user_id, 'wabe_licensed_domain', true)),
+        'license_message'   => (string) ($primary['license_message'] ?? get_user_meta($user_id, 'wabe_license_message', true)),
+        'license_checked'   => (string) ($primary['license_checked'] ?? get_user_meta($user_id, 'wabe_license_checked', true)),
+        'license_active_at' => (string) ($primary['license_active_at'] ?? get_user_meta($user_id, 'wabe_license_active_at', true)),
+    ];
+}
+
+/**
+ * Save license meta
+ */
+function wabe_save_license_meta($user_id, $license_key, array $api_result = [], $domain = '')
+{
+    $data = isset($api_result['data']) && is_array($api_result['data']) ? $api_result['data'] : [];
+
+    $plan = '';
+    if (!empty($data['plan'])) {
+        $plan = sanitize_text_field($data['plan']);
+    } elseif (!empty($data['tier'])) {
+        $plan = sanitize_text_field($data['tier']);
+    }
+
+    $status = '';
+    if (!empty($data['status'])) {
+        $status = sanitize_text_field($data['status']);
+    } else {
+        $status = !empty($api_result['ok']) ? 'active' : 'invalid';
+    }
+
+    update_user_meta($user_id, 'wabe_license_key', sanitize_text_field($license_key));
+    update_user_meta($user_id, 'wabe_license_plan', $plan);
+    update_user_meta($user_id, 'wabe_license_status', $status);
+    update_user_meta($user_id, 'wabe_licensed_domain', sanitize_text_field($domain));
+    update_user_meta($user_id, 'wabe_license_message', sanitize_text_field($api_result['message'] ?? ''));
+    update_user_meta($user_id, 'wabe_license_checked', current_time('mysql'));
+
+    if (!empty($api_result['ok'])) {
+        update_user_meta($user_id, 'wabe_license_active_at', current_time('mysql'));
+    }
+
+    wabe_update_user_license_list($user_id, $license_key, $api_result, $domain);
+}
+
+function wabe_clear_license_meta($user_id)
+{
+    delete_user_meta($user_id, 'wabe_license_key');
+    delete_user_meta($user_id, 'wabe_license_plan');
+    delete_user_meta($user_id, 'wabe_license_status');
+    delete_user_meta($user_id, 'wabe_licensed_domain');
+    delete_user_meta($user_id, 'wabe_license_message');
+    delete_user_meta($user_id, 'wabe_license_checked');
+    delete_user_meta($user_id, 'wabe_license_active_at');
 }
