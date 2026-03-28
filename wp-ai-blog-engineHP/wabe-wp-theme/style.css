@@ -620,6 +620,341 @@ p {
     align-items: flex-start;
   }
 }
+
+/* --- heder --- */
+.wabe-site-header {
+  position: sticky;
+  top: 0;
+  z-index: 999;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.wabe-header-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.wabe-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  color: #0f172a;
+  min-width: 0;
+}
+
+.wabe-brand-mark {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #2563eb, #60a5fa);
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-weight: 800;
+  font-size: 18px;
+  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.24);
+}
+
+.wabe-brand-text {
+  min-width: 0;
+}
+
+.wabe-brand-title {
+  display: block;
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.2;
+  color: #0f172a;
+}
+
+.wabe-brand-sub {
+  display: block;
+  font-size: 12px;
+  line-height: 1.2;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.wabe-header-nav-wrap {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.wabe-global-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wabe-global-nav ul {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.wabe-global-nav a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 14px;
+  border-radius: 999px;
+  text-decoration: none;
+  color: #334155;
+  font-size: 14px;
+  font-weight: 700;
+  transition: 0.2s ease;
+}
+
+.wabe-global-nav a:hover {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.wabe-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.wabe-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: 999px;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 800;
+  transition: 0.2s ease;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.wabe-btn-secondary {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-color: #dbeafe;
+}
+
+.wabe-btn-primary {
+  background: #2563eb;
+  color: #fff;
+  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.22);
+}
+
+.wabe-btn:hover {
+  transform: translateY(-1px);
+  opacity: 0.96;
+}
+
+.wabe-menu-toggle {
+  display: none;
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 12px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 22px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+@media (max-width: 991px) {
+  .wabe-header-inner {
+    padding: 12px 16px;
+  }
+
+  .wabe-menu-toggle {
+    display: grid;
+    place-items: center;
+  }
+
+  .wabe-header-nav-wrap {
+    display: none;
+    position: absolute;
+    left: 16px;
+    right: 16px;
+    top: calc(100% + 10px);
+    padding: 16px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 20px;
+    background: #fff;
+    box-shadow: 0 20px 50px rgba(15, 23, 42, 0.12);
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .wabe-header-nav-wrap.is-open {
+    display: flex;
+  }
+
+  .wabe-global-nav ul {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .wabe-global-nav a {
+    justify-content: flex-start;
+    border-radius: 14px;
+    padding: 12px 14px;
+  }
+
+  .wabe-header-actions {
+    flex-direction: column;
+  }
+
+  .wabe-header-actions .wabe-btn {
+    width: 100%;
+  }
+}
+
+/* --- footer --- */
+.wabe-site-footer {
+  margin-top: 80px;
+  background: #0f172a;
+  color: #cbd5e1;
+}
+.wabe-footer-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 56px 20px 22px;
+}
+.wabe-footer-grid {
+  display: grid;
+  grid-template-columns: 1.3fr 0.9fr 0.9fr 0.9fr;
+  gap: 28px;
+  padding-bottom: 32px;
+}
+.wabe-footer-brand {
+  max-width: 420px;
+}
+.wabe-footer-title {
+  margin: 0 0 14px;
+  font-size: 24px;
+  line-height: 1.3;
+  color: #fff;
+}
+.wabe-footer-text {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.9;
+  color: #94a3b8;
+}
+.wabe-footer-heading {
+  margin: 0 0 14px;
+  font-size: 14px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #fff;
+}
+.wabe-footer-links {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+.wabe-footer-links a {
+  color: #cbd5e1;
+  text-decoration: none;
+  font-size: 14px;
+  line-height: 1.8;
+  transition: 0.2s ease;
+}
+.wabe-footer-links a:hover {
+  color: #60a5fa;
+}
+.wabe-footer-cta {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+.wabe-footer-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 999px;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 800;
+  transition: 0.2s ease;
+}
+.wabe-footer-btn-primary {
+  background: #2563eb;
+  color: #fff;
+}
+.wabe-footer-btn-secondary {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.wabe-footer-btn:hover {
+  transform: translateY(-1px);
+  opacity: 0.96;
+}
+.wabe-footer-bottom {
+  padding-top: 22px;
+  border-top: 1px solid rgba(148, 163, 184, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+.wabe-footer-copy,
+.wabe-footer-bottom-links {
+  font-size: 13px;
+  color: #94a3b8;
+}
+.wabe-footer-bottom-links {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.wabe-footer-bottom-links a {
+  color: #94a3b8;
+  text-decoration: none;
+}
+.wabe-footer-bottom-links a:hover {
+  color: #60a5fa;
+}
+@media (max-width: 991px) {
+  .wabe-footer-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (max-width: 640px) {
+  .wabe-footer-inner {
+    padding: 44px 16px 20px;
+  }
+  .wabe-footer-grid {
+    grid-template-columns: 1fr;
+  }
+  .wabe-footer-title {
+    font-size: 22px;
+  }
+  .wabe-footer-cta .wabe-footer-btn {
+    width: 100%;
+  }
+}
+
 .wabe-lp {
   --wabe-bg: #f7fbff;
   --wabe-bg-2: #eef5ff;

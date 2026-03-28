@@ -1,36 +1,71 @@
-<?php if (!defined('ABSPATH')) exit; ?>
+<?php
+if (!defined('ABSPATH')) exit;
+?>
 <!DOCTYPE html>
 <html <?php language_attributes(); ?>>
+
 <head>
-  <meta charset="<?php bloginfo('charset'); ?>" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="<?php bloginfo('charset'); ?>">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <?php wp_head(); ?>
 </head>
+
 <body <?php body_class(); ?>>
-<?php wp_body_open(); ?>
-<header class="site-header" id="top">
-  <div class="container header-inner">
-    <a class="brand" href="<?php echo esc_url(home_url('/')); ?>" aria-label="WP AI Blog Engine トップへ">
-      <span class="brand-mark">AI</span>
-      <span>WP AI Blog Engine</span>
-    </a>
+  <?php wp_body_open(); ?>
+  <header class="wabe-site-header">
+    <div class="wabe-header-inner">
+      <a href="<?php echo esc_url(home_url('/')); ?>" class="wabe-brand" aria-label="<?php bloginfo('name'); ?>">
+        <span class="wabe-brand-mark">AI</span>
+        <span class="wabe-brand-text">
+          <span class="wabe-brand-title">WP AI Blog Engine</span>
+          <span class="wabe-brand-sub">WordPress向けAI記事作成プラグイン</span>
+        </span>
+      </a>
 
-    <button class="menu-toggle" id="menuToggle" aria-label="メニューを開く" aria-expanded="false" aria-controls="globalNav">☰</button>
+      <button class="wabe-menu-toggle" type="button" aria-expanded="false" aria-controls="wabeHeaderNav"
+        data-wabe-menu-toggle>
+        ☰
+      </button>
 
-    <?php
-    wp_nav_menu([
-      'theme_location' => 'primary',
-      'container'      => false,
-      'menu_class'     => 'nav',
-      'menu_id'        => 'globalNav',
-      'fallback_cb'    => 'wabe_menu_fallback',
-      'depth'          => 1,
-    ]);
-    ?>
+      <div class="wabe-header-nav-wrap" id="wabeHeaderNav">
+        <nav class="wabe-global-nav" aria-label="Global Navigation">
+          <ul>
+            <li><a href="<?php echo esc_url(home_url('/#problems')); ?>">お悩み</a></li>
+            <li><a href="<?php echo esc_url(home_url('/#features')); ?>">特長</a></li>
+            <li><a href="<?php echo esc_url(home_url('/#flow')); ?>">使い方</a></li>
+            <li><a href="<?php echo esc_url(home_url('/#pricing')); ?>">料金</a></li>
+            <li><a href="<?php echo esc_url(home_url('/#faq')); ?>">FAQ</a></li>
+          </ul>
+        </nav>
 
-    <div class="header-cta">
-      <a class="btn btn-secondary" href="<?php echo esc_url(wabe_cta_secondary_link()); ?>">購入前の不安を解消</a>
-      <a class="btn btn-primary" href="<?php echo esc_url(wabe_cta_primary_link()); ?>">料金プランを見る</a>
+        <div class="wabe-header-actions">
+          <a class="wabe-btn wabe-btn-secondary" href="<?php echo esc_url(home_url('/free')); ?>">無料で試す</a>
+          <a class="wabe-btn wabe-btn-primary"
+            href="<?php echo esc_url(home_url('/advanced')); ?>">Advancedを見る</a>
+        </div>
+      </div>
     </div>
-  </div>
-</header>
+  </header>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      var toggle = document.querySelector('[data-wabe-menu-toggle]');
+      var nav = document.getElementById('wabeHeaderNav');
+      if (!toggle || !nav) return;
+
+      toggle.addEventListener('click', function() {
+        var isOpen = nav.classList.toggle('is-open');
+        toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        toggle.textContent = isOpen ? '×' : '☰';
+      });
+
+      nav.querySelectorAll('a').forEach(function(link) {
+        link.addEventListener('click', function() {
+          if (window.innerWidth <= 991) {
+            nav.classList.remove('is-open');
+            toggle.setAttribute('aria-expanded', 'false');
+            toggle.textContent = '☰';
+          }
+        });
+      });
+    });
+  </script>
